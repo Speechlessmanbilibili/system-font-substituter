@@ -66,6 +66,12 @@
   let pending = new Set();
   let scheduled = false;
 
+  // Ligature forcing must beat site author styles, including author !important.
+  // We therefore use reversible inline !important declarations only on elements
+  // that have already been selected for font replacement.
+  const originalLigatureStyles = new WeakMap();
+  const lastInternalStyle = new WeakMap();
+
   function normalizeFamily(name) {
     return name.trim().replace(/^["']|["']$/g, "").trim().toLowerCase();
   }
@@ -142,26 +148,75 @@
       (document.head || document.documentElement).appendChild(style);
     }
 
-    // The replacement string is user-controlled CSS font-family syntax.
-    // Ligature rules intentionally apply only to elements already marked for
-    // font replacement. Unmatched site fonts are left completely untouched.
-    const ligatureRules = settings.standardLigatures
-      ? `
-        font-variant-ligatures: common-ligatures !important;
-        font-feature-settings: "liga" 1, "clig" 1 !important;
-      `
-      : "";
-
+    // Keep the stylesheet responsible only for font replacement.
+    // Standard ligatures are forced separately as inline !important so they
+    // can override site-level author rules when enabled.
     style.textContent = settings.enabled
-      ? `[${MARK}="1"] {
-          font-family: ${settings.replacement} !important;
-          ${ligatureRules}
-        }`
+      ? `[${MARK}="1"] { font-family: ${settings.replacement} !important; }`
       : "";
   }
 
+  function splitFeatureSettings(value) {
+    if (!value || value.trim().toLowerCase() === "normal") return [];
+    return value
+      .split(",")
+      .map(part => part.trim())
+      .filter(Boolean);
+  }
+
+  function forceStandardLigatures(el) {
+    if (!settings.standardLigatures || !(el instanceof HTMLElement)) return;
+
+    if (!originalLigatureStyles.has(el)) {
+      originalLigatureStyles.set(el, {
+        featureValue: el.style.getPropertyValue("font-feature-settings"),
+        featurePriority: el.style.getPropertyPriority("font-feature-settings")
+      });
+    }
+
+    // Preserve all effective low-level OpenType settings except liga/clig,
+    // then force those two tags on. font-feature-settings takes precedence
+    // over conflicting font-variant-ligatures declarations from the site.
+    let computed = "normal";
+    try {
+      computed = getComputedStyle(el).fontFeatureSettings || "normal";
+    } catch {}
+
+    const kept = splitFeatureSettings(computed).filter(part => {
+      const m = part.match(/^["']([^"']{4})["']/);
+      if (!m) return true;
+      const tag = m[1].toLowerCase();
+      return tag !== "liga" && tag !== "clig";
+    });
+
+    kept.push('"liga" 1', '"clig" 1');
+    el.style.setProperty("font-feature-settings", kept.join(", "), "important");
+    lastInternalStyle.set(el, el.getAttribute("style") || "");
+  }
+
+  function restoreStandardLigatures(el) {
+    const original = originalLigatureStyles.get(el);
+    if (!original || !(el instanceof HTMLElement)) return;
+
+    if (original.featureValue) {
+      el.style.setProperty(
+        "font-feature-settings",
+        original.featureValue,
+        original.featurePriority
+      );
+    } else {
+      el.style.removeProperty("font-feature-settings");
+    }
+
+    originalLigatureStyles.delete(el);
+    lastInternalStyle.set(el, el.getAttribute("style") || "");
+  }
+
   function unmarkAll() {
-    document.querySelectorAll(`[${MARK}]`).forEach(el => el.removeAttribute(MARK));
+    document.querySelectorAll(`[${MARK}]`).forEach(el => {
+      restoreStandardLigatures(el);
+      el.removeAttribute(MARK);
+    });
   }
 
   function evaluate(el) {
@@ -181,6 +236,7 @@
     const first = firstFamily(family);
     if (targetSet.has(first)) {
       el.setAttribute(MARK, "1");
+      forceStandardLigatures(el);
     }
   }
 
@@ -219,9 +275,22 @@
         if (m.type === "childList") {
           for (const node of m.addedNodes) queue(node);
         } else if (m.type === "attributes" && m.target instanceof Element) {
-          // Re-evaluate elements whose class/style changed.
+          // Re-evaluate elements whose class/style changed. Ignore the exact
+          // style mutation produced by our own reversible ligature override.
+          if (m.attributeName === "style") {
+            const internal = lastInternalStyle.get(m.target);
+            const current = m.target.getAttribute("style") || "";
+            if (internal !== undefined && internal === current) {
+              lastInternalStyle.delete(m.target);
+              continue;
+            }
+          }
+
           if (m.attributeName === "class" || m.attributeName === "style") {
-            if (m.target.hasAttribute(MARK)) m.target.removeAttribute(MARK);
+            if (m.target.hasAttribute(MARK)) {
+              restoreStandardLigatures(m.target);
+              m.target.removeAttribute(MARK);
+            }
             queue(m.target);
           }
         }

@@ -40,3 +40,26 @@
 - 设置页重做为更克制的系统设置风格，保留中英文界面与深色模式。
 - 默认字体链改为 CJK Punct Bridge → Hanken Grotesk → HarmonyOS Sans SC。
 - 加入 `-apple-system-body`、`ui-sans-serif`，覆盖当前 ChatGPT Web 的系统字体栈。
+
+## v1.5.0
+
+- 新增“标准连字”开关，默认关闭。
+- 开启后只对已经命中替换名单、实际被扩展替换字体的元素生效。
+- 使用 `common-ligatures` 并强制开启 OpenType `liga` / `clig`，可覆盖网站对标准连字的关闭设置。
+- 未被字体替换的网页文字不受连字设置影响。
+
+## v1.5.1
+
+- 在 `manifest.json` 中加入固定 Chromium `key`。
+- 开发者模式下，即使扩展解压到不同目录，加载后也会保持同一个扩展 ID。
+- 固定扩展 ID：`ecgcpjehkelnjfcgldmifejcoefohdcp`。
+- 私钥不包含在仓库或 Release 中；扩展运行与开发者模式加载只需要 manifest 中的公钥。
+
+## v1.5.2
+
+- 修复部分网站开启“标准连字”后偶尔失效的问题。
+- 连字强制规则改为仅对已被字体替换的元素写入 inline `font-feature-settings: ... !important`。
+- 该方式可以压过网站自身高特异性的 author `!important` 规则。
+- 会保留原有的其他 OpenType feature，只强制 `liga` / `clig` 为开启。
+- 网站之后若动态改写元素样式，扩展会重新识别并恢复连字强制状态。
+- 未命中字体替换名单的元素仍完全不受连字设置影响。
