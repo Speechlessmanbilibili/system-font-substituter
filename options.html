@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>字体替换器</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main class="page">
+    <header class="page-header">
+      <div>
+        <h1 data-i18n="pageTitle">字体替换器</h1>
+        <p data-i18n="pageSubtitle">替换常见西文与简中系统 / UI 字体，并保留网站的设计字体、代码字体与图标字体。</p>
+      </div>
+      <label class="toggle-line header-toggle">
+        <span data-i18n="enable">启用</span>
+        <span class="switch">
+          <input id="enabled" type="checkbox">
+          <span class="track" aria-hidden="true"></span>
+        </span>
+      </label>
+    </header>
+
+    <div class="settings-panel">
+      <section class="setting-section">
+        <div class="section-copy">
+          <h2 data-i18n="replacementTitle">替换字体</h2>
+          <p data-i18n="replacementDesc">填写本机字体的 CSS font-family，可使用完整 fallback 链。</p>
+        </div>
+        <div class="section-control wide-control">
+          <label class="field-label" for="replacement" data-i18n="replacementLabel">字体族</label>
+          <input id="replacement" class="text-input code-input" type="text" spellcheck="false">
+          <div class="preview-row">
+            <span class="preview-caption" data-i18n="preview">预览</span>
+            <span id="previewText" class="preview-text">The quick brown fox · 中文字体预览 0123456789</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="setting-section vertical-section">
+        <div class="section-title-row">
+          <div class="section-copy">
+            <h2 data-i18n="targetsTitle">替换名单</h2>
+            <p data-i18n="targetsDesc">每行一个字体族。只有元素的首选字体命中名单时才会替换。</p>
+          </div>
+          <span class="family-count"><span id="targetCount">0</span> <span data-i18n="families">个字体族</span></span>
+        </div>
+        <textarea id="targets" class="text-area code-input" rows="15" spellcheck="false" aria-label="Target font families"></textarea>
+        <p class="note" data-i18n="targetsHint">默认仅包含常见西文与简中系统 / UI 字体；可能用于视觉设计的 WebFont 不在默认名单中。</p>
+      </section>
+
+      <section class="setting-section protection-section">
+        <div class="section-copy">
+          <h2 data-i18n="protectionTitle">保护规则</h2>
+          <p data-i18n="protectionDesc">避免替换影响代码和图标。</p>
+        </div>
+        <div class="rule-list">
+          <label class="rule-row">
+            <span>
+              <strong data-i18n="protectCode">保护代码字体</strong>
+              <small data-i18n="protectCodeDesc">跳过 code、pre、kbd、samp 及其内部元素</small>
+            </span>
+            <span class="switch">
+              <input id="protectCode" type="checkbox">
+              <span class="track" aria-hidden="true"></span>
+            </span>
+          </label>
+          <label class="rule-row">
+            <span>
+              <strong data-i18n="protectIcons">保护图标字体</strong>
+              <small data-i18n="protectIconsDesc">识别 Material Icons、Font Awesome 等常见图标字体</small>
+            </span>
+            <span class="switch">
+              <input id="protectIcons" type="checkbox">
+              <span class="track" aria-hidden="true"></span>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <details class="details-section">
+        <summary data-i18n="howItWorks">工作方式</summary>
+        <div class="details-copy">
+          <p data-i18n="howItWorks1">扩展逐个检查元素计算后的 font-family，不对整个页面强制指定同一个字体。</p>
+          <p data-i18n="howItWorks2">只有第一个字体族命中名单时才会替换；动态页面会继续检查新增内容。</p>
+          <p data-i18n="howItWorks3">edge://、chrome://、扩展商店等浏览器受保护页面无法注入普通扩展。</p>
+        </div>
+      </details>
+    </div>
+
+    <footer class="page-footer">
+      <span id="status" class="status" aria-live="polite"></span>
+      <div class="actions">
+        <button id="reset" class="button secondary" type="button" data-i18n="reset">恢复默认</button>
+        <button id="save" class="button primary" type="button" data-i18n="save">保存设置</button>
+      </div>
+    </footer>
+  </main>
+  <script src="options.js"></script>
+</body>
+</html>
