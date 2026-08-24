@@ -151,8 +151,21 @@
     // Keep the stylesheet responsible only for font replacement.
     // Standard ligatures are forced separately as inline !important so they
     // can override site-level author rules when enabled.
+    const descendantLigatures = settings.standardLigatures
+      ? `
+        [${MARK}="1"],
+        [${MARK}="1"] * {
+          font-variant-ligatures: common-ligatures !important;
+          font-feature-settings: "liga" 1, "clig" 1 !important;
+        }
+      `
+      : "";
+
     style.textContent = settings.enabled
-      ? `[${MARK}="1"] { font-family: ${settings.replacement} !important; }`
+      ? `
+        [${MARK}="1"] { font-family: ${settings.replacement} !important; }
+        ${descendantLigatures}
+      `
       : "";
   }
 
@@ -219,33 +232,73 @@
     });
   }
 
-  function evaluate(el) {
-    if (!settings.enabled || !(el instanceof Element)) return;
-    if (el.hasAttribute(MARK)) return;
+  function shouldReplace(el) {
+    if (!settings.enabled || !(el instanceof Element)) return false;
 
     let cs;
     try {
       cs = getComputedStyle(el);
     } catch {
-      return;
+      return false;
     }
 
     const family = cs.fontFamily || "";
-    if (isProtected(el, family)) return;
+    if (isProtected(el, family)) return false;
 
     const first = firstFamily(family);
-    if (targetSet.has(first)) {
-      el.setAttribute(MARK, "1");
-      forceStandardLigatures(el);
-    }
+    return targetSet.has(first);
+  }
+
+  function applyReplacement(el) {
+    if (!(el instanceof Element)) return;
+    el.setAttribute(MARK, "1");
+    forceStandardLigatures(el);
   }
 
   function scanSubtree(root) {
     if (!(root instanceof Element) && root !== document) return;
 
-    if (root instanceof Element) evaluate(root);
-    const nodes = root.querySelectorAll ? root.querySelectorAll("*") : [];
-    for (const el of nodes) evaluate(el);
+    // Decide which elements match BEFORE applying any replacement.
+    // Font replacement is inherited, so mutating a parent during the same
+    // decision pass would otherwise change descendants' computed font-family.
+    const nodes = [];
+    if (root instanceof Element) nodes.push(root);
+    if (root.querySelectorAll) nodes.push(...root.querySelectorAll("*"));
+
+    const matches = [];
+    for (const el of nodes) {
+      if (el.hasAttribute(MARK)) continue;
+      if (shouldReplace(el)) matches.push(el);
+    }
+
+    for (const el of matches) {
+      applyReplacement(el);
+    }
+
+    if (root instanceof Element) {
+      const markedAncestor = root.closest(`[${MARK}="1"]`);
+      if (markedAncestor) {
+        let replacementFirst = "";
+        try {
+          replacementFirst = firstFamily(getComputedStyle(markedAncestor).fontFamily || "");
+        } catch {}
+
+        if (replacementFirst) {
+          for (const el of nodes) {
+            if (el.hasAttribute(MARK) || isProtected(el, "")) continue;
+            let first = "";
+            try {
+              first = firstFamily(getComputedStyle(el).fontFamily || "");
+            } catch {
+              continue;
+            }
+            if (first === replacementFirst) {
+              applyReplacement(el);
+            }
+          }
+        }
+      }
+    }
   }
 
   function flushPending() {
