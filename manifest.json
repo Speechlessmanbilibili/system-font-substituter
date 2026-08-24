@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "System Font Substituter",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "Replace common Western and Simplified Chinese system/UI fonts while preserving site design fonts, icons, and code fonts.",
   "permissions": [
     "storage"
