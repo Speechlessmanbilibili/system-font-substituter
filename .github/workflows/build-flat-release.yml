@@ -1,0 +1,21 @@
+name: Build flat release asset
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build flat ZIP
+        run: |
+          zip -9 -j system-font-substituter-v1.5.5.zip             LICENSE README.md background.js content.js manifest.json             options.css options.html options.js
+          unzip -Z1 system-font-substituter-v1.5.5.zip
+      - name: Upload Release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload v1.5.5 system-font-substituter-v1.5.5.zip --clobber
