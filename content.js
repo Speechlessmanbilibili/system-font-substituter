@@ -53,7 +53,8 @@
     "思源黑体"
 ],
     protectCode: true,
-    protectIcons: true
+    protectIcons: true,
+    standardLigatures: false
   };
 
   const MARK = "data-sfs-replaced";
@@ -142,8 +143,20 @@
     }
 
     // The replacement string is user-controlled CSS font-family syntax.
+    // Ligature rules intentionally apply only to elements already marked for
+    // font replacement. Unmatched site fonts are left completely untouched.
+    const ligatureRules = settings.standardLigatures
+      ? `
+        font-variant-ligatures: common-ligatures !important;
+        font-feature-settings: "liga" 1, "clig" 1 !important;
+      `
+      : "";
+
     style.textContent = settings.enabled
-      ? `[${MARK}="1"] { font-family: ${settings.replacement} !important; }`
+      ? `[${MARK}="1"] {
+          font-family: ${settings.replacement} !important;
+          ${ligatureRules}
+        }`
       : "";
   }
 
