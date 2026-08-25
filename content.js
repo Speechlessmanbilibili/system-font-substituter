@@ -169,67 +169,8 @@
       : "";
   }
 
-  function splitFeatureSettings(value) {
-    if (!value || value.trim().toLowerCase() === "normal") return [];
-    return value
-      .split(",")
-      .map(part => part.trim())
-      .filter(Boolean);
-  }
-
-  function forceStandardLigatures(el) {
-    if (!settings.standardLigatures || !(el instanceof HTMLElement)) return;
-
-    if (!originalLigatureStyles.has(el)) {
-      originalLigatureStyles.set(el, {
-        featureValue: el.style.getPropertyValue("font-feature-settings"),
-        featurePriority: el.style.getPropertyPriority("font-feature-settings")
-      });
-    }
-
-    // Preserve all effective low-level OpenType settings except liga/clig,
-    // then force those two tags on. font-feature-settings takes precedence
-    // over conflicting font-variant-ligatures declarations from the site.
-    let computed = "normal";
-    try {
-      computed = getComputedStyle(el).fontFeatureSettings || "normal";
-    } catch {}
-
-    const kept = splitFeatureSettings(computed).filter(part => {
-      const m = part.match(/^["']([^"']{4})["']/);
-      if (!m) return true;
-      const tag = m[1].toLowerCase();
-      return tag !== "liga" && tag !== "clig";
-    });
-
-    kept.push('"liga" 1', '"clig" 1');
-    el.style.setProperty("font-feature-settings", kept.join(", "), "important");
-    lastInternalStyle.set(el, el.getAttribute("style") || "");
-  }
-
-  function restoreStandardLigatures(el) {
-    const original = originalLigatureStyles.get(el);
-    if (!original || !(el instanceof HTMLElement)) return;
-
-    if (original.featureValue) {
-      el.style.setProperty(
-        "font-feature-settings",
-        original.featureValue,
-        original.featurePriority
-      );
-    } else {
-      el.style.removeProperty("font-feature-settings");
-    }
-
-    originalLigatureStyles.delete(el);
-    lastInternalStyle.set(el, el.getAttribute("style") || "");
-  }
-
   function unmarkAll() {
-    document.querySelectorAll(`[${MARK}]`).forEach(el => {
-      restoreStandardLigatures(el);
-      el.removeAttribute(MARK);
-    });
+    document.querySelectorAll(`[${MARK}]`).forEach(el => el.removeAttribute(MARK));
   }
 
   function shouldReplace(el) {
@@ -245,60 +186,71 @@
     const family = cs.fontFamily || "";
     if (isProtected(el, family)) return false;
 
-    const first = firstFamily(family);
-    return targetSet.has(first);
+    return targetSet.has(firstFamily(family));
   }
 
   function applyReplacement(el) {
-    if (!(el instanceof Element)) return;
-    el.setAttribute(MARK, "1");
-    forceStandardLigatures(el);
+    if (el instanceof Element) el.setAttribute(MARK, "1");
+  }
+
+  function collectTextElements(root) {
+    const out = new Set();
+
+    if (root instanceof Element) {
+      if (root.matches("input, textarea, select, button")) out.add(root);
+      root.querySelectorAll?.("input, textarea, select, button").forEach(el => out.add(el));
+    }
+
+    const walkerRoot = root === document ? document.documentElement : root;
+    if (!walkerRoot) return out;
+
+    const walker = document.createTreeWalker(
+      walkerRoot,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node) {
+          if (!node.nodeValue || !node.nodeValue.trim()) {
+            return NodeFilter.FILTER_REJECT;
+          }
+
+          const parent = node.parentElement;
+          if (!parent) return NodeFilter.FILTER_REJECT;
+
+          const tag = parent.tagName;
+          if (
+            tag === "SCRIPT" ||
+            tag === "STYLE" ||
+            tag === "NOSCRIPT" ||
+            tag === "TEMPLATE"
+          ) {
+            return NodeFilter.FILTER_REJECT;
+          }
+
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
+    );
+
+    let node;
+    while ((node = walker.nextNode())) {
+      if (node.parentElement) out.add(node.parentElement);
+    }
+
+    return out;
   }
 
   function scanSubtree(root) {
     if (!(root instanceof Element) && root !== document) return;
 
-    // Decide which elements match BEFORE applying any replacement.
-    // Font replacement is inherited, so mutating a parent during the same
-    // decision pass would otherwise change descendants' computed font-family.
-    const nodes = [];
-    if (root instanceof Element) nodes.push(root);
-    if (root.querySelectorAll) nodes.push(...root.querySelectorAll("*"));
-
+    const nodes = collectTextElements(root);
     const matches = [];
+
     for (const el of nodes) {
       if (el.hasAttribute(MARK)) continue;
       if (shouldReplace(el)) matches.push(el);
     }
 
-    for (const el of matches) {
-      applyReplacement(el);
-    }
-
-    if (root instanceof Element) {
-      const markedAncestor = root.closest(`[${MARK}="1"]`);
-      if (markedAncestor) {
-        let replacementFirst = "";
-        try {
-          replacementFirst = firstFamily(getComputedStyle(markedAncestor).fontFamily || "");
-        } catch {}
-
-        if (replacementFirst) {
-          for (const el of nodes) {
-            if (el.hasAttribute(MARK) || isProtected(el, "")) continue;
-            let first = "";
-            try {
-              first = firstFamily(getComputedStyle(el).fontFamily || "");
-            } catch {
-              continue;
-            }
-            if (first === replacementFirst) {
-              applyReplacement(el);
-            }
-          }
-        }
-      }
-    }
+    for (const el of matches) applyReplacement(el);
   }
 
   function flushPending() {
@@ -325,26 +277,13 @@
 
     observer = new MutationObserver(mutations => {
       for (const m of mutations) {
-        if (m.type === "childList") {
-          for (const node of m.addedNodes) queue(node);
-        } else if (m.type === "attributes" && m.target instanceof Element) {
-          // Re-evaluate elements whose class/style changed. Ignore the exact
-          // style mutation produced by our own reversible ligature override.
-          if (m.attributeName === "style") {
-            const internal = lastInternalStyle.get(m.target);
-            const current = m.target.getAttribute("style") || "";
-            if (internal !== undefined && internal === current) {
-              lastInternalStyle.delete(m.target);
-              continue;
-            }
-          }
+        if (m.type !== "childList") continue;
 
-          if (m.attributeName === "class" || m.attributeName === "style") {
-            if (m.target.hasAttribute(MARK)) {
-              restoreStandardLigatures(m.target);
-              m.target.removeAttribute(MARK);
-            }
-            queue(m.target);
+        for (const node of m.addedNodes) {
+          if (node instanceof Element) {
+            queue(node);
+          } else if (node.nodeType === Node.TEXT_NODE && node.parentElement) {
+            queue(node.parentElement);
           }
         }
       }
@@ -352,9 +291,7 @@
 
     observer.observe(document.documentElement, {
       subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: ["class", "style"]
+      childList: true
     });
   }
 
