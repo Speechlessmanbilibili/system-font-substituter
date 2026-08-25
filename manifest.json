@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "System Font Substituter",
-  "version": "1.5.5",
-  "description": "Replace common Western and Simplified Chinese system/UI fonts while preserving site design fonts, icons, and code fonts.",
+  "name": "__MSG_extName__",
+  "version": "1.6.1",
+  "description": "__MSG_extDescription__",
   "permissions": [
     "storage"
   ],
@@ -26,10 +26,21 @@
     "open_in_tab": true
   },
   "action": {
-    "default_title": "System Font Substituter"
+    "default_title": "__MSG_extName__",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
   },
   "background": {
     "service_worker": "background.js"
   },
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxukZjjFQwqZTs0hs87Sil4avGyU2fSSpr8U4AugAwSxKgObGrQLUIjfYBdJJf4xoPzubk5Kr9GydovfmhUcNe2lTKqFZjINo5OlIZxVWCLSMgz90S5n8tQ9vI9/2+OF/SVPpPd5EPK51MICK3l+nBCLXcubJzE52FDgHbKdjBWZe688XYruU5R5T9Yx1eUbmeSVdtadFV2Syv1AooGNQROyJ79MLJecUBRCPxfZoJqUtW+2tretoVl4J18rZzWbVfnkF5DiFGRyo37hjBDufMSnSgl7tu3znuyS+aeTLRz7gUNrOcaESGay8wT/zlXiH2RxH1QhAINaMAC+IVHCTkQIDAQAB"
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxukZjjFQwqZTs0hs87Sil4avGyU2fSSpr8U4AugAwSxKgObGrQLUIjfYBdJJf4xoPzubk5Kr9GydovfmhUcNe2lTKqFZjINo5OlIZxVWCLSMgz90S5n8tQ9vI9/2+OF/SVPpPd5EPK51MICK3l+nBCLXcubJzE52FDgHbKdjBWZe688XYruU5R5T9Yx1eUbmeSVdtadFV2Syv1AooGNQROyJ79MLJecUBRCPxfZoJqUtW+2tretoVl4J18rZzWbVfnkF5DiFGRyo37hjBDufMSnSgl7tu3znuyS+aeTLRz7gUNrOcaESGay8wT/zlXiH2RxH1QhAINaMAC+IVHCTkQIDAQAB",
+  "default_locale": "en",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
 }
