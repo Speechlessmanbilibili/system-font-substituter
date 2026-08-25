@@ -12,7 +12,8 @@ const DEFAULTS = {
     "Noto Sans SC", "Noto Sans CJK SC", "Source Han Sans SC", "思源黑体 CN", "思源黑体"
   ],
   protectCode: true,
-  protectIcons: true
+  protectIcons: true,
+  standardLigatures: false
 };
 
 const TEXT = {
@@ -34,6 +35,8 @@ const TEXT = {
     protectCodeDesc: "跳过 code、pre、kbd、samp 及其内部元素",
     protectIcons: "保护图标字体",
     protectIconsDesc: "识别常见 Material Icons、Font Awesome 等图标字体",
+    standardLigatures: "标准连字",
+    standardLigaturesDesc: "仅对已被替换字体的文字强制开启 OpenType liga / clig，并覆盖网站的关闭设置；默认关闭",
     howItWorks: "工作方式",
     howItWorks1: "扩展逐个检查元素计算后的 font-family，不对整个页面强制指定同一个字体。",
     howItWorks2: "只有第一个字体族命中名单时才会替换；动态页面会继续检查新增内容。",
@@ -62,6 +65,8 @@ const TEXT = {
     protectCodeDesc: "Skip code, pre, kbd, samp and their descendants",
     protectIcons: "Protect icon fonts",
     protectIconsDesc: "Detect common icon fonts such as Material Icons and Font Awesome",
+    standardLigatures: "Standard ligatures",
+    standardLigaturesDesc: "Force OpenType liga/clig only on text whose font is replaced, overriding site-level disabling; off by default",
     howItWorks: "How it works",
     howItWorks1: "The extension checks each element's computed font-family instead of forcing one font across the whole page.",
     howItWorks2: "Replacement happens only when the first family matches your list. Newly added dynamic content is checked as well.",
@@ -116,6 +121,7 @@ function fill(s) {
   $("targets").value = s.targets.join("\n");
   $("protectCode").checked = s.protectCode;
   $("protectIcons").checked = s.protectIcons;
+  $("standardLigatures").checked = s.standardLigatures;
   updateCount();
   updatePreview();
 }
@@ -138,7 +144,8 @@ async function save() {
     replacement,
     targets: parseTargets(),
     protectCode: $("protectCode").checked,
-    protectIcons: $("protectIcons").checked
+    protectIcons: $("protectIcons").checked,
+    standardLigatures: $("standardLigatures").checked
   });
   showStatus(t("saved"));
 }

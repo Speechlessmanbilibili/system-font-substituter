@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "System Font Substituter"
+  },
+  "extDescription": {
+    "message": "Replace common Western and Simplified Chinese system/UI fonts with your preferred local fonts while preserving design fonts, icons, and code."
+  }
+}

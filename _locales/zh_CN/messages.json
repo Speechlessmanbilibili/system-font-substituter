@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "System Font Substituter"
+  },
+  "extDescription": {
+    "message": "将常见西文与简体中文系统／界面字体替换为你偏好的本地字体，同时保留网站设计字体、图标字体与代码字体。"
+  }
+}
