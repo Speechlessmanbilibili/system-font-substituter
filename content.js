@@ -65,6 +65,9 @@
 
   const ICON_CLASS_RE = /(^|[\s_-])(icon|icons|fa|fas|far|fal|fab|material-icons?|glyph|symbol)([\s_-]|$)/;
   const ICON_FAMILY_RE = /fontawesome|material symbols|material icons|bootstrap-icons|remixicon|tabler-icons|lucide/;
+  // 表单控件与可编辑区域：即使内容为空也需要参与替换（空输入框/占位文字
+  // 同样展示字体），contenteditable 区域初始无文本节点时尤其需要。
+  const EDITABLE_SELECTOR = "input, textarea, select, button, [contenteditable]:not([contenteditable='false'])";
 
   let settings = DEFAULTS;
   let targetSet = new Set();
@@ -198,6 +201,7 @@
     style.textContent = settings.enabled
       ? `
         ${rootSel} [${MARK}="1"] { font-family: ${font} !important; }
+        ${rootSel} [${MARK}="1"]::placeholder { font-family: ${font} !important; }
         ${descendantLigatures}
       `
       : "";
@@ -249,8 +253,8 @@
     const out = new Set();
 
     if (root instanceof Element) {
-      if (root.matches("input, textarea, select, button")) out.add(root);
-      root.querySelectorAll?.("input, textarea, select, button").forEach(el => out.add(el));
+      if (root.matches(EDITABLE_SELECTOR)) out.add(root);
+      root.querySelectorAll?.(EDITABLE_SELECTOR).forEach(el => out.add(el));
     }
 
     const walkerRoot = root === document ? document.documentElement : root;
