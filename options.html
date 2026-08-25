@@ -50,6 +50,18 @@
         <p class="note" data-i18n="targetsHint">默认仅包含常见西文与简中系统 / UI 字体；可能用于视觉设计的 WebFont 不在默认名单中。</p>
       </section>
 
+      <section class="setting-section vertical-section">
+        <div class="section-title-row">
+          <div class="section-copy">
+            <h2 data-i18n="siteRulesTitle">站点强制覆盖</h2>
+            <p data-i18n="siteRulesDesc">对指定站点跳过字体名单判断，直接强制替换。</p>
+          </div>
+          <button id="addSiteRule" class="button secondary" type="button" aria-label="Add site rule">＋<span data-i18n="addSite">添加站点</span></button>
+        </div>
+        <div id="siteRules" class="site-rule-list"></div>
+        <p class="note" data-i18n="siteRulesHint">域名支持主域名与子域名，例如 chatgpt.com、*.example.com；字体留空则使用全局替换字体。代码与图标保护规则仍然生效。</p>
+      </section>
+
       <section class="setting-section protection-section">
         <div class="section-copy">
           <h2 data-i18n="protectionTitle">保护规则</h2>

@@ -54,23 +54,28 @@
 ],
     protectCode: true,
     protectIcons: true,
-    standardLigatures: false
+    standardLigatures: false,
+    siteRules: []
   };
 
   const MARK = "data-sfs-replaced";
+  const ROOT_MARK = "data-sfs";
   const STYLE_ID = "sfs-style";
+  const SCAN_CHUNK = 2000;
+
+  const ICON_CLASS_RE = /(^|[\s_-])(icon|icons|fa|fas|far|fal|fab|material-icons?|glyph|symbol)([\s_-]|$)/;
+  const ICON_FAMILY_RE = /fontawesome|material symbols|material icons|bootstrap-icons|remixicon|tabler-icons|lucide/;
 
   let settings = DEFAULTS;
   let targetSet = new Set();
+  let forceSite = false;
+  let siteFont = null;
   let observer = null;
   let pending = new Set();
   let scheduled = false;
-
-  // Ligature forcing must beat site author styles, including author !important.
-  // We therefore use reversible inline !important declarations only on elements
-  // that have already been selected for font replacement.
-  const originalLigatureStyles = new WeakMap();
-  const lastInternalStyle = new WeakMap();
+  let styleNeedsReposition = false;
+  let scanQueue = [];
+  let scanning = false;
 
   function normalizeFamily(name) {
     return name.trim().replace(/^["']|["']$/g, "").trim().toLowerCase();
@@ -105,6 +110,28 @@
     return parts.length ? normalizeFamily(parts[0]) : "";
   }
 
+  function normalizeDomain(value) {
+    let s = String(value || "").trim().toLowerCase();
+    s = s.replace(/^https?:\/\//, "").replace(/^\*\./, "").replace(/^www\./, "");
+    s = s.split("/")[0].split(":")[0];
+    return s;
+  }
+
+  // 返回 { force, font }：force 表示当前站点命中强制覆盖规则，
+  // font 为站点专属字体（空字符串表示沿用全局替换字体）。
+  function computeSiteState() {
+    const rules = settings.siteRules || [];
+    const host = (location.hostname || "").toLowerCase();
+    for (const rule of rules) {
+      const d = normalizeDomain(rule && rule.domain);
+      if (!d) continue;
+      if (host === d || host.endsWith("." + d)) {
+        return { force: true, font: String(rule.font || "").trim() };
+      }
+    }
+    return { force: false, font: "" };
+  }
+
   function looksLikeIconElement(el, family) {
     if (!settings.protectIcons) return false;
 
@@ -112,8 +139,8 @@
     const id = el.id || "";
     const signature = `${family} ${cls} ${id}`.toLowerCase();
 
-    return /(^|[\s_-])(icon|icons|fa|fas|far|fal|fab|material-icons?|glyph|symbol)([\s_-]|$)/.test(signature)
-      || /fontawesome|material symbols|material icons|bootstrap-icons|remixicon|tabler-icons|lucide/.test(signature)
+    return ICON_CLASS_RE.test(signature)
+      || ICON_FAMILY_RE.test(signature)
       || el.getAttribute("aria-hidden") === "true" && /icon|symbol|glyph/.test(signature);
   }
 
@@ -140,6 +167,13 @@
     return false;
   }
 
+  function ensureRootMark() {
+    const root = document.documentElement;
+    if (root && !root.hasAttribute(ROOT_MARK)) root.setAttribute(ROOT_MARK, "1");
+  }
+
+  // 替换规则挂在 html[data-sfs] 下提高特异性，避免被网站的
+  // CSS-in-JS 动态注入样式（如 ChatGPT 的 emotion）压掉。
   function ensureStyle() {
     let style = document.getElementById(STYLE_ID);
     if (!style) {
@@ -148,13 +182,13 @@
       (document.head || document.documentElement).appendChild(style);
     }
 
-    // Keep the stylesheet responsible only for font replacement.
-    // Standard ligatures are forced separately as inline !important so they
-    // can override site-level author rules when enabled.
+    const font = forceSite && siteFont ? siteFont : settings.replacement;
+    const rootSel = `html[${ROOT_MARK}]`;
+
     const descendantLigatures = settings.standardLigatures
       ? `
-        [${MARK}="1"],
-        [${MARK}="1"] * {
+        ${rootSel} [${MARK}="1"],
+        ${rootSel} [${MARK}="1"] * {
           font-variant-ligatures: common-ligatures !important;
           font-feature-settings: "liga" 1, "clig" 1 !important;
         }
@@ -163,10 +197,18 @@
 
     style.textContent = settings.enabled
       ? `
-        [${MARK}="1"] { font-family: ${settings.replacement} !important; }
+        ${rootSel} [${MARK}="1"] { font-family: ${font} !important; }
         ${descendantLigatures}
       `
       : "";
+  }
+
+  // 把扩展样式表挪回 head 末尾，保证同优先级下声明顺序靠后。
+  function ensureStylePosition() {
+    const style = document.getElementById(STYLE_ID);
+    if (style && document.head && style.parentNode === document.head) {
+      document.head.appendChild(style);
+    }
   }
 
   function unmarkAll() {
@@ -185,6 +227,9 @@
 
     const family = cs.fontFamily || "";
     if (isProtected(el, family)) return false;
+
+    // 站点强制覆盖：跳过首选字体命中名单的判断，保护规则仍然生效。
+    if (forceSite) return true;
 
     return targetSet.has(firstFamily(family));
   }
@@ -239,10 +284,9 @@
     return out;
   }
 
-  function scanSubtree(root) {
-    if (!(root instanceof Element) && root !== document) return;
-
-    const nodes = collectTextElements(root);
+  // 片内两阶段：先快照判断、再统一打标，避免同批内父元素先被替换
+  // 而污染子元素继承后的 font-family 判断。
+  function applyBatch(nodes) {
     const matches = [];
 
     for (const el of nodes) {
@@ -253,10 +297,61 @@
     for (const el of matches) applyReplacement(el);
   }
 
+  function scanSubtree(root) {
+    if (!(root instanceof Element) && root !== document) return;
+
+    const nodes = collectTextElements(root);
+    if (nodes.size <= SCAN_CHUNK) {
+      applyBatch(nodes);
+      return;
+    }
+
+    // 大子树分片处理，避免一次扫描阻塞主线程。
+    scanQueue.push(...nodes);
+    scheduleScan();
+  }
+
+  function scheduleScan() {
+    if (scanning) return;
+    scanning = true;
+
+    const step = () => {
+      if (scanQueue.length) {
+        applyBatch(scanQueue.splice(0, SCAN_CHUNK));
+        requestAnimationFrame(step);
+      } else {
+        scanning = false;
+      }
+    };
+
+    requestAnimationFrame(step);
+  }
+
   function flushPending() {
     scheduled = false;
-    const work = Array.from(pending);
+
+    if (!pending.size) return;
+
+    // 祖先去重：若节点位于另一个待处理节点内部，扫外层一次即可覆盖。
+    const work = [];
+    for (const node of pending) {
+      let p = node.parentElement;
+      let redundant = false;
+      while (p) {
+        if (pending.has(p)) {
+          redundant = true;
+          break;
+        }
+        p = p.parentElement;
+      }
+      if (!redundant) work.push(node);
+    }
     pending.clear();
+
+    if (styleNeedsReposition) {
+      styleNeedsReposition = false;
+      ensureStylePosition();
+    }
 
     for (const node of work) {
       if (node.isConnected) scanSubtree(node);
@@ -281,6 +376,8 @@
 
         for (const node of m.addedNodes) {
           if (node instanceof Element) {
+            const tag = node.tagName;
+            if (tag === "STYLE" || tag === "LINK") styleNeedsReposition = true;
             queue(node);
           } else if (node.nodeType === Node.TEXT_NODE && node.parentElement) {
             queue(node.parentElement);
@@ -300,6 +397,12 @@
     settings = { ...DEFAULTS, ...saved };
     targetSet = new Set((settings.targets || []).map(normalizeFamily).filter(Boolean));
 
+    const site = computeSiteState();
+    forceSite = site.force;
+    siteFont = site.font;
+
+    scanQueue = [];
+    ensureRootMark();
     ensureStyle();
     unmarkAll();
 
@@ -307,10 +410,11 @@
       scanSubtree(document);
       startObserver();
 
-      // Re-check after webfonts finish loading. This helps avoid decisions based
-      // on transient fallback fonts during initial page load.
+      // 页面存在 webfont 时，加载完成后重扫一次，纠正字体加载前后
+      // 站点脚本切换字体栈造成的漏判；无 webfont 则跳过。
       if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(() => {
+          if (document.fonts.size === 0) return;
           unmarkAll();
           scanSubtree(document);
         }).catch(() => {});

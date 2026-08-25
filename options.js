@@ -13,7 +13,8 @@ const DEFAULTS = {
   ],
   protectCode: true,
   protectIcons: true,
-  standardLigatures: false
+  standardLigatures: false,
+  siteRules: []
 };
 
 const TEXT = {
@@ -29,6 +30,12 @@ const TEXT = {
     targetsDesc: "每行一个字体族。只有元素的首选字体命中此名单时才会替换。",
     families: "个字体族",
     targetsHint: "默认只包含常见西文与简中系统 / UI 字体；Inter、Open Sans 等可能承担视觉设计的 WebFont 不在默认名单中。",
+    siteRulesTitle: "站点强制覆盖",
+    siteRulesDesc: "对指定站点跳过字体名单判断，直接强制替换为所选字体。",
+    addSite: "添加站点",
+    removeSite: "删除该站点",
+    siteFontPlaceholder: "留空使用全局替换字体",
+    siteRulesHint: "域名支持主域名与子域名，例如 chatgpt.com、*.example.com；字体留空则使用全局替换字体。代码与图标保护规则仍然生效。",
     protectionTitle: "保护规则",
     protectionDesc: "避免全局替换破坏代码区域或图标字体。",
     protectCode: "保护代码字体",
@@ -59,6 +66,12 @@ const TEXT = {
     targetsDesc: "One family per line. Replacement only happens when the element's first-choice family matches this list.",
     families: "families",
     targetsHint: "The default list focuses on common Western and Simplified Chinese system/UI fonts. Design-oriented webfonts such as Inter and Open Sans are intentionally excluded.",
+    siteRulesTitle: "Site force override",
+    siteRulesDesc: "Skip the font list check on these sites and force replacement.",
+    addSite: "Add site",
+    removeSite: "Remove this site",
+    siteFontPlaceholder: "Leave empty to use the global font",
+    siteRulesHint: "Domains match the main domain and subdomains, e.g. chatgpt.com, *.example.com. An empty font falls back to the global replacement font. Code and icon protection still applies.",
     protectionTitle: "Protection rules",
     protectionDesc: "Prevent global replacement from breaking code areas or icon fonts.",
     protectCode: "Protect code fonts",
@@ -115,6 +128,37 @@ function showStatus(message, type = "success") {
   }, 2400);
 }
 
+function addSiteRuleRow(rule = {}) {
+  const row = document.createElement("div");
+  row.className = "site-rule-row";
+  row.innerHTML = `
+    <input class="text-input rule-domain" type="text" spellcheck="false" placeholder="chatgpt.com" aria-label="Domain">
+    <input class="text-input rule-font" type="text" spellcheck="false" placeholder="${t("siteFontPlaceholder")}" aria-label="Font">
+    <button class="rule-remove" type="button" title="${t("removeSite")}" aria-label="${t("removeSite")}">×</button>
+  `;
+  row.querySelector(".rule-domain").value = rule.domain || "";
+  row.querySelector(".rule-font").value = rule.font || "";
+  row.querySelector(".rule-remove").addEventListener("click", () => {
+    row.remove();
+  });
+  $("siteRules").appendChild(row);
+}
+
+function renderSiteRules(rules) {
+  $("siteRules").innerHTML = "";
+  for (const rule of rules) addSiteRuleRow(rule);
+}
+
+function collectSiteRules() {
+  const rules = [];
+  for (const row of $("siteRules").querySelectorAll(".site-rule-row")) {
+    const domain = row.querySelector(".rule-domain").value.trim();
+    const font = row.querySelector(".rule-font").value.trim();
+    if (domain) rules.push({ domain, font });
+  }
+  return rules;
+}
+
 function fill(s) {
   $("enabled").checked = s.enabled;
   $("replacement").value = s.replacement;
@@ -122,6 +166,7 @@ function fill(s) {
   $("protectCode").checked = s.protectCode;
   $("protectIcons").checked = s.protectIcons;
   $("standardLigatures").checked = s.standardLigatures;
+  renderSiteRules(s.siteRules || []);
   updateCount();
   updatePreview();
 }
@@ -145,7 +190,8 @@ async function save() {
     targets: parseTargets(),
     protectCode: $("protectCode").checked,
     protectIcons: $("protectIcons").checked,
-    standardLigatures: $("standardLigatures").checked
+    standardLigatures: $("standardLigatures").checked,
+    siteRules: collectSiteRules()
   });
   showStatus(t("saved"));
 }
@@ -158,6 +204,7 @@ async function reset() {
 
 $("replacement").addEventListener("input", updatePreview);
 $("targets").addEventListener("input", updateCount);
+$("addSiteRule").addEventListener("click", () => addSiteRuleRow());
 $("save").addEventListener("click", save);
 $("reset").addEventListener("click", reset);
 
