@@ -204,7 +204,14 @@
   }
 
   // 把扩展样式表挪回 head 末尾，保证同优先级下声明顺序靠后。
+  // 限流：CSS-in-JS 站点（如 ChatGPT）会频繁插入 style 标签，
+  // 每次移动都会触发级联重算，节流避免持续抢占主线程。
+  let lastReposition = 0;
   function ensureStylePosition() {
+    const now = performance.now();
+    if (now - lastReposition < 500) return;
+    lastReposition = now;
+
     const style = document.getElementById(STYLE_ID);
     if (style && document.head && style.parentNode === document.head) {
       document.head.appendChild(style);
@@ -330,6 +337,11 @@
   function flushPending() {
     scheduled = false;
 
+    if (styleNeedsReposition) {
+      styleNeedsReposition = false;
+      ensureStylePosition();
+    }
+
     if (!pending.size) return;
 
     // 祖先去重：若节点位于另一个待处理节点内部，扫外层一次即可覆盖。
@@ -347,11 +359,6 @@
       if (!redundant) work.push(node);
     }
     pending.clear();
-
-    if (styleNeedsReposition) {
-      styleNeedsReposition = false;
-      ensureStylePosition();
-    }
 
     for (const node of work) {
       if (node.isConnected) scanSubtree(node);
@@ -410,12 +417,11 @@
       scanSubtree(document);
       startObserver();
 
-      // 页面存在 webfont 时，加载完成后重扫一次，纠正字体加载前后
-      // 站点脚本切换字体栈造成的漏判；无 webfont 则跳过。
+      // 页面存在 webfont 时，加载完成后补扫一次：只标记此前漏掉的元素，
+      // 不撤销已有标记，避免整页字体闪回；无 webfont 则跳过。
       if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(() => {
           if (document.fonts.size === 0) return;
-          unmarkAll();
           scanSubtree(document);
         }).catch(() => {});
       }
