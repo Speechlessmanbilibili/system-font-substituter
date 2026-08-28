@@ -14,13 +14,14 @@ const DEFAULTS = {
   protectCode: true,
   protectIcons: true,
   standardLigatures: false,
+  autoSpacing: false,
   siteRules: []
 };
 
 const TEXT = {
   "zh-CN": {
     pageTitle: "字体替换器",
-    pageSubtitle: "替换常见西文与简中系统 / UI 字体，并保留网站的设计字体、代码字体与图标字体。",
+    pageSubtitle: "替换常见西文与简中系统/UI 字体，并保留网站的设计字体、代码字体与图标字体。",
     enable: "启用全局替换",
     replacementTitle: "替换字体",
     replacementDesc: "填写本机字体的 CSS font-family。可以使用单个字体，也可以填写完整 fallback 链。",
@@ -29,13 +30,15 @@ const TEXT = {
     targetsTitle: "默认替换名单",
     targetsDesc: "每行一个字体族。只有元素的首选字体命中此名单时才会替换。",
     families: "个字体族",
-    targetsHint: "默认只包含常见西文与简中系统 / UI 字体；Inter、Open Sans 等可能承担视觉设计的 WebFont 不在默认名单中。",
+    targetsHint: "默认只包含常见西文与简中系统/UI 字体；Inter、Open Sans 等可能承担视觉设计的 WebFont 不在默认名单中。",
     siteRulesTitle: "站点强制覆盖",
     siteRulesDesc: "对指定站点跳过字体名单判断，直接强制替换为所选字体。",
     addSite: "添加站点",
     removeSite: "删除该站点",
     siteFontPlaceholder: "留空使用全局替换字体",
-    siteRulesHint: "域名支持主域名与子域名，例如 chatgpt.com、*.example.com；字体留空则使用全局替换字体。代码与图标保护规则仍然生效。",
+    siteAutoSpacing: "Auto Spacing",
+    siteAutoSpacingDesc: "为该站点强制开启 Auto Spacing",
+    siteRulesHint: "域名支持主域名与子域名，例如 chatgpt.com、*.example.com；字体留空则使用全局替换字体。可为每个站点单独开启 Auto Spacing，代码与图标保护规则仍然生效。",
     protectionTitle: "保护规则",
     protectionDesc: "避免全局替换破坏代码区域或图标字体。",
     protectCode: "保护代码字体",
@@ -44,6 +47,8 @@ const TEXT = {
     protectIconsDesc: "识别常见 Material Icons、Font Awesome 等图标字体",
     standardLigatures: "标准连字",
     standardLigaturesDesc: "仅对已被替换字体的文字强制开启 OpenType liga / clig，并覆盖网站的关闭设置；默认关闭",
+    autoSpacing: "Auto Spacing",
+    autoSpacingDesc: "对已被替换字体的文字强制启用 CSS text-autospace: normal，并覆盖网站设置；默认关闭",
     howItWorks: "工作方式",
     howItWorks1: "扩展逐个检查元素计算后的 font-family，不对整个页面强制指定同一个字体。",
     howItWorks2: "只有第一个字体族命中名单时才会替换；动态页面会继续检查新增内容。",
@@ -71,7 +76,9 @@ const TEXT = {
     addSite: "Add site",
     removeSite: "Remove this site",
     siteFontPlaceholder: "Leave empty to use the global font",
-    siteRulesHint: "Domains match the main domain and subdomains, e.g. chatgpt.com, *.example.com. An empty font falls back to the global replacement font. Code and icon protection still applies.",
+    siteAutoSpacing: "Auto Spacing",
+    siteAutoSpacingDesc: "Force Auto Spacing on this site",
+    siteRulesHint: "Domains match the main domain and subdomains, e.g. chatgpt.com, *.example.com. An empty font falls back to the global replacement font. Auto Spacing can be enabled per site. Code and icon protection still applies.",
     protectionTitle: "Protection rules",
     protectionDesc: "Prevent global replacement from breaking code areas or icon fonts.",
     protectCode: "Protect code fonts",
@@ -80,6 +87,8 @@ const TEXT = {
     protectIconsDesc: "Detect common icon fonts such as Material Icons and Font Awesome",
     standardLigatures: "Standard ligatures",
     standardLigaturesDesc: "Force OpenType liga/clig only on text whose font is replaced, overriding site-level disabling; off by default",
+    autoSpacing: "Auto Spacing",
+    autoSpacingDesc: "Force CSS text-autospace: normal on replaced text, overriding site styles; off by default",
     howItWorks: "How it works",
     howItWorks1: "The extension checks each element's computed font-family instead of forcing one font across the whole page.",
     howItWorks2: "Replacement happens only when the first family matches your list. Newly added dynamic content is checked as well.",
@@ -134,10 +143,18 @@ function addSiteRuleRow(rule = {}) {
   row.innerHTML = `
     <input class="text-input rule-domain" type="text" spellcheck="false" placeholder="chatgpt.com" aria-label="Domain">
     <input class="text-input rule-font" type="text" spellcheck="false" placeholder="${t("siteFontPlaceholder")}" aria-label="Font">
+    <label class="site-rule-toggle" title="${t("siteAutoSpacingDesc")}">
+      <span>${t("siteAutoSpacing")}</span>
+      <span class="switch">
+        <input class="rule-auto-spacing" type="checkbox" aria-label="${t("siteAutoSpacingDesc")}">
+        <span class="track" aria-hidden="true"></span>
+      </span>
+    </label>
     <button class="rule-remove" type="button" title="${t("removeSite")}" aria-label="${t("removeSite")}">×</button>
   `;
   row.querySelector(".rule-domain").value = rule.domain || "";
   row.querySelector(".rule-font").value = rule.font || "";
+  row.querySelector(".rule-auto-spacing").checked = rule.autoSpacing === true;
   row.querySelector(".rule-remove").addEventListener("click", () => {
     row.remove();
   });
@@ -154,7 +171,8 @@ function collectSiteRules() {
   for (const row of $("siteRules").querySelectorAll(".site-rule-row")) {
     const domain = row.querySelector(".rule-domain").value.trim();
     const font = row.querySelector(".rule-font").value.trim();
-    if (domain) rules.push({ domain, font });
+    const autoSpacing = row.querySelector(".rule-auto-spacing").checked;
+    if (domain) rules.push({ domain, font, autoSpacing });
   }
   return rules;
 }
@@ -166,6 +184,7 @@ function fill(s) {
   $("protectCode").checked = s.protectCode;
   $("protectIcons").checked = s.protectIcons;
   $("standardLigatures").checked = s.standardLigatures;
+  $("autoSpacing").checked = s.autoSpacing;
   renderSiteRules(s.siteRules || []);
   updateCount();
   updatePreview();
@@ -191,6 +210,7 @@ async function save() {
     protectCode: $("protectCode").checked,
     protectIcons: $("protectIcons").checked,
     standardLigatures: $("standardLigatures").checked,
+    autoSpacing: $("autoSpacing").checked,
     siteRules: collectSiteRules()
   });
   showStatus(t("saved"));

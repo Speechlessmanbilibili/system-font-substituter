@@ -55,6 +55,7 @@
     protectCode: true,
     protectIcons: true,
     standardLigatures: false,
+    autoSpacing: false,
     siteRules: []
   };
 
@@ -73,6 +74,7 @@
   let targetSet = new Set();
   let forceSite = false;
   let siteFont = null;
+  let siteAutoSpacing = false;
   let observer = null;
   let pending = new Set();
   let scheduled = false;
@@ -120,8 +122,8 @@
     return s;
   }
 
-  // 返回 { force, font }：force 表示当前站点命中强制覆盖规则，
-  // font 为站点专属字体（空字符串表示沿用全局替换字体）。
+  // 返回站点强制覆盖状态。font 为空表示沿用全局替换字体；
+  // autoSpacing 可在全局关闭时仅为该站点强制开启 Auto Spacing。
   function computeSiteState() {
     const rules = settings.siteRules || [];
     const host = (location.hostname || "").toLowerCase();
@@ -129,10 +131,14 @@
       const d = normalizeDomain(rule && rule.domain);
       if (!d) continue;
       if (host === d || host.endsWith("." + d)) {
-        return { force: true, font: String(rule.font || "").trim() };
+        return {
+          force: true,
+          font: String(rule.font || "").trim(),
+          autoSpacing: rule.autoSpacing === true
+        };
       }
     }
-    return { force: false, font: "" };
+    return { force: false, font: "", autoSpacing: false };
   }
 
   function looksLikeIconElement(el, family) {
@@ -198,11 +204,22 @@
       `
       : "";
 
+    const effectiveAutoSpacing = settings.autoSpacing || siteAutoSpacing;
+    const descendantAutoSpacing = effectiveAutoSpacing
+      ? `
+        ${rootSel} [${MARK}="1"],
+        ${rootSel} [${MARK}="1"] * {
+          text-autospace: normal !important;
+        }
+      `
+      : "";
+
     style.textContent = settings.enabled
       ? `
         ${rootSel} [${MARK}="1"] { font-family: ${font} !important; }
         ${rootSel} [${MARK}="1"]::placeholder { font-family: ${font} !important; }
         ${descendantLigatures}
+        ${descendantAutoSpacing}
       `
       : "";
   }
@@ -411,6 +428,7 @@
     const site = computeSiteState();
     forceSite = site.force;
     siteFont = site.font;
+    siteAutoSpacing = site.autoSpacing;
 
     scanQueue = [];
     ensureRootMark();

@@ -11,7 +11,7 @@
     <header class="page-header">
       <div>
         <h1 data-i18n="pageTitle">字体替换器</h1>
-        <p data-i18n="pageSubtitle">替换常见西文与简中系统 / UI 字体，并保留网站的设计字体、代码字体与图标字体。</p>
+        <p data-i18n="pageSubtitle">替换常见西文与简中系统/UI 字体，并保留网站的设计字体、代码字体与图标字体。</p>
       </div>
       <label class="toggle-line header-toggle">
         <span data-i18n="enable">启用</span>
@@ -47,7 +47,7 @@
           <span class="family-count"><span id="targetCount">0</span> <span data-i18n="families">个字体族</span></span>
         </div>
         <textarea id="targets" class="text-area code-input" rows="15" spellcheck="false" aria-label="Target font families"></textarea>
-        <p class="note" data-i18n="targetsHint">默认仅包含常见西文与简中系统 / UI 字体；可能用于视觉设计的 WebFont 不在默认名单中。</p>
+        <p class="note" data-i18n="targetsHint">默认仅包含常见西文与简中系统/UI 字体；可能用于视觉设计的 WebFont 不在默认名单中。</p>
       </section>
 
       <section class="setting-section vertical-section">
@@ -95,6 +95,16 @@
             </span>
             <span class="switch">
               <input id="standardLigatures" type="checkbox">
+              <span class="track" aria-hidden="true"></span>
+            </span>
+          </label>
+          <label class="rule-row">
+            <span>
+              <strong data-i18n="autoSpacing">Auto Spacing</strong>
+              <small data-i18n="autoSpacingDesc">对已被替换字体的文字强制启用 CSS text-autospace: normal，并覆盖网站设置</small>
+            </span>
+            <span class="switch">
+              <input id="autoSpacing" type="checkbox">
               <span class="track" aria-hidden="true"></span>
             </span>
           </label>

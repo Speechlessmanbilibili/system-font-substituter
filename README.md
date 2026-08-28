@@ -1,6 +1,6 @@
 # System Font Substituter
 
-一个面向 Chromium 的 Manifest V3 字体替换扩展。它会全局检查网页元素的 `font-family`，仅在首选字体命中默认名单时替换，从而尽量保留网站主动选择的设计字体、图标字体和代码字体。
+一个面向 Chromium 的 Manifest V3 字体替换扩展。它会全局检查网页元素的 `font-family`，仅在首选字体命中默认名单时替换，从而尽量保留网站主动选择的设计字体、图标字体和代码字体；还可对被替换文字强制开启 CSS Auto Spacing。
 
 ## 默认替换字体
 
@@ -12,7 +12,7 @@
 
 ## 默认目标
 
-默认只覆盖常见西文与简体中文系统 / UI 字体。名单包含 Windows、Apple、Android / Linux 常见系统字体以及微软雅黑、苹方、Noto Sans SC、思源黑体等简中 UI 字体。
+默认只覆盖常见西文与简体中文系统/UI 字体。名单包含 Windows、Apple、Android/Linux 常见系统字体以及微软雅黑、苹方、Noto Sans SC、思源黑体等简中 UI 字体。
 
 `Inter`、`Open Sans`、`Source Sans` 等可能由网站主动用于视觉设计的 WebFont 不在默认名单中。繁体中文、日文、韩文字体也不在默认名单中。
 
@@ -23,6 +23,12 @@
 在设置页可为指定站点配置「强制覆盖」规则：点击「添加站点」，左边填域名（支持主域名与子域名，如 `chatgpt.com`、`*.example.com`），右边可单独指定该站点使用的替换字体，留空则使用全局替换字体。
 
 强制覆盖的站点会跳过「首选字体命中名单」判断，所有文字元素直接替换；代码与图标保护规则仍然生效，避免破坏代码块和图标字体。
+
+每条站点规则还带有独立的 Auto Spacing 开关。开启后，即使全局 Auto Spacing 关闭，该站点被替换的文字仍会强制应用 `text-autospace: normal`。
+
+## Auto Spacing
+
+设置页可全局开启 Auto Spacing。启用后，扩展会对已被替换字体的文字及其后代强制应用 `text-autospace: normal !important`，覆盖网站自身设置；默认关闭。
 
 ## 安装
 
@@ -40,6 +46,12 @@
 - 使用 `MutationObserver` 跟踪动态页面。
 - WebFont 加载完成后会重新检查页面。
 - 浏览器受保护页面无法注入普通扩展。
+
+## v1.8.0
+
+- 新增全局 Auto Spacing 开关，对已替换文字强制应用 CSS `text-autospace: normal`。
+- 站点强制覆盖规则新增独立 Auto Spacing 开关，可只对指定站点开启。
+- 简体中文文案统一使用半角 `/`。
 
 ## 许可证
 
