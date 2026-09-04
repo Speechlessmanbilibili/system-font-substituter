@@ -1,9 +1,191 @@
 (() => {
   "use strict";
 
+  // 默认自定义 CSS：Apple UI Mix（SF Pro → PingFang SC → Microsoft YaHei）
+  // 的 @font-face 分段与全局字体栈。内容不含反引号与 ${，可安全内联。
+  const DEFAULT_CUSTOM_CSS = `/* =========================================================
+   Apple UI Mix
+   =========================================================
+
+   Western:      SF Pro → PingFang SC → Microsoft YaHei
+   CJK:          PingFang SC → Microsoft YaHei
+   共有标点:      PingFang SC    PUA: SF Pro（E000-F8FF）
+   直接 fallback（不参与 mix 构建）:
+   SF Pro / SF Arabic / SF Hebrew / SF Armenian / SF Georgian
+   → PingFang HK / TC / KR / JP → Microsoft YaHei
+   → 霞鹜新晰黑 屏幕阅读版 补全
+   其余字体族用于兼容 B 站原有字体栈。unicode-range 按本机字体
+   源文件实测（fontTools）划定。
+   ========================================================= */
+
+/* ======== Western / Latin（SF Pro 优先） ======== */
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("SF Pro Ultralight"), local("SF Pro Display Ultralight"), local("PingFang SC Ultralight"), local("Microsoft YaHei Light");
+  font-weight: 100;
+  unicode-range: U+0020-00B6, U+00B8-024F, U+0250-02AF, U+0370-03FF, U+0400-04FF, U+1E00-1EFF, U+2070-209F, U+20A0-20BF, U+E000-F8FF;
+}
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("SF Pro Thin"), local("SF Pro Display Thin"), local("PingFang SC Thin"), local("Microsoft YaHei Light");
+  font-weight: 200;
+  unicode-range: U+0020-00B6, U+00B8-024F, U+0250-02AF, U+0370-03FF, U+0400-04FF, U+1E00-1EFF, U+2070-209F, U+20A0-20BF, U+E000-F8FF;
+}
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("SF Pro Light"), local("SF Pro Display Light"), local("PingFang SC Light"), local("Microsoft YaHei Light");
+  font-weight: 300;
+  unicode-range: U+0020-00B6, U+00B8-024F, U+0250-02AF, U+0370-03FF, U+0400-04FF, U+1E00-1EFF, U+2070-209F, U+20A0-20BF, U+E000-F8FF;
+}
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("SF Pro"), local("SF Pro Display"), local("PingFang SC"), local("Microsoft YaHei");
+  font-weight: 400;
+  unicode-range: U+0020-00B6, U+00B8-024F, U+0250-02AF, U+0370-03FF, U+0400-04FF, U+1E00-1EFF, U+2070-209F, U+20A0-20BF, U+E000-F8FF;
+}
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("SF Pro Medium"), local("SF Pro Display Medium"), local("PingFang SC Medium"), local("Microsoft YaHei");
+  font-weight: 500;
+  unicode-range: U+0020-00B6, U+00B8-024F, U+0250-02AF, U+0370-03FF, U+0400-04FF, U+1E00-1EFF, U+2070-209F, U+20A0-20BF, U+E000-F8FF;
+}
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("SF Pro Semibold"), local("SF Pro Display Semibold"), local("PingFang SC Semibold"), local("Microsoft YaHei Bold");
+  font-weight: 600;
+  unicode-range: U+0020-00B6, U+00B8-024F, U+0250-02AF, U+0370-03FF, U+0400-04FF, U+1E00-1EFF, U+2070-209F, U+20A0-20BF, U+E000-F8FF;
+}
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("SF Pro Bold"), local("SF Pro Display Bold"), local("PingFang SC Semibold"), local("Microsoft YaHei Bold");
+  font-weight: 700;
+  unicode-range: U+0020-00B6, U+00B8-024F, U+0250-02AF, U+0370-03FF, U+0400-04FF, U+1E00-1EFF, U+2070-209F, U+20A0-20BF, U+E000-F8FF;
+}
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("SF Pro Heavy"), local("SF Pro Display Heavy"), local("PingFang SC Semibold"), local("Microsoft YaHei Bold");
+  font-weight: 800;
+  unicode-range: U+0020-00B6, U+00B8-024F, U+0250-02AF, U+0370-03FF, U+0400-04FF, U+1E00-1EFF, U+2070-209F, U+20A0-20BF, U+E000-F8FF;
+}
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("SF Pro Black"), local("SF Pro Display Black"), local("PingFang SC Semibold"), local("Microsoft YaHei Bold");
+  font-weight: 900;
+  unicode-range: U+0020-00B6, U+00B8-024F, U+0250-02AF, U+0370-03FF, U+0400-04FF, U+1E00-1EFF, U+2070-209F, U+20A0-20BF, U+E000-F8FF;
+}
+
+
+/* ======== Chinese / CJK（苹方优先，共有标点走苹方） ======== */
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("PingFang SC Ultralight"), local("Microsoft YaHei Light");
+  font-weight: 100;
+  unicode-range: U+00B7, U+2010-2016, U+2018-2019, U+201C-201D, U+2020-2027, U+203B, U+2103, U+2160-217F, U+2460-24FF, U+2208, U+2229-222A, U+2266-2267, U+226E-226F, U+22EF, U+2E80-2FFF, U+3000-303F, U+3105-312F, U+3300-33FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
+}
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("PingFang SC Thin"), local("Microsoft YaHei Light");
+  font-weight: 200;
+  unicode-range: U+00B7, U+2010-2016, U+2018-2019, U+201C-201D, U+2020-2027, U+203B, U+2103, U+2160-217F, U+2460-24FF, U+2208, U+2229-222A, U+2266-2267, U+226E-226F, U+22EF, U+2E80-2FFF, U+3000-303F, U+3105-312F, U+3300-33FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
+}
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("PingFang SC Light"), local("Microsoft YaHei Light");
+  font-weight: 300;
+  unicode-range: U+00B7, U+2010-2016, U+2018-2019, U+201C-201D, U+2020-2027, U+203B, U+2103, U+2160-217F, U+2460-24FF, U+2208, U+2229-222A, U+2266-2267, U+226E-226F, U+22EF, U+2E80-2FFF, U+3000-303F, U+3105-312F, U+3300-33FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
+}
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("PingFang SC"), local("Microsoft YaHei");
+  font-weight: 400;
+  unicode-range: U+00B7, U+2010-2016, U+2018-2019, U+201C-201D, U+2020-2027, U+203B, U+2103, U+2160-217F, U+2460-24FF, U+2208, U+2229-222A, U+2266-2267, U+226E-226F, U+22EF, U+2E80-2FFF, U+3000-303F, U+3105-312F, U+3300-33FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
+}
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("PingFang SC Medium"), local("Microsoft YaHei");
+  font-weight: 500;
+  unicode-range: U+00B7, U+2010-2016, U+2018-2019, U+201C-201D, U+2020-2027, U+203B, U+2103, U+2160-217F, U+2460-24FF, U+2208, U+2229-222A, U+2266-2267, U+226E-226F, U+22EF, U+2E80-2FFF, U+3000-303F, U+3105-312F, U+3300-33FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
+}
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("PingFang SC Semibold"), local("Microsoft YaHei Bold");
+  font-weight: 600 900;
+  unicode-range: U+00B7, U+2010-2016, U+2018-2019, U+201C-201D, U+2020-2027, U+203B, U+2103, U+2160-217F, U+2460-24FF, U+2208, U+2229-222A, U+2266-2267, U+226E-226F, U+22EF, U+2E80-2FFF, U+3000-303F, U+3105-312F, U+3300-33FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
+}
+
+
+/* =========================================================
+   Global
+   ========================================================= */
+
+html,
+body {
+  font-family:
+    "Apple UI Mix",
+
+    /* 直接 fallback（不参与 mix） */
+    "SF Pro",
+    "SF Arabic",
+    "SF Hebrew",
+    "SF Armenian",
+    "SF Georgian",
+    "PingFang HK",
+    "PingFang TC",
+    "PingFang KR",
+    "PingFang JP",
+
+    /* 真正的 fallback */
+    "Microsoft YaHei",
+    "霞鹜新晰黑 屏幕阅读版 补全",
+
+    /* 以下主要用于兼容 B 站原有字体栈 */
+    "Em Dash Bridge",
+    "HarmonyOS Sans SC",
+    CJKEmDash,
+    Numbers,
+    Onest,
+    ShangguSansSCVF,
+    -apple-system,
+    BlinkMacSystemFont,
+    InterVariable,
+    Inter,
+    "Segoe UI",
+    Cantarell,
+    "Noto Sans",
+    "Roboto Flex",
+    Roboto,
+    sans-serif,
+    ui-sans-serif,
+    system-ui,
+    "Apple Color Emoji",
+    "Twemoji Mozilla",
+    "Noto Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol",
+    emoji !important;
+
+  text-autospace: normal !important;
+}
+`;
+
   const DEFAULTS = {
     enabled: true,
-    replacement: '"CJK Punct Bridge", "Hanken Grotesk", "HarmonyOS Sans SC"',
+    replacement: '"Em Dash Bridge", "HarmonyOS Sans SC", "Noto Sans SC", "霞鹜新晰黑 屏幕阅读版 补全"',
     targets: [
     "-apple-system-body",
     "ui-sans-serif",
@@ -56,13 +238,31 @@
     protectIcons: true,
     standardLigatures: false,
     autoSpacing: false,
+    customCSSOn: false,
+    customCSS: DEFAULT_CUSTOM_CSS,
     siteRules: []
   };
 
   const MARK = "data-sfs-replaced";
   const ROOT_MARK = "data-sfs";
   const STYLE_ID = "sfs-style";
+  const CUSTOM_STYLE_ID = "sfs-custom-style";
   const SCAN_CHUNK = 2000;
+
+  // 站点规则可三态覆盖的功能项："on" / "off" 为强制开关，其余值跟随全局。
+  const SITE_OVERRIDE_KEYS = [
+    "protectCode",
+    "protectIcons",
+    "standardLigatures",
+    "autoSpacing",
+    "customCSSOn"
+  ];
+
+  let settings = DEFAULTS;
+  let targetSet = new Set();
+  let forceSite = false;
+  let siteFont = null;
+  let siteOverrides = {};
 
   const ICON_CLASS_RE = /(^|[\s_-])(icon|icons|fa|fas|far|fal|fab|material-icons?|glyph|symbol)([\s_-]|$)/;
   const ICON_FAMILY_RE = /fontawesome|material symbols|material icons|bootstrap-icons|remixicon|tabler-icons|lucide/;
@@ -70,11 +270,6 @@
   // 同样展示字体），contenteditable 区域初始无文本节点时尤其需要。
   const EDITABLE_SELECTOR = "input, textarea, select, button, [contenteditable]:not([contenteditable='false'])";
 
-  let settings = DEFAULTS;
-  let targetSet = new Set();
-  let forceSite = false;
-  let siteFont = null;
-  let siteAutoSpacing = false;
   let observer = null;
   let pending = new Set();
   let scheduled = false;
@@ -122,8 +317,16 @@
     return s;
   }
 
+  // 归一化站点规则里的三态覆盖值。旧版本存的是布尔值：
+  // true 视为强制开启，false / 缺省视为跟随全局。
+  function ruleOverride(value) {
+    if (value === "on" || value === true) return "on";
+    if (value === "off") return "off";
+    return "";
+  }
+
   // 返回站点强制覆盖状态。font 为空表示沿用全局替换字体；
-  // autoSpacing 可在全局关闭时仅为该站点强制开启 Auto Spacing。
+  // overrides 内各键为 "" / "on" / "off"，可对单个功能强制开关或放行全局。
   function computeSiteState() {
     const rules = settings.siteRules || [];
     const host = (location.hostname || "").toLowerCase();
@@ -131,14 +334,28 @@
       const d = normalizeDomain(rule && rule.domain);
       if (!d) continue;
       if (host === d || host.endsWith("." + d)) {
+        const overrides = {};
+        for (const key of SITE_OVERRIDE_KEYS) {
+          overrides[key] = ruleOverride(rule && rule[key]);
+        }
         return {
           force: true,
           font: String(rule.font || "").trim(),
-          autoSpacing: rule.autoSpacing === true
+          overrides
         };
       }
     }
-    return { force: false, font: "", autoSpacing: false };
+    return { force: false, font: "", overrides: {} };
+  }
+
+  // 把站点覆盖落到工作副本上：settings 在每次 loadSettings 时都会
+  // 从存储重建，这里的改写不会跨会话残留。
+  function applySiteOverrides() {
+    for (const key of SITE_OVERRIDE_KEYS) {
+      const v = siteOverrides[key];
+      if (v === "on") settings[key] = true;
+      else if (v === "off") settings[key] = false;
+    }
   }
 
   function looksLikeIconElement(el, family) {
@@ -204,8 +421,7 @@
       `
       : "";
 
-    const effectiveAutoSpacing = settings.autoSpacing || siteAutoSpacing;
-    const descendantAutoSpacing = effectiveAutoSpacing
+    const descendantAutoSpacing = settings.autoSpacing
       ? `
         ${rootSel} [${MARK}="1"],
         ${rootSel} [${MARK}="1"] * {
@@ -224,7 +440,31 @@
       : "";
   }
 
-  // 把扩展样式表挪回 head 末尾，保证同优先级下声明顺序靠后。
+  // 自定义 CSS 与替换样式相互独立，但始终注入在扩展自身样式之后：
+  // 同优先级冲突（替换字体、标准连字、Auto Spacing 等）以自定义 CSS 为准。
+  // 跟随全局启用开关，也可被站点规则按站点单独开关；空内容不注入。
+  function ensureCustomStyle() {
+    const css = settings.enabled && settings.customCSSOn
+      ? String(settings.customCSS || "")
+      : "";
+
+    let style = document.getElementById(CUSTOM_STYLE_ID);
+
+    if (!css.trim()) {
+      if (style) style.remove();
+      return;
+    }
+
+    if (!style) {
+      style = document.createElement("style");
+      style.id = CUSTOM_STYLE_ID;
+    }
+    if (style.textContent !== css) style.textContent = css;
+    (document.head || document.documentElement).appendChild(style);
+  }
+
+  // 把扩展样式表挪回 head 末尾，保证同优先级下声明顺序靠后；
+  // 自定义样式压轴，冲突时优先于扩展自身规则。
   // 限流：CSS-in-JS 站点（如 ChatGPT）会频繁插入 style 标签，
   // 每次移动都会触发级联重算，节流避免持续抢占主线程。
   let lastReposition = 0;
@@ -233,9 +473,12 @@
     if (now - lastReposition < 500) return;
     lastReposition = now;
 
-    const style = document.getElementById(STYLE_ID);
-    if (style && document.head && style.parentNode === document.head) {
-      document.head.appendChild(style);
+    if (!document.head) return;
+    for (const id of [STYLE_ID, CUSTOM_STYLE_ID]) {
+      const style = document.getElementById(id);
+      if (style && style.parentNode === document.head) {
+        document.head.appendChild(style);
+      }
     }
   }
 
@@ -428,11 +671,13 @@
     const site = computeSiteState();
     forceSite = site.force;
     siteFont = site.font;
-    siteAutoSpacing = site.autoSpacing;
+    siteOverrides = site.overrides;
+    applySiteOverrides();
 
     scanQueue = [];
     ensureRootMark();
     ensureStyle();
+    ensureCustomStyle();
     unmarkAll();
 
     if (settings.enabled) {

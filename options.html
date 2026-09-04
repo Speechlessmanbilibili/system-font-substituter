@@ -111,12 +111,34 @@
         </div>
       </section>
 
+      <section class="setting-section vertical-section">
+        <div class="section-title-row">
+          <div class="section-copy">
+            <h2 data-i18n="customCSSTitle">自定义 CSS</h2>
+            <p data-i18n="customCSSDesc">向页面注入自定义样式，可用于 @font-face、字体栈或全局排版；跟随全局启用开关。</p>
+          </div>
+          <label class="toggle-line">
+            <span data-i18n="customCSSToggle">插入自定义 CSS</span>
+            <span class="switch">
+              <input id="customCSSOn" type="checkbox">
+              <span class="track" aria-hidden="true"></span>
+            </span>
+          </label>
+        </div>
+        <textarea id="customCSS" class="text-area code-input custom-css-input" rows="16" spellcheck="false" aria-label="Custom CSS"></textarea>
+        <div class="custom-css-actions">
+          <button id="resetCustomCSS" class="button secondary" type="button" data-i18n="customCSSReset">恢复默认内容</button>
+        </div>
+        <p class="note" data-i18n="customCSSHint">自定义 CSS 始终注入在扩展自身样式之后：与替换字体、标准连字、Auto Spacing 等扩展规则冲突时，以自定义 CSS 为准；留空则不注入。</p>
+      </section>
+
       <details class="details-section">
         <summary data-i18n="howItWorks">工作方式</summary>
         <div class="details-copy">
           <p data-i18n="howItWorks1">扩展逐个检查元素计算后的 font-family，不对整个页面强制指定同一个字体。</p>
           <p data-i18n="howItWorks2">只有第一个字体族命中名单时才会替换；动态页面会继续检查新增内容。</p>
           <p data-i18n="howItWorks3">edge://、chrome://、扩展商店等浏览器受保护页面无法注入普通扩展。</p>
+          <p data-i18n="howItWorks4">自定义 CSS 在扩展样式之后注入，与替换字体、连字、Auto Spacing 等扩展规则冲突时以自定义 CSS 为准。</p>
         </div>
       </details>
     </div>

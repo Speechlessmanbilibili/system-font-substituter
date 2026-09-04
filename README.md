@@ -1,11 +1,11 @@
 # System Font Substituter
 
-一个面向 Chromium 的 Manifest V3 字体替换扩展。它会全局检查网页元素的 `font-family`，仅在首选字体命中默认名单时替换，从而尽量保留网站主动选择的设计字体、图标字体和代码字体；还可对被替换文字强制开启 CSS Auto Spacing。
+一个面向 Chromium 的 Manifest V3 字体替换扩展。它会全局检查网页元素的 `font-family`，仅在首选字体命中默认名单时替换，从而尽量保留网站主动选择的设计字体、图标字体和代码字体；还可对被替换文字强制开启 CSS Auto Spacing，或向页面注入自定义 CSS。
 
 ## 默认替换字体
 
 ```css
-"CJK Punct Bridge", "Hanken Grotesk", "HarmonyOS Sans SC"
+"Em Dash Bridge", "HarmonyOS Sans SC", "Noto Sans SC", "霞鹜新晰黑 屏幕阅读版 补全"
 ```
 
 适合本机已经安装上述字体的环境。可在设置页自由修改。
@@ -24,11 +24,17 @@
 
 强制覆盖的站点会跳过「首选字体命中名单」判断，所有文字元素直接替换；代码与图标保护规则仍然生效，避免破坏代码块和图标字体。
 
-每条站点规则还带有独立的 Auto Spacing 开关。开启后，即使全局 Auto Spacing 关闭，该站点被替换的文字仍会强制应用 `text-autospace: normal`。
+每条站点规则还支持三态覆盖：展开规则后，可对保护代码字体、保护图标字体、标准连字、Auto Spacing、自定义 CSS 分别选择「跟随全局 / 开启 / 关闭」。选择「关闭」后，即使全局开启，该站点也不会应用对应功能；选择「跟随全局」时完全使用全局设置。
 
 ## Auto Spacing
 
 设置页可全局开启 Auto Spacing。启用后，扩展会对已被替换字体的文字及其后代强制应用 `text-autospace: normal !important`，覆盖网站自身设置；默认关闭。
+
+## 自定义 CSS
+
+设置页可向页面注入自定义 CSS，默认关闭，内置一套 Apple UI Mix 模板作为起点。模板的 `@font-face` 分段与 unicode-range 按本机字体源文件实测（fontTools）划定：西文命中 SF Pro，中文命中苹方，中西文共有的标点符号交给苹方，PUA（E000-F8FF，含 Apple 标志）交给 SF Pro。mix 未覆盖的文种不参与其构建，走直接 fallback：SF Arabic / SF Hebrew / SF Armenian / SF Georgian 与 PingFang HK / TC / KR / JP，再落到 Microsoft YaHei 与霞鹜新晰黑。注入跟随全局启用开关，也可在站点规则中按站点单独开启或关闭；内容留空则不注入。
+
+自定义 CSS 始终注入在扩展自身样式之后：与「替换字体」「标准连字」「Auto Spacing」等扩展规则冲突时，以自定义 CSS 为准。
 
 ## 安装
 
@@ -46,6 +52,13 @@
 - 使用 `MutationObserver` 跟踪动态页面。
 - WebFont 加载完成后会重新检查页面。
 - 浏览器受保护页面无法注入普通扩展。
+
+## v1.9.0
+
+- 新增「自定义 CSS」：可向所有页面注入自定义样式，默认关闭；内置 Apple UI Mix 模板（SF Pro → PingFang SC → Microsoft YaHei），unicode-range 按本机字体源文件实测划定，mix 未覆盖的文种以直接 fallback 兜底（SF Arabic / Hebrew / Armenian / Georgian 与 PingFang HK / TC / KR / JP）。
+- 自定义 CSS 在扩展自身样式之后注入，与替换字体、标准连字、Auto Spacing 等扩展规则冲突时以自定义 CSS 为准。
+- 站点强制覆盖升级为三态覆盖：每条规则可对保护代码字体、保护图标字体、标准连字、Auto Spacing、自定义 CSS 单独选择「跟随全局 / 开启 / 关闭」，不再只能单向强制开启 Auto Spacing。
+- 默认替换字体改为 `"Em Dash Bridge", "HarmonyOS Sans SC", "Noto Sans SC", "霞鹜新晰黑 屏幕阅读版 补全"`。
 
 ## v1.8.0
 
