@@ -109,7 +109,7 @@
 
 @font-face {
   font-family: "Apple UI Mix";
-  src: local("PingFang SC"), local("Microsoft YaHei");
+  src: local("PingFang SC Regular"), local("PingFangSC-Regular"), local("Microsoft YaHei");
   font-weight: 400;
   unicode-range: U+00B7, U+2010-2016, U+2018-2019, U+201C-201D, U+2020-2027, U+203B, U+2103, U+2160-217F, U+2460-24FF, U+2208, U+2229-222A, U+2266-2267, U+226E-226F, U+22EF, U+2E80-2FFF, U+3000-303F, U+3105-312F, U+3300-33FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
 }
@@ -134,7 +134,9 @@
    ========================================================= */
 
 html,
-body {
+body,
+[data-sfs] [data-sfs-replaced="1"],
+[data-sfs] [data-sfs-replaced="1"]::placeholder {
   font-family:
     "Apple UI Mix",
 
@@ -411,6 +413,16 @@ body {
     const font = forceSite && siteFont ? siteFont : settings.replacement;
     const rootSel = `html[${ROOT_MARK}]`;
 
+    // 自定义 CSS 开启时由它接管页面字体：替换链（含 ::placeholder）整体
+    // 失效，标记仅保留给标准连字与 Auto Spacing 使用；关闭时恢复替换链。
+    const chainActive = settings.enabled && !settings.customCSSOn;
+    const chainRules = chainActive
+      ? `
+        ${rootSel} [${MARK}="1"] { font-family: ${font} !important; }
+        ${rootSel} [${MARK}="1"]::placeholder { font-family: ${font} !important; }
+      `
+      : "";
+
     const descendantLigatures = settings.standardLigatures
       ? `
         ${rootSel} [${MARK}="1"],
@@ -432,17 +444,15 @@ body {
 
     style.textContent = settings.enabled
       ? `
-        ${rootSel} [${MARK}="1"] { font-family: ${font} !important; }
-        ${rootSel} [${MARK}="1"]::placeholder { font-family: ${font} !important; }
+        ${chainRules}
         ${descendantLigatures}
         ${descendantAutoSpacing}
       `
       : "";
   }
 
-  // 自定义 CSS 与替换样式相互独立，但始终注入在扩展自身样式之后：
-  // 同优先级冲突（替换字体、标准连字、Auto Spacing 等）以自定义 CSS 为准。
-  // 跟随全局启用开关，也可被站点规则按站点单独开关；空内容不注入。
+  // 自定义 CSS 开启时接管页面字体（替换链自动失效），始终注入在扩展自身
+  // 样式之后；跟随全局启用开关，也可被站点规则按站点单独开关；空内容不注入。
   function ensureCustomStyle() {
     const css = settings.enabled && settings.customCSSOn
       ? String(settings.customCSS || "")

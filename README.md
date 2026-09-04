@@ -34,7 +34,7 @@
 
 设置页可向页面注入自定义 CSS，默认关闭，内置一套 Apple UI Mix 模板作为起点。模板的 `@font-face` 分段与 unicode-range 按本机字体源文件实测（fontTools）划定：西文命中 SF Pro，中文命中苹方，中西文共有的标点符号交给苹方，PUA（E000-F8FF，含 Apple 标志）交给 SF Pro。mix 未覆盖的文种不参与其构建，走直接 fallback：SF Arabic / SF Hebrew / SF Armenian / SF Georgian 与 PingFang HK / TC / KR / JP，再落到 Microsoft YaHei 与霞鹜新晰黑。注入跟随全局启用开关，也可在站点规则中按站点单独开启或关闭；内容留空则不注入。
 
-自定义 CSS 始终注入在扩展自身样式之后：与「替换字体」「标准连字」「Auto Spacing」等扩展规则冲突时，以自定义 CSS 为准。
+自定义 CSS 开启时接管替换：替换字体链自动失效，扩展照常检测并标记命中原名单的元素（代码与图标保护规则不变），这些元素及其占位文字改用自定义 CSS 的字体栈渲染；标准连字与 Auto Spacing 仍按各自开关作用于标记元素。关闭自定义 CSS 时替换链恢复。
 
 ## 安装
 
@@ -52,6 +52,12 @@
 - 使用 `MutationObserver` 跟踪动态页面。
 - WebFont 加载完成后会重新检查页面。
 - 浏览器受保护页面无法注入普通扩展。
+
+## v1.9.1
+
+- 自定义 CSS 开启时接管替换：替换字体链自动失效，扩展照常检测并标记命中原名单的元素（代码与图标保护规则不变），这些元素及其占位文字改用自定义 CSS 的字体栈渲染；关闭自定义 CSS 时替换链恢复。
+- 模板全局规则选择器从 `html, body` 扩展到被标记元素（`[data-sfs] [data-sfs-replaced="1"]`），不再依赖 body 继承。
+- 修复苹方 Regular 的 `local()` 命中：`@font-face` 的 `local()` 按**全名 / PostScript 名**匹配，族名 `"PingFang SC"`（全名为 `"PingFang SC Regular"`）无法命中，导致 400 字重的中文面悄悄回落雅黑、弯引号变成几何斜块；现改用全名并补充 PS 名 `PingFangSC-Regular`。
 
 ## v1.9.0
 

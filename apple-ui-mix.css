@@ -104,7 +104,7 @@
 
 @font-face {
   font-family: "Apple UI Mix";
-  src: local("PingFang SC"), local("Microsoft YaHei");
+  src: local("PingFang SC Regular"), local("PingFangSC-Regular"), local("Microsoft YaHei");
   font-weight: 400;
   unicode-range: U+00B7, U+2010-2016, U+2018-2019, U+201C-201D, U+2020-2027, U+203B, U+2103, U+2160-217F, U+2460-24FF, U+2208, U+2229-222A, U+2266-2267, U+226E-226F, U+22EF, U+2E80-2FFF, U+3000-303F, U+3105-312F, U+3300-33FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
 }
@@ -129,7 +129,9 @@
    ========================================================= */
 
 html,
-body {
+body,
+[data-sfs] [data-sfs-replaced="1"],
+[data-sfs] [data-sfs-replaced="1"]::placeholder {
   font-family:
     "Apple UI Mix",
 

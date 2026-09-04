@@ -105,7 +105,7 @@ const DEFAULT_CUSTOM_CSS = `/* =================================================
 
 @font-face {
   font-family: "Apple UI Mix";
-  src: local("PingFang SC"), local("Microsoft YaHei");
+  src: local("PingFang SC Regular"), local("PingFangSC-Regular"), local("Microsoft YaHei");
   font-weight: 400;
   unicode-range: U+00B7, U+2010-2016, U+2018-2019, U+201C-201D, U+2020-2027, U+203B, U+2103, U+2160-217F, U+2460-24FF, U+2208, U+2229-222A, U+2266-2267, U+226E-226F, U+22EF, U+2E80-2FFF, U+3000-303F, U+3105-312F, U+3300-33FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
 }
@@ -130,7 +130,9 @@ const DEFAULT_CUSTOM_CSS = `/* =================================================
    ========================================================= */
 
 html,
-body {
+body,
+[data-sfs] [data-sfs-replaced="1"],
+[data-sfs] [data-sfs-replaced="1"]::placeholder {
   font-family:
     "Apple UI Mix",
 
@@ -231,7 +233,7 @@ const TEXT = {
     customCSSDesc: "向页面注入自定义样式，可用于 @font-face、字体栈或全局排版；跟随全局启用开关，默认关闭。",
     customCSSToggle: "插入自定义 CSS",
     customCSSReset: "恢复默认内容",
-    customCSSHint: "自定义 CSS 始终注入在扩展自身样式之后：与替换字体、标准连字、Auto Spacing 等扩展规则冲突时，以自定义 CSS 为准；留空则不注入。站点强制覆盖中也可按站点单独开关。",
+    customCSSHint: "开启时由自定义 CSS 接管页面字体，替换字体链自动失效（标记逻辑仅保留给标准连字与 Auto Spacing）；始终注入在扩展自身样式之后，站点强制覆盖中也可按站点单独开关。留空则不注入、替换链恢复生效。",
     cssTooLarge: "自定义 CSS 过大，未能保存（其余设置已保存；同步存储单条上限约 8KB）",
     saveFailed: "保存失败，请重试",
     protectionTitle: "保护规则",
@@ -248,7 +250,7 @@ const TEXT = {
     howItWorks1: "扩展逐个检查元素计算后的 font-family，不对整个页面强制指定同一个字体。",
     howItWorks2: "只有第一个字体族命中名单时才会替换；动态页面会继续检查新增内容。",
     howItWorks3: "edge://、chrome://、扩展商店等浏览器受保护页面无法注入普通扩展。",
-    howItWorks4: "自定义 CSS 在扩展样式之后注入，与替换字体、连字、Auto Spacing 等扩展规则冲突时以自定义 CSS 为准。",
+    howItWorks4: "自定义 CSS 开启时替换链自动失效，页面字体由自定义 CSS 接管；关闭时恢复替换链。",
     reset: "恢复默认",
     save: "保存设置",
     saved: "已保存，已打开的网页会自动更新",
@@ -281,7 +283,7 @@ const TEXT = {
     customCSSDesc: "Inject custom styles into pages for @font-face, font stacks, or global typography; follows the global enable switch, off by default.",
     customCSSToggle: "Insert custom CSS",
     customCSSReset: "Restore default content",
-    customCSSHint: "Custom CSS is always injected after the extension's own styles: when it conflicts with the replacement font, standard ligatures, Auto Spacing or other extension rules, the custom CSS wins. Leave empty to inject nothing. It can also be toggled per site in the site rules.",
+    customCSSHint: "When enabled, custom CSS takes over page typography and the replacement chain is suspended (marking is kept only for standard ligatures and Auto Spacing). It is always injected after the extension's own styles and can be toggled per site in the site rules. Leave empty to inject nothing and restore the chain.",
     cssTooLarge: "Custom CSS is too large to save (other settings were saved; the per-item sync storage limit is about 8KB)",
     saveFailed: "Save failed, please try again",
     protectionTitle: "Protection rules",
@@ -298,7 +300,7 @@ const TEXT = {
     howItWorks1: "The extension checks each element's computed font-family instead of forcing one font across the whole page.",
     howItWorks2: "Replacement happens only when the first family matches your list. Newly added dynamic content is checked as well.",
     howItWorks3: "Protected browser pages such as edge://, chrome:// and extension stores do not allow normal extension injection.",
-    howItWorks4: "Custom CSS is injected after the extension's styles and wins conflicts with replacement, ligature, or Auto Spacing rules.",
+    howItWorks4: "Enabling custom CSS suspends the replacement chain and lets it take over page typography; disabling restores the chain.",
     reset: "Restore defaults",
     save: "Save settings",
     saved: "Saved. Open pages will update automatically.",
