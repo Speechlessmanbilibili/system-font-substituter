@@ -56,8 +56,11 @@
 ## v1.9.1
 
 - 自定义 CSS 开启时接管替换：替换字体链自动失效，扩展照常检测并标记命中原名单的元素（代码与图标保护规则不变），这些元素及其占位文字改用自定义 CSS 的字体栈渲染；关闭自定义 CSS 时替换链恢复。
-- 模板全局规则选择器从 `html, body` 扩展到被标记元素（`[data-sfs] [data-sfs-replaced="1"]`），不再依赖 body 继承。
+- 模板全局规则选择器从 `html, body` 扩展到被标记元素（`[data-sfs] [data-sfs-replaced="1"]`），不再依赖 body 继承，并对被接管元素归一 `font-variation-settings`。
 - 修复苹方 Regular 的 `local()` 命中：`@font-face` 的 `local()` 按**全名 / PostScript 名**匹配，族名 `"PingFang SC"`（全名为 `"PingFang SC Regular"`）无法命中，导致 400 字重的中文面悄悄回落雅黑、弯引号变成几何斜块；现改用全名并补充 PS 名 `PingFangSC-Regular`。
+- 600-900 字重中文面拆分为四条单字重面，Semibold 补充 PS 名与 Medium 兜底。
+- 模板全局栈精简：删去 B 站兼容段（Em Dash Bridge、CJKEmDash、Numbers、Onest、ShangguSansSCVF 与通用兜底），直接 fallback 链保留 SF 各文种版与苹方港繁日韩变体。
+- 自定义 CSS 改为分块存储（`customCSS#0…`），绕过同步单键 8KB 配额，旧版单键自动迁移；模板体积不再受限。
 
 ## v1.9.0
 
