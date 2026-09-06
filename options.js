@@ -16,6 +16,7 @@ const DEFAULT_CUSTOM_CSS = `/* =================================================
   font-family: "Apple UI Mix";
   src: local("SF Pro");
   font-weight: 100 900;
+  font-variation-settings: "opsz" 17;
   unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
 }
 
@@ -117,21 +118,24 @@ const TEXT = {
     targetsDesc: "每行一个字体族。只有元素的首选字体命中此名单时才会替换。",
     families: "个字体族",
     targetsHint: "默认只包含常见西文与简中系统/UI 字体；Inter、Open Sans 等可能承担视觉设计的 WebFont 不在默认名单中。",
-    siteRulesTitle: "站点强制覆盖",
-    siteRulesDesc: "对指定站点跳过字体名单判断，直接强制替换。",
+    siteRulesTitle: "站点特殊规则",
+    siteRulesDesc: "对指定站点选择特殊行为：强制替换，或关闭扩展的一切覆盖以便查看网站原生字体设置。",
     addSite: "添加站点",
     removeSite: "删除该站点",
     siteFontPlaceholder: "留空使用全局替换字体",
+    siteActionLabel: "动作",
+    siteActionForce: "强制替换",
+    siteActionOff: "关闭覆盖（旁观）",
     siteOverridesToggle: "覆盖选项",
     triInherit: "跟随全局",
     triOn: "开启",
     triOff: "关闭",
-    siteRulesHint: "域名支持主域名与子域名，例如 chatgpt.com、*.example.com；字体留空则使用全局替换字体。命中站点后除强制替换外，还可展开规则对下列功能单独选择开启或关闭，选择「跟随全局」时使用全局设置。",
+    siteRulesHint: "域名支持主域名与子域名，例如 chatgpt.com、*.example.com；字体留空则使用全局替换字体。动作选「关闭覆盖」时扩展对该站点完全静默（不替换、不注入自定义 CSS），适合查看网站原生字体设置；选「强制替换」时可展开规则对下列功能单独选择开启或关闭，选择「跟随全局」时使用全局设置。",
     customCSSTitle: "自定义 CSS",
     customCSSDesc: "向页面注入自定义样式，可用于 @font-face、字体栈或全局排版；跟随全局启用开关，默认关闭。",
     customCSSToggle: "插入自定义 CSS",
     customCSSReset: "恢复默认内容",
-    customCSSHint: "开启时由自定义 CSS 接管页面字体，替换字体链自动失效（标记逻辑仅保留给标准连字与 Auto Spacing）；始终注入在扩展自身样式之后，站点强制覆盖中也可按站点单独开关。留空则不注入、替换链恢复生效。",
+    customCSSHint: "开启时由自定义 CSS 接管页面字体，替换字体链自动失效（标记逻辑仅保留给标准连字与 Auto Spacing）。注入采用检测策略：仅当页面使用了替换名单字体时才全局注入，个人站等使用原生字体的页面保持原样；样式始终注入在扩展自身样式之后，站点特殊规则中也可按站点单独开关。留空则不注入、替换链恢复生效。",
     cssTooLarge: "自定义 CSS 过大，未能保存（其余设置已保存；同步存储单条上限约 8KB）",
     saveFailed: "保存失败，请重试",
     protectionTitle: "保护规则",
@@ -167,21 +171,24 @@ const TEXT = {
     targetsDesc: "One family per line. Replacement only happens when the element's first-choice family matches this list.",
     families: "families",
     targetsHint: "The default list focuses on common Western and Simplified Chinese system/UI fonts. Design-oriented webfonts such as Inter and Open Sans are intentionally excluded.",
-    siteRulesTitle: "Site force override",
-    siteRulesDesc: "Skip the font list check on these sites and force replacement.",
+    siteRulesTitle: "Site special rules",
+    siteRulesDesc: "Choose a special behavior per site: force replacement, or turn off all extension overrides to inspect the site's native font settings.",
     addSite: "Add site",
     removeSite: "Remove this site",
     siteFontPlaceholder: "Leave empty to use the global font",
+    siteActionLabel: "Action",
+    siteActionForce: "Force replacement",
+    siteActionOff: "Off (bypass)",
     siteOverridesToggle: "Override options",
     triInherit: "Follow global",
     triOn: "On",
     triOff: "Off",
-    siteRulesHint: "Domains match the main domain and subdomains, e.g. chatgpt.com, *.example.com. An empty font falls back to the global replacement font. Expand a rule to force individual features on or off for that site; options left as \"Follow global\" use the global settings.",
+    siteRulesHint: "Domains match the main domain and subdomains, e.g. chatgpt.com, *.example.com. An empty font falls back to the global replacement font. With the \"Off (bypass)\" action the extension goes fully silent on that site (no replacement, no custom CSS), useful for inspecting the site's native font settings. With \"Force replacement\" you can expand a rule to force individual features on or off; options left as \"Follow global\" use the global settings.",
     customCSSTitle: "Custom CSS",
     customCSSDesc: "Inject custom styles into pages for @font-face, font stacks, or global typography; follows the global enable switch, off by default.",
     customCSSToggle: "Insert custom CSS",
     customCSSReset: "Restore default content",
-    customCSSHint: "When enabled, custom CSS takes over page typography and the replacement chain is suspended (marking is kept only for standard ligatures and Auto Spacing). It is always injected after the extension's own styles and can be toggled per site in the site rules. Leave empty to inject nothing and restore the chain.",
+    customCSSHint: "When enabled, custom CSS takes over page typography and the replacement chain is suspended (marking is kept only for standard ligatures and Auto Spacing). Injection is detection-based: it only goes global when the page actually uses fonts from the replacement list, while pages using their own fonts (e.g. personal sites) stay untouched. It is always injected after the extension's own styles and can be toggled per site in the site rules. Leave empty to inject nothing and restore the chain.",
     cssTooLarge: "Custom CSS is too large to save (other settings were saved; the per-item sync storage limit is about 8KB)",
     saveFailed: "Save failed, please try again",
     protectionTitle: "Protection rules",
@@ -266,6 +273,13 @@ function addSiteRuleRow(rule = {}) {
       <button class="rule-remove" type="button" title="${t("removeSite")}" aria-label="${t("removeSite")}">×</button>
     </div>
     <div class="site-rule-overrides">
+      <label class="override-item">
+        <span>${t("siteActionLabel")}</span>
+        <select class="rule-action" aria-label="${t("siteActionLabel")}">
+          <option value="force">${t("siteActionForce")}</option>
+          <option value="off">${t("siteActionOff")}</option>
+        </select>
+      </label>
       ${OVERRIDE_KEYS.map(key => `
         <label class="override-item">
           <span>${overrideLabel(key)}</span>
@@ -280,6 +294,7 @@ function addSiteRuleRow(rule = {}) {
   `;
   row.querySelector(".rule-domain").value = rule.domain || "";
   row.querySelector(".rule-font").value = rule.font || "";
+  row.querySelector(".rule-action").value = rule.action === "off" ? "off" : "force";
   for (const select of row.querySelectorAll(".rule-override")) {
     select.value = normalizeOverride(rule[select.dataset.key]);
   }
@@ -312,7 +327,8 @@ function collectSiteRules() {
     if (!domain) continue;
     const rule = {
       domain,
-      font: row.querySelector(".rule-font").value.trim()
+      font: row.querySelector(".rule-font").value.trim(),
+      action: row.querySelector(".rule-action").value === "off" ? "off" : "force"
     };
     for (const select of row.querySelectorAll(".rule-override")) {
       rule[select.dataset.key] = select.value;

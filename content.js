@@ -20,6 +20,7 @@
   font-family: "Apple UI Mix";
   src: local("SF Pro");
   font-weight: 100 900;
+  font-variation-settings: "opsz" 17;
   unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
 }
 
@@ -77,6 +78,8 @@ body,
     "Segoe UI Variable",
     "Segoe UI Variable Text",
     "Segoe UI Variable Display",
+    "OpenAI Sans",
+    "OpenAI Sans SC",
     "Arial",
     "Arial Unicode MS",
     "Helvetica",
@@ -161,9 +164,13 @@ body,
 
   let settings = DEFAULTS;
   let targetSet = new Set();
+  let siteOff = false;
   let forceSite = false;
   let siteFont = null;
   let siteOverrides = {};
+  // 自定义 CSS 采用"检测到名单字体才全局注入"策略：扫描器首次命中
+  // 替换名单字体时置位并注入；个人站等未使用名单字体的页面保持原样。
+  let cssDetected = false;
 
   const ICON_CLASS_RE = /(^|[\s_-])(icon|icons|fa|fas|far|fal|fab|material-icons?|glyph|symbol)([\s_-]|$)/;
   const ICON_FAMILY_RE = /fontawesome|material symbols|material icons|bootstrap-icons|remixicon|tabler-icons|lucide/;
@@ -226,8 +233,9 @@ body,
     return "";
   }
 
-  // 返回站点强制覆盖状态。font 为空表示沿用全局替换字体；
-  // overrides 内各键为 "" / "on" / "off"，可对单个功能强制开关或放行全局。
+  // 返回站点规则状态。action="off" 表示关闭覆盖（扩展对该站完全静默，
+  // 用于查看网站原生字体设置）；默认 "force" 沿用强制替换行为。
+  // font 为空表示沿用全局替换字体；overrides 内各键为 "" / "on" / "off"。
   function computeSiteState() {
     const rules = settings.siteRules || [];
     const host = (location.hostname || "").toLowerCase();
@@ -235,18 +243,21 @@ body,
       const d = normalizeDomain(rule && rule.domain);
       if (!d) continue;
       if (host === d || host.endsWith("." + d)) {
+        const off = (rule && rule.action) === "off";
         const overrides = {};
         for (const key of SITE_OVERRIDE_KEYS) {
           overrides[key] = ruleOverride(rule && rule[key]);
         }
         return {
-          force: true,
+          action: off ? "off" : "force",
+          off,
+          force: !off,
           font: String(rule.font || "").trim(),
           overrides
         };
       }
     }
-    return { force: false, font: "", overrides: {} };
+    return { action: "force", off: false, force: false, font: "", overrides: {} };
   }
 
   // 把站点覆盖落到工作副本上：settings 在每次 loadSettings 时都会
@@ -352,8 +363,9 @@ body,
 
   // 自定义 CSS 开启时接管页面字体（替换链自动失效），始终注入在扩展自身
   // 样式之后；跟随全局启用开关，也可被站点规则按站点单独开关；空内容不注入。
+  // v2：采用"检测到名单字体才注入"策略——cssDetected 为假时保持页面原样。
   function ensureCustomStyle() {
-    const css = settings.enabled && settings.customCSSOn
+    const css = settings.enabled && settings.customCSSOn && cssDetected
       ? String(settings.customCSS || "")
       : "";
 
@@ -395,6 +407,22 @@ body,
     document.querySelectorAll(`[${MARK}]`).forEach(el => el.removeAttribute(MARK));
   }
 
+  // 站点规则"关闭覆盖"：撤样式、撤标记、还原 opsz 内联值、断开观察器，
+  // 扩展对当前站点完全静默（用于查看网站原生字体设置）。
+  function sleepForSite() {
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+    }
+    unmarkAll();
+    restoreOpsz();
+    document.documentElement.style.removeProperty("font-variation-settings");
+    document.documentElement.removeAttribute(ROOT_MARK);
+    for (const id of [STYLE_ID, CUSTOM_STYLE_ID]) {
+      document.getElementById(id)?.remove();
+    }
+  }
+
   function shouldReplace(el) {
     if (!settings.enabled || !(el instanceof Element)) return false;
 
@@ -417,6 +445,88 @@ body,
   function applyReplacement(el) {
     if (el instanceof Element) el.setAttribute(MARK, "1");
   }
+
+  // ---------- JS 逐元素 opsz 映射 ----------
+  // SF 原生逻辑：op sz 跟随字号（≤20px 走 Text 端、大字号线性到 Display 端 28）。
+  // 浏览器的 font-optical-sizing:auto 按设备像素字号计算（Chromium/Firefox 已知
+  // 行为，200% 缩放下 16px 会被顶到 opsz 28），因此由扩展按 CSS px 自行映射。
+  // 仅在自定义 CSS（Apple UI Mix）生效时运行；替换链字体无 opsz 轴。
+  const OPSZ_MIN = 17, OPSZ_MAX = 28;
+  const OPSZ_FVS_RE = /"([a-zA-Z0-9_]+)"\s+(-?[\d.]+)/g;
+
+  function parseFvs(value) {
+    const axes = {};
+    if (!value) return axes;
+    for (const m of value.matchAll(OPSZ_FVS_RE)) {
+      const v = parseFloat(m[2]);
+      if (isFinite(v)) axes[m[1]] = v;
+    }
+    return axes;
+  }
+
+  function fvsToString(axes) {
+    return Object.entries(axes).map(([k, v]) => `"${k}" ${v}`).join(", ");
+  }
+
+  // 对单个元素设置 opsz = clamp(round(fontSize), 17, 28)。
+  // 保留页面/继承已声明的其他轴（wght/wdth 等），只覆盖 opsz；
+  // 原内联值备份到 data-sfs-fvs，供站点休眠时还原。
+  function applyOpsz(el, cs) {
+    let fs;
+    try {
+      fs = parseFloat(cs.fontSize);
+    } catch {
+      return;
+    }
+    if (!isFinite(fs) || fs <= 0) return;
+    const opsz = Math.max(OPSZ_MIN, Math.min(OPSZ_MAX, Math.round(fs)));
+
+    let axes = parseFvs(el.style.fontVariationSettings);
+    if (el.dataset.sfsFvs === undefined) {
+      el.dataset.sfsFvs = el.style.fontVariationSettings || "";
+    }
+    axes.opsz = opsz;
+    const next = fvsToString(axes);
+    if (el.style.fontVariationSettings !== next) {
+      el.style.fontVariationSettings = next;
+    }
+  }
+
+  function restoreOpsz(root = document) {
+    root.querySelectorAll?.("[data-sfs-fvs]").forEach(el => {
+      const saved = el.dataset.sfsFvs;
+      if (saved) el.style.fontVariationSettings = saved;
+      else el.style.removeProperty("font-variation-settings");
+      delete el.dataset.sfsFvs;
+    });
+  }
+
+  // customCSS 模式下：打标元素逐个精确映射；文档根按 html 字号兜底
+  // （未被 Global 覆盖规则的元素经继承获得基础 opsz）。
+  function applyOpszPass() {
+    if (!settings.enabled || !settings.customCSSOn || !cssDetected) return;
+    const htmlFs = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    document.documentElement.style.fontVariationSettings =
+      `"opsz" ${Math.max(OPSZ_MIN, Math.min(OPSZ_MAX, Math.round(htmlFs)))}`;
+    for (const el of document.querySelectorAll(`[${MARK}="1"]`)) {
+      let cs;
+      try {
+        cs = getComputedStyle(el);
+      } catch {
+        continue;
+      }
+      if ((cs.fontFamily || "").includes("Apple UI Mix")) applyOpsz(el, cs);
+    }
+  }
+
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      resizeTimer = null;
+      applyOpszPass();
+    }, 300);
+  });
 
   function collectTextElements(root) {
     const out = new Set();
@@ -474,7 +584,18 @@ body,
       if (shouldReplace(el)) matches.push(el);
     }
 
-    for (const el of matches) applyReplacement(el);
+    for (const el of matches) {
+      applyReplacement(el);
+      // 首次命中替换名单字体 → 全局注入自定义 CSS（用户策略：
+      // 页面正文使用名单字体才接管，个人站等原生字体页面保持原样）。
+      if (settings.customCSSOn && !cssDetected) {
+        cssDetected = true;
+        ensureCustomStyle();
+        applyOpszPass();
+      }
+    }
+
+    if (cssDetected) applyOpszPass();
   }
 
   function scanSubtree(root) {
@@ -586,10 +707,19 @@ body,
     }
 
     const site = computeSiteState();
+    siteOff = site.off;
     forceSite = site.force;
     siteFont = site.font;
     siteOverrides = site.overrides;
     applySiteOverrides();
+
+    cssDetected = false;
+
+    // 站点规则"关闭覆盖"：本站完全静默，不扫描不打标不注入任何样式。
+    if (siteOff) {
+      sleepForSite();
+      return;
+    }
 
     scanQueue = [];
     ensureRootMark();

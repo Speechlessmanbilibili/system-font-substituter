@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>opsz auto 诊断 v2</title>
+<style>
+@font-face { font-family: "MixVar"; src: local("SF Pro"); font-weight: 100 900; }
+@font-face { font-family: "MixText"; src: local("SF Pro"); font-weight: 100 900; font-variation-settings: "opsz" 17; }
+@font-face { font-family: "MixDisp"; src: local("SF Pro"); font-weight: 100 900; font-variation-settings: "opsz" 28; }
+body { background:#fff; color:#111; margin:16px; font-size:16px; }
+div { white-space: nowrap; margin: 2px 0 }
+.l { display:inline-block; width: 380px; font-size: 13px; color:#888; font-family: monospace }
+.s { font-size: 16px }
+.b { font-size: 48px }
+#status { font-family: monospace; font-size: 13px; color:#06c; white-space: pre-wrap }
+</style>
+</head>
+<body>
+<div id="status">testing…</div>
+<h4>16px：系统直配 vs @font-face</h4>
+<div><span class="l">直配 SF Pro 16px（原生 auto）</span><span id="s1" class="s" style="font-family:'SF Pro'">Hamburgfonstiv Apple</span></div>
+<div><span class="l">face MixVar 16px</span><span id="s2" class="s" style="font-family:'MixVar'">Hamburgfonstiv Apple</span></div>
+<div><span class="l">face 钉17 16px（Text 基准）</span><span id="s3" class="s" style="font-family:'MixText'">Hamburgfonstiv Apple</span></div>
+<div><span class="l">face 钉28 16px（Display 基准）</span><span id="s4" class="s" style="font-family:'MixDisp'">Hamburgfonstiv Apple</span></div>
+<h4>48px</h4>
+<div><span class="l">直配 SF Pro 48px（原生 auto）</span><span id="s5" class="b" style="font-family:'SF Pro'">Hamburgfonstiv</span></div>
+<div><span class="l">face MixVar 48px</span><span id="s6" class="b" style="font-family:'MixVar'">Hamburgfonstiv</span></div>
+<div><span class="l">face 钉17 48px（Text 对照）</span><span id="s7" class="b" style="font-family:'MixText'">Hamburgfonstiv</span></div>
+<div><span class="l">face 钉28 48px（Display 对照）</span><span id="s8" class="b" style="font-family:'MixDisp'">Hamburgfonstiv</span></div>
+<pre id="out" style="font-family:monospace;font-size:14px;color:#06c"></pre>
+<script>
+(async () => {
+  const names = ["MixVar", "MixText", "MixDisp", "SF Pro"];
+  const status = [];
+  for (const n of names) {
+    try {
+      await document.fonts.load(`16px "${n}"`, "Hamburg");
+      status.push(`${n}: check=${document.fonts.check(\`16px "${n}"\`)}`);
+    } catch (e) {
+      status.push(`${n}: ERR ${e.message}`);
+    }
+  }
+  document.getElementById("status").textContent = status.join("\n");
+  const out = {};
+  for (let i = 1; i <= 8; i++) out["s" + i] = Math.round(document.getElementById("s" + i).getBoundingClientRect().width * 10) / 10;
+  document.getElementById("out").textContent = JSON.stringify(out, null, 1);
+})();
+</script>
+</body>
+</html>

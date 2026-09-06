@@ -15,6 +15,7 @@
   font-family: "Apple UI Mix";
   src: local("SF Pro");
   font-weight: 100 900;
+  font-variation-settings: "opsz" 17;
   unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
 }
 
