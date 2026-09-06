@@ -3,141 +3,28 @@ const DEFAULT_CUSTOM_CSS = `/* =================================================
    Apple UI Mix
    =========================================================
 
-   Western: SF Pro→苹方SC→YaHei  CJK: 苹方SC→YaHei
-   共有标点:苹方  弯引号:苹方  PUA:SF Pro
+   Western: SF Pro→苹方UI SC→YaHei  CJK: 苹方UI SC→YaHei
+   共有标点:苹方UI  弯引号:苹方UI  PUA:SF Pro
    fallback: SF Pro/SF Arabic/SF Hebrew/SF Armenian/SF Georgian
-   →苹方HK/TC/KR/JP→YaHei→霞鹜新晰黑unicode-range 按本机字体
-   源文件实测（fontTools）划定。
+   →苹方UI SC→苹方HK/TC/KR/JP→YaHei→霞鹜新晰黑
+   变量字体全权重：每区一段，font-weight 区间驱动 wght 轴。
    ========================================================= */
 
-/* ======== Western / Latin（SF Pro 优先） ======== */
+/* ======== Western / Latin（SF Pro 变量全权重） ======== */
 
 @font-face {
   font-family: "Apple UI Mix";
-  src: local("SF Pro Ultralight"), local("SF Pro Display Ultralight"), local("PingFang SC Ultralight"), local("Microsoft YaHei Light");
-  font-weight: 100;
+  src: local("SF Pro");
+  font-weight: 100 900;
   unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
 }
 
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("SF Pro Thin"), local("SF Pro Display Thin"), local("PingFang SC Thin"), local("Microsoft YaHei Light");
-  font-weight: 200;
-  unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
-}
+/* ======== Chinese / CJK（苹方 UI SC 变量全权重，共有标点/弯引号归苹方） ======== */
 
 @font-face {
   font-family: "Apple UI Mix";
-  src: local("SF Pro Light"), local("SF Pro Display Light"), local("PingFang SC Light"), local("Microsoft YaHei Light");
-  font-weight: 300;
-  unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
-}
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("SF Pro"), local("SF Pro Display"), local("PingFang SC"), local("Microsoft YaHei");
-  font-weight: 400;
-  unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
-}
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("SF Pro Medium"), local("SF Pro Display Medium"), local("PingFang SC Medium"), local("Microsoft YaHei");
-  font-weight: 500;
-  unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
-}
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("SF Pro Semibold"), local("SF Pro Display Semibold"), local("PingFang SC Semibold"), local("Microsoft YaHei Bold");
-  font-weight: 600;
-  unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
-}
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("SF Pro Bold"), local("SF Pro Display Bold"), local("PingFang SC Semibold"), local("Microsoft YaHei Bold");
-  font-weight: 700;
-  unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
-}
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("SF Pro Heavy"), local("SF Pro Display Heavy"), local("PingFang SC Semibold"), local("Microsoft YaHei Bold");
-  font-weight: 800;
-  unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
-}
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("SF Pro Black"), local("SF Pro Display Black"), local("PingFang SC Semibold"), local("Microsoft YaHei Bold");
-  font-weight: 900;
-  unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
-}
-
-
-/* ======== Chinese / CJK（苹方优先，共有标点走苹方） ======== */
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("PingFang SC Ultralight"), local("Microsoft YaHei Light");
-  font-weight: 100;
-  unicode-range: U+00B7,U+2010-2016,U+2018-2019,U+201C-201D,U+2020-2027,U+203B,U+2103,U+2160-217F,U+2460-24FF,U+2208,U+2229-222A,U+2266-2267,U+226E-226F,U+22EF,U+2E80-2FFF,U+3000-303F,U+3300-33FF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF,U+FF00-FFEF;
-}
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("PingFang SC Thin"), local("Microsoft YaHei Light");
-  font-weight: 200;
-  unicode-range: U+00B7,U+2010-2016,U+2018-2019,U+201C-201D,U+2020-2027,U+203B,U+2103,U+2160-217F,U+2460-24FF,U+2208,U+2229-222A,U+2266-2267,U+226E-226F,U+22EF,U+2E80-2FFF,U+3000-303F,U+3300-33FF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF,U+FF00-FFEF;
-}
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("PingFang SC Light"), local("Microsoft YaHei Light");
-  font-weight: 300;
-  unicode-range: U+00B7,U+2010-2016,U+2018-2019,U+201C-201D,U+2020-2027,U+203B,U+2103,U+2160-217F,U+2460-24FF,U+2208,U+2229-222A,U+2266-2267,U+226E-226F,U+22EF,U+2E80-2FFF,U+3000-303F,U+3300-33FF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF,U+FF00-FFEF;
-}
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("PingFang SC Regular"), local("PingFangSC-Regular"), local("Microsoft YaHei");
-  font-weight: 400;
-  unicode-range: U+00B7,U+2010-2016,U+2018-2019,U+201C-201D,U+2020-2027,U+203B,U+2103,U+2160-217F,U+2460-24FF,U+2208,U+2229-222A,U+2266-2267,U+226E-226F,U+22EF,U+2E80-2FFF,U+3000-303F,U+3300-33FF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF,U+FF00-FFEF;
-}
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("PingFang SC Medium"), local("Microsoft YaHei");
-  font-weight: 500;
-  unicode-range: U+00B7,U+2010-2016,U+2018-2019,U+201C-201D,U+2020-2027,U+203B,U+2103,U+2160-217F,U+2460-24FF,U+2208,U+2229-222A,U+2266-2267,U+226E-226F,U+22EF,U+2E80-2FFF,U+3000-303F,U+3300-33FF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF,U+FF00-FFEF;
-}
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("PingFang SC Semibold"), local("PingFangSC-Semibold"), local("PingFang SC Medium"), local("Microsoft YaHei Bold");
-  font-weight: 600;
-  unicode-range: U+00B7,U+2010-2016,U+2018-2019,U+201C-201D,U+2020-2027,U+203B,U+2103,U+2160-217F,U+2460-24FF,U+2208,U+2229-222A,U+2266-2267,U+226E-226F,U+22EF,U+2E80-2FFF,U+3000-303F,U+3300-33FF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF,U+FF00-FFEF;
-}
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("PingFang SC Semibold"), local("PingFangSC-Semibold"), local("PingFang SC Medium"), local("Microsoft YaHei Bold");
-  font-weight: 700;
-  unicode-range: U+00B7,U+2010-2016,U+2018-2019,U+201C-201D,U+2020-2027,U+203B,U+2103,U+2160-217F,U+2460-24FF,U+2208,U+2229-222A,U+2266-2267,U+226E-226F,U+22EF,U+2E80-2FFF,U+3000-303F,U+3300-33FF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF,U+FF00-FFEF;
-}
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("PingFang SC Semibold"), local("PingFangSC-Semibold"), local("PingFang SC Medium"), local("Microsoft YaHei Bold");
-  font-weight: 800;
-  unicode-range: U+00B7,U+2010-2016,U+2018-2019,U+201C-201D,U+2020-2027,U+203B,U+2103,U+2160-217F,U+2460-24FF,U+2208,U+2229-222A,U+2266-2267,U+226E-226F,U+22EF,U+2E80-2FFF,U+3000-303F,U+3300-33FF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF,U+FF00-FFEF;
-}
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("PingFang SC Semibold"), local("PingFangSC-Semibold"), local("PingFang SC Medium"), local("Microsoft YaHei Bold");
-  font-weight: 900;
+  src: local("PingFang UI SC");
+  font-weight: 100 900;
   unicode-range: U+00B7,U+2010-2016,U+2018-2019,U+201C-201D,U+2020-2027,U+203B,U+2103,U+2160-217F,U+2460-24FF,U+2208,U+2229-222A,U+2266-2267,U+226E-226F,U+22EF,U+2E80-2FFF,U+3000-303F,U+3300-33FF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF,U+FF00-FFEF;
 }
 
@@ -159,6 +46,7 @@ body,
     "SF Hebrew",
     "SF Armenian",
     "SF Georgian",
+    "PingFang UI SC",
     "PingFang HK",
     "PingFang TC",
     "PingFang KR",
@@ -170,8 +58,7 @@ body,
 
   font-variation-settings: normal !important;
   text-autospace: normal !important;
-}
-`;
+}`;
 
 const DEFAULTS = {
   enabled: true,
