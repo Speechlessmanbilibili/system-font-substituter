@@ -6,7 +6,7 @@ const DEFAULT_CUSTOM_CSS = `/* =================================================
    Western: SF Pro Text→苹方UI SC→YaHei  CJK: 苹方UI SC→YaHei
    共有标点:苹方UI  弯引号:苹方UI  PUA:SF Pro Text
    fallback: SF Pro Text/SF Arabic/SF Hebrew/SF Armenian/SF Georgian
-   →苹方UI SC→苹方HK/TC/KR/JP→YaHei→霞鹜新晰黑
+   →苹方UI SC→苹方UI HK/TC/MO→Hiragino Sans→Apple SD Gothic Neo→YaHei→霞鹜新晰黑
    西文用 SF Pro Text 静态套件（opsz 固定 Text 端）；苹方 UI 为变量全权重。
    ========================================================= */
 
@@ -48,10 +48,11 @@ body,
     "SF Armenian",
     "SF Georgian",
     "PingFang UI SC",
-    "PingFang HK",
-    "PingFang TC",
-    "PingFang KR",
-    "PingFang JP",
+    "PingFang UI HK",
+    "PingFang UI TC",
+    "PingFang UI MO",
+    "Hiragino Sans",
+    "Apple SD Gothic Neo",
 
     /* 真正的 fallback */
     "Microsoft YaHei",
