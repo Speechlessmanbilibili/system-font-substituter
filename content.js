@@ -7,20 +7,20 @@
    Apple UI Mix
    =========================================================
 
-   Western: SF Pro→苹方UI SC→YaHei  CJK: 苹方UI SC→YaHei
-   共有标点:苹方UI  弯引号:苹方UI  PUA:SF Pro
-   fallback: SF Pro/SF Arabic/SF Hebrew/SF Armenian/SF Georgian
+   Western: SF Pro Text→苹方UI SC→YaHei  CJK: 苹方UI SC→YaHei
+   共有标点:苹方UI  弯引号:苹方UI  PUA:SF Pro Text
+   fallback: SF Pro Text/SF Arabic/SF Hebrew/SF Armenian/SF Georgian
    →苹方UI SC→苹方HK/TC/KR/JP→YaHei→霞鹜新晰黑
-   变量字体全权重：每区一段，font-weight 区间驱动 wght 轴。
+   西文用 SF Pro Text 静态套件（opsz 固定 Text 端）；苹方 UI 为变量全权重。
    ========================================================= */
 
-/* ======== Western / Latin（SF Pro 变量全权重） ======== */
+/* ======== Western / Latin（SF Pro Text 静态套件：opsz 烤死 Text 端，
+   不受浏览器光学尺寸行为影响；单 family 九权重由 DWrite 按字重选面） ======== */
 
 @font-face {
   font-family: "Apple UI Mix";
-  src: local("SF Pro");
+  src: local("SF Pro Text");
   font-weight: 100 900;
-  font-variation-settings: "opsz" 17;
   unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
 }
 
@@ -46,7 +46,7 @@ body,
     "Apple UI Mix",
 
     /* 直接 fallback（不参与 mix） */
-    "SF Pro",
+    "SF Pro Text",
     "SF Arabic",
     "SF Hebrew",
     "SF Armenian",
@@ -407,7 +407,7 @@ body,
     document.querySelectorAll(`[${MARK}]`).forEach(el => el.removeAttribute(MARK));
   }
 
-  // 站点规则"关闭覆盖"：撤样式、撤标记、还原 opsz 内联值、断开观察器，
+  // 站点规则"关闭覆盖"：撤样式、撤标记、断开观察器，
   // 扩展对当前站点完全静默（用于查看网站原生字体设置）。
   function sleepForSite() {
     if (observer) {
@@ -415,7 +415,6 @@ body,
       observer = null;
     }
     unmarkAll();
-    restoreOpsz();
     document.documentElement.style.removeProperty("font-variation-settings");
     document.documentElement.removeAttribute(ROOT_MARK);
     for (const id of [STYLE_ID, CUSTOM_STYLE_ID]) {
@@ -446,87 +445,6 @@ body,
     if (el instanceof Element) el.setAttribute(MARK, "1");
   }
 
-  // ---------- JS 逐元素 opsz 映射 ----------
-  // SF 原生逻辑：op sz 跟随字号（≤20px 走 Text 端、大字号线性到 Display 端 28）。
-  // 浏览器的 font-optical-sizing:auto 按设备像素字号计算（Chromium/Firefox 已知
-  // 行为，200% 缩放下 16px 会被顶到 opsz 28），因此由扩展按 CSS px 自行映射。
-  // 仅在自定义 CSS（Apple UI Mix）生效时运行；替换链字体无 opsz 轴。
-  const OPSZ_MIN = 17, OPSZ_MAX = 28;
-  const OPSZ_FVS_RE = /"([a-zA-Z0-9_]+)"\s+(-?[\d.]+)/g;
-
-  function parseFvs(value) {
-    const axes = {};
-    if (!value) return axes;
-    for (const m of value.matchAll(OPSZ_FVS_RE)) {
-      const v = parseFloat(m[2]);
-      if (isFinite(v)) axes[m[1]] = v;
-    }
-    return axes;
-  }
-
-  function fvsToString(axes) {
-    return Object.entries(axes).map(([k, v]) => `"${k}" ${v}`).join(", ");
-  }
-
-  // 对单个元素设置 opsz = clamp(round(fontSize), 17, 28)。
-  // 保留页面/继承已声明的其他轴（wght/wdth 等），只覆盖 opsz；
-  // 原内联值备份到 data-sfs-fvs，供站点休眠时还原。
-  function applyOpsz(el, cs) {
-    let fs;
-    try {
-      fs = parseFloat(cs.fontSize);
-    } catch {
-      return;
-    }
-    if (!isFinite(fs) || fs <= 0) return;
-    const opsz = Math.max(OPSZ_MIN, Math.min(OPSZ_MAX, Math.round(fs)));
-
-    let axes = parseFvs(el.style.fontVariationSettings);
-    if (el.dataset.sfsFvs === undefined) {
-      el.dataset.sfsFvs = el.style.fontVariationSettings || "";
-    }
-    axes.opsz = opsz;
-    const next = fvsToString(axes);
-    if (el.style.fontVariationSettings !== next) {
-      el.style.fontVariationSettings = next;
-    }
-  }
-
-  function restoreOpsz(root = document) {
-    root.querySelectorAll?.("[data-sfs-fvs]").forEach(el => {
-      const saved = el.dataset.sfsFvs;
-      if (saved) el.style.fontVariationSettings = saved;
-      else el.style.removeProperty("font-variation-settings");
-      delete el.dataset.sfsFvs;
-    });
-  }
-
-  // customCSS 模式下：打标元素逐个精确映射；文档根按 html 字号兜底
-  // （未被 Global 覆盖规则的元素经继承获得基础 opsz）。
-  function applyOpszPass() {
-    if (!settings.enabled || !settings.customCSSOn || !cssDetected) return;
-    const htmlFs = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-    document.documentElement.style.fontVariationSettings =
-      `"opsz" ${Math.max(OPSZ_MIN, Math.min(OPSZ_MAX, Math.round(htmlFs)))}`;
-    for (const el of document.querySelectorAll(`[${MARK}="1"]`)) {
-      let cs;
-      try {
-        cs = getComputedStyle(el);
-      } catch {
-        continue;
-      }
-      if ((cs.fontFamily || "").includes("Apple UI Mix")) applyOpsz(el, cs);
-    }
-  }
-
-  let resizeTimer = null;
-  window.addEventListener("resize", () => {
-    if (resizeTimer) clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      resizeTimer = null;
-      applyOpszPass();
-    }, 300);
-  });
 
   function collectTextElements(root) {
     const out = new Set();
@@ -591,11 +509,8 @@ body,
       if (settings.customCSSOn && !cssDetected) {
         cssDetected = true;
         ensureCustomStyle();
-        applyOpszPass();
       }
     }
-
-    if (cssDetected) applyOpszPass();
   }
 
   function scanSubtree(root) {

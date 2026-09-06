@@ -2,20 +2,20 @@
    Apple UI Mix
    =========================================================
 
-   Western: SF Pro→苹方UI SC→YaHei  CJK: 苹方UI SC→YaHei
-   共有标点:苹方UI  弯引号:苹方UI  PUA:SF Pro
-   fallback: SF Pro/SF Arabic/SF Hebrew/SF Armenian/SF Georgian
+   Western: SF Pro Text→苹方UI SC→YaHei  CJK: 苹方UI SC→YaHei
+   共有标点:苹方UI  弯引号:苹方UI  PUA:SF Pro Text
+   fallback: SF Pro Text/SF Arabic/SF Hebrew/SF Armenian/SF Georgian
    →苹方UI SC→苹方HK/TC/KR/JP→YaHei→霞鹜新晰黑
-   变量字体全权重：每区一段，font-weight 区间驱动 wght 轴。
+   西文用 SF Pro Text 静态套件（opsz 固定 Text 端）；苹方 UI 为变量全权重。
    ========================================================= */
 
-/* ======== Western / Latin（SF Pro 变量全权重） ======== */
+/* ======== Western / Latin（SF Pro Text 静态套件：opsz 烤死 Text 端，
+   不受浏览器光学尺寸行为影响；单 family 九权重由 DWrite 按字重选面） ======== */
 
 @font-face {
   font-family: "Apple UI Mix";
-  src: local("SF Pro");
+  src: local("SF Pro Text");
   font-weight: 100 900;
-  font-variation-settings: "opsz" 17;
   unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
 }
 
@@ -41,7 +41,7 @@ body,
     "Apple UI Mix",
 
     /* 直接 fallback（不参与 mix） */
-    "SF Pro",
+    "SF Pro Text",
     "SF Arabic",
     "SF Hebrew",
     "SF Armenian",
