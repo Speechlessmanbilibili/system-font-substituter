@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>日韩字体命中验证</title>
+<style>
+body { background:#fff; color:#111; margin:16px; font-size:24px;
+  font-family: "Apple UI Mix", "SF Pro Text", "PingFang UI SC", "Hiragino Sans", "Apple SD Gothic Neo", "Microsoft YaHei"; }
+div { margin: 6px 0 }
+.l { font-size: 13px; color: #888; font-family: monospace; display: block }
+.w300 { font-weight: 300 } .w700 { font-weight: 700 }
+</style>
+</head>
+<body>
+<div><span class="l">日文（Hiragino Sans，W3/W6 静态多 face）</span>ヒラギノ角ゴシックのテスト、日本語の文章です。</div>
+<div><span class="l">韩文（Apple SD Gothic Neo，九字重）</span>애플 산돌고딕 네오 테스트, 한국어 문장입니다.</div>
+<div><span class="l">日文 300</span><span class="w300">ヒラギノ角ゴシック W3 の太さ</span></div>
+<div><span class="l">日文 700</span><span class="w700">ヒラギノ角ゴシック W7 の太さ</span></div>
+<div><span class="l">韩文 300</span><span class="w300">Apple SD Gothic Neo Light 굵기</span></div>
+<div><span class="l">韩文 700</span><span class="w700">Apple SD Gothic Neo Bold 굵기</span></div>
+<pre id="chk" style="font-family:monospace;font-size:13px;color:#06c"></pre>
+<script>
+const out = {};
+for (const n of ["Hiragino Sans", "Hiragino Sans W3", "Hiragino Sans W6", "Apple SD Gothic Neo"]) {
+  out[n] = document.fonts.check(`16px "${n}"`);
+}
+document.getElementById("chk").textContent = JSON.stringify(out, null, 1);
+</script>
+</body>
+</html>
