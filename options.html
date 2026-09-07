@@ -2,107 +2,166 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>字体替换器</title>
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
+  <div class="page-background"></div>
+  
   <main class="page">
+    <!-- Header -->
     <header class="page-header">
-      <div>
-        <h1 data-i18n="pageTitle">字体替换器</h1>
-        <p data-i18n="pageSubtitle">替换常见西文与简中系统/UI 字体，并保留网站的设计字体、代码字体与图标字体。</p>
+      <div class="header-branding">
+        <div class="header-icon-box">
+          <img src="icons/icon-48.png" alt="Logo" class="header-logo" width="36" height="36">
+        </div>
+        <div class="header-text">
+          <div class="header-title-row">
+            <h1 data-i18n="pageTitle">字体替换器</h1>
+            <span class="status-badge" id="globalStatusBadge">
+              <span class="status-dot"></span>
+              <span class="status-badge-text" id="globalStatusText">运行中</span>
+            </span>
+          </div>
+          <p data-i18n="pageSubtitle">替换常见西文与简中系统/UI 字体，并保留网站的设计字体、代码字体与图标字体。</p>
+        </div>
       </div>
-      <label class="toggle-line header-toggle">
-        <span data-i18n="enable">启用</span>
-        <span class="switch">
-          <input id="enabled" type="checkbox">
-          <span class="track" aria-hidden="true"></span>
-        </span>
-      </label>
+      
+      <div class="header-action">
+        <label class="toggle-control main-toggle" for="enabled" title="全局启用/停用">
+          <span class="toggle-label" data-i18n="enable">启用</span>
+          <span class="switch">
+            <input id="enabled" type="checkbox">
+            <span class="track" aria-hidden="true"></span>
+          </span>
+        </label>
+      </div>
     </header>
 
+    <!-- Main Settings Container -->
     <div class="settings-panel">
+
+      <!-- Section: Replacement Font & Live Preview Board -->
+      <section class="setting-section vertical-section">
+        <div class="section-title-row">
+          <div class="section-copy">
+            <div class="section-label-group">
+              <span class="section-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
+              </span>
+              <h2 data-i18n="replacementTitle">替换字体</h2>
+            </div>
+            <p data-i18n="replacementDesc">填写本机字体的 CSS font-family，可使用完整 fallback 链。</p>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="field-label" for="replacement" data-i18n="replacementLabel">字体族</label>
+          <div class="input-with-actions">
+            <input id="replacement" class="text-input code-input font-input" type="text" spellcheck="false" placeholder='"HarmonyOS Sans SC", "Noto Sans SC"'>
+          </div>
+        </div>
+
+        <!-- Enhanced Live Preview Board -->
+        <div class="preview-card">
+          <div class="preview-header">
+            <div class="preview-title-box">
+              <span class="preview-caption" data-i18n="preview">预览</span>
+              <span class="preview-tag">实时渲染 · 支持直接编辑</span>
+            </div>
+            <div class="preview-toolbar">
+              <!-- Sample Preset Buttons -->
+              <div class="sample-preset-group" id="presetButtons">
+                <button type="button" class="preset-btn active" data-preset="mixed">综合</button>
+                <button type="button" class="preset-btn" data-preset="punct">标点破折号</button>
+                <button type="button" class="preset-btn" data-preset="ligatures">连字数字</button>
+                <button type="button" class="preset-btn" data-preset="latin">西文短文</button>
+              </div>
+              <!-- Font Weight Switcher -->
+              <div class="weight-switcher-group" id="weightButtons">
+                <button type="button" class="weight-btn" data-weight="300">Light</button>
+                <button type="button" class="weight-btn active" data-weight="400">Regular</button>
+                <button type="button" class="weight-btn" data-weight="600">Semibold</button>
+                <button type="button" class="weight-btn" data-weight="700">Bold</button>
+              </div>
+            </div>
+          </div>
+          <div class="preview-body">
+            <div id="previewText" class="preview-text" contenteditable="true" spellcheck="false">The quick brown fox jumps over the lazy dog.
+天地玄黄，宇宙洪荒。汉字与西文字符协同排版预览。
+0123456789 · fi fl ffi ffl · “弯引号” 与 ‘单引号’ — 破折号</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Protection & Typography Rules -->
       <section class="setting-section">
         <div class="section-copy">
-          <h2 data-i18n="replacementTitle">替换字体</h2>
-          <p data-i18n="replacementDesc">填写本机字体的 CSS font-family，可使用完整 fallback 链。</p>
-        </div>
-        <div class="section-control wide-control">
-          <label class="field-label" for="replacement" data-i18n="replacementLabel">字体族</label>
-          <input id="replacement" class="text-input code-input" type="text" spellcheck="false">
-          <div class="preview-row">
-            <span class="preview-caption" data-i18n="preview">预览</span>
-            <span id="previewText" class="preview-text">The quick brown fox · 中文字体预览 0123456789</span>
+          <div class="section-label-group">
+            <span class="section-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </span>
+            <h2 data-i18n="protectionTitle">保护与排版规则</h2>
           </div>
+          <p data-i18n="protectionDesc">避免替换破坏代码和图标，并优化连字与间距排版。</p>
         </div>
-      </section>
 
-      <section class="setting-section vertical-section">
-        <div class="section-title-row">
-          <div class="section-copy">
-            <h2 data-i18n="targetsTitle">替换名单</h2>
-            <p data-i18n="targetsDesc">每行一个字体族。只有元素的首选字体命中名单时才会替换。</p>
-          </div>
-          <span class="family-count"><span id="targetCount">0</span> <span data-i18n="families">个字体族</span></span>
-        </div>
-        <textarea id="targets" class="text-area code-input" rows="15" spellcheck="false" aria-label="Target font families"></textarea>
-        <p class="note" data-i18n="targetsHint">默认仅包含常见西文与简中系统/UI 字体；可能用于视觉设计的 WebFont 不在默认名单中。</p>
-      </section>
-
-      <section class="setting-section vertical-section">
-        <div class="section-title-row">
-          <div class="section-copy">
-            <h2 data-i18n="siteRulesTitle">站点特殊规则</h2>
-            <p data-i18n="siteRulesDesc">对指定站点选择特殊行为：强制替换，或关闭扩展的一切覆盖以便查看网站原生字体设置。</p>
-          </div>
-          <button id="addSiteRule" class="button secondary" type="button" aria-label="Add site rule">＋<span data-i18n="addSite">添加站点</span></button>
-        </div>
-        <div id="siteRules" class="site-rule-list"></div>
-        <p class="note" data-i18n="siteRulesHint">域名支持主域名与子域名，例如 chatgpt.com、*.example.com；字体留空则使用全局替换字体。代码与图标保护规则仍然生效。</p>
-      </section>
-
-      <section class="setting-section protection-section">
-        <div class="section-copy">
-          <h2 data-i18n="protectionTitle">保护规则</h2>
-          <p data-i18n="protectionDesc">避免替换影响代码和图标。</p>
-        </div>
-        <div class="rule-list">
-          <label class="rule-row">
-            <span>
+        <div class="rule-grid">
+          <!-- Protect Code -->
+          <label class="rule-card" for="protectCode">
+            <div class="rule-card-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            </div>
+            <div class="rule-card-content">
               <strong data-i18n="protectCode">保护代码字体</strong>
               <small data-i18n="protectCodeDesc">跳过 code、pre、kbd、samp 及其内部元素</small>
-            </span>
+            </div>
             <span class="switch">
               <input id="protectCode" type="checkbox">
               <span class="track" aria-hidden="true"></span>
             </span>
           </label>
-          <label class="rule-row">
-            <span>
+
+          <!-- Protect Icons -->
+          <label class="rule-card" for="protectIcons">
+            <div class="rule-card-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+            </div>
+            <div class="rule-card-content">
               <strong data-i18n="protectIcons">保护图标字体</strong>
               <small data-i18n="protectIconsDesc">识别 Material Icons、Font Awesome 等常见图标字体</small>
-            </span>
+            </div>
             <span class="switch">
               <input id="protectIcons" type="checkbox">
               <span class="track" aria-hidden="true"></span>
             </span>
           </label>
-          <label class="rule-row">
-            <span>
+
+          <!-- Standard Ligatures -->
+          <label class="rule-card" for="standardLigatures">
+            <div class="rule-card-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M8 15V5a3 3 0 0 1 6 0v10"/><path d="M6 10h8"/></svg>
+            </div>
+            <div class="rule-card-content">
               <strong data-i18n="standardLigatures">标准连字</strong>
-              <small data-i18n="standardLigaturesDesc">仅对已被替换字体的文字强制开启 fi、fl、ffi、ffl 等标准连字</small>
-            </span>
+              <small data-i18n="standardLigaturesDesc">仅对已被替换字体的文字强制开启 fi、fl 等标准连字</small>
+            </div>
             <span class="switch">
               <input id="standardLigatures" type="checkbox">
               <span class="track" aria-hidden="true"></span>
             </span>
           </label>
-          <label class="rule-row">
-            <span>
+
+          <!-- Auto Spacing -->
+          <label class="rule-card" for="autoSpacing">
+            <div class="rule-card-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"/><polyline points="17 8 21 12 17 16"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+            </div>
+            <div class="rule-card-content">
               <strong data-i18n="autoSpacing">Auto Spacing</strong>
-              <small data-i18n="autoSpacingDesc">对已被替换字体的文字强制启用 CSS text-autospace: normal，并覆盖网站设置</small>
-            </span>
+              <small data-i18n="autoSpacingDesc">对已替换文字强制启用 CSS text-autospace: normal</small>
+            </div>
             <span class="switch">
               <input id="autoSpacing" type="checkbox">
               <span class="track" aria-hidden="true"></span>
@@ -111,13 +170,76 @@
         </div>
       </section>
 
+      <!-- Section: Targets List -->
       <section class="setting-section vertical-section">
         <div class="section-title-row">
           <div class="section-copy">
-            <h2 data-i18n="customCSSTitle">自定义 CSS</h2>
+            <div class="section-label-group">
+              <span class="section-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              </span>
+              <h2 data-i18n="targetsTitle">替换名单</h2>
+            </div>
+            <p data-i18n="targetsDesc">每行一个字体族。只有元素的首选字体命中名单时才会替换。</p>
+          </div>
+          <div class="badge-chip">
+            <span class="badge-number" id="targetCount">0</span>
+            <span data-i18n="families">个字体族</span>
+          </div>
+        </div>
+
+        <div class="editor-container">
+          <textarea id="targets" class="text-area code-input" rows="12" spellcheck="false" aria-label="Target font families"></textarea>
+        </div>
+        <p class="note" data-i18n="targetsHint">默认仅包含常见西文与简中系统/UI 字体；可能用于视觉设计的 WebFont 不在默认名单中。</p>
+      </section>
+
+      <!-- Section: Site Rules -->
+      <section class="setting-section vertical-section">
+        <div class="section-title-row">
+          <div class="section-copy">
+            <div class="section-label-group">
+              <span class="section-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              </span>
+              <h2 data-i18n="siteRulesTitle">站点特殊规则</h2>
+            </div>
+            <p data-i18n="siteRulesDesc">对指定站点选择特殊行为：强制替换，或关闭扩展的一切覆盖以便查看网站原生字体设置。</p>
+          </div>
+          <button id="addSiteRule" class="button secondary add-site-btn" type="button" aria-label="Add site rule">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span data-i18n="addSite">添加站点</span>
+          </button>
+        </div>
+
+        <!-- Site Rules List Container -->
+        <div id="siteRules" class="site-rule-list"></div>
+        
+        <!-- Empty State for Site Rules -->
+        <div id="emptySiteRules" class="empty-rules-box">
+          <div class="empty-rules-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
+          </div>
+          <div class="empty-rules-text">暂无站点特殊规则</div>
+          <div class="empty-rules-hint">点击上方「添加站点」可为特定域名配置强制替换或关闭覆盖。</div>
+        </div>
+
+        <p class="note" data-i18n="siteRulesHint">域名支持主域名与子域名，例如 chatgpt.com、*.example.com；字体留空则使用全局替换字体。代码与图标保护规则仍然生效。</p>
+      </section>
+
+      <!-- Section: Custom CSS -->
+      <section class="setting-section vertical-section">
+        <div class="section-title-row">
+          <div class="section-copy">
+            <div class="section-label-group">
+              <span class="section-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+              </span>
+              <h2 data-i18n="customCSSTitle">自定义 CSS</h2>
+            </div>
             <p data-i18n="customCSSDesc">向页面注入自定义样式，可用于 @font-face、字体栈或全局排版；跟随全局启用开关。</p>
           </div>
-          <label class="toggle-line">
+          <label class="toggle-control" for="customCSSOn">
             <span data-i18n="customCSSToggle">插入自定义 CSS</span>
             <span class="switch">
               <input id="customCSSOn" type="checkbox">
@@ -125,32 +247,73 @@
             </span>
           </label>
         </div>
-        <textarea id="customCSS" class="text-area code-input custom-css-input" rows="16" spellcheck="false" aria-label="Custom CSS"></textarea>
-        <div class="custom-css-actions">
-          <button id="resetCustomCSS" class="button secondary" type="button" data-i18n="customCSSReset">恢复默认内容</button>
+
+        <!-- Editor Styled Box -->
+        <div class="code-editor-card">
+          <div class="code-editor-topbar">
+            <div class="window-dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <span class="code-editor-title">Apple UI Mix.css</span>
+            <div class="code-editor-actions">
+              <button id="resetCustomCSS" class="button button-sm secondary" type="button" data-i18n="customCSSReset">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                <span>恢复默认内容</span>
+              </button>
+            </div>
+          </div>
+          <textarea id="customCSS" class="text-area code-input custom-css-input" rows="14" spellcheck="false" aria-label="Custom CSS"></textarea>
         </div>
+
         <p class="note" data-i18n="customCSSHint">自定义 CSS 始终注入在扩展自身样式之后：与替换字体、标准连字、Auto Spacing 等扩展规则冲突时，以自定义 CSS 为准；留空则不注入。</p>
       </section>
 
+      <!-- Details: How it works -->
       <details class="details-section">
         <summary data-i18n="howItWorks">工作方式</summary>
         <div class="details-copy">
-          <p data-i18n="howItWorks1">扩展逐个检查元素计算后的 font-family，不对整个页面强制指定同一个字体。</p>
-          <p data-i18n="howItWorks2">只有第一个字体族命中名单时才会替换；动态页面会继续检查新增内容。</p>
-          <p data-i18n="howItWorks3">edge://、chrome://、扩展商店等浏览器受保护页面无法注入普通扩展。</p>
-          <p data-i18n="howItWorks4">自定义 CSS 在扩展样式之后注入，与替换字体、连字、Auto Spacing 等扩展规则冲突时以自定义 CSS 为准。</p>
+          <div class="details-item">
+            <span class="details-bullet">1</span>
+            <p data-i18n="howItWorks1">扩展逐个检查元素计算后的 font-family，不对整个页面强制指定同一个字体。</p>
+          </div>
+          <div class="details-item">
+            <span class="details-bullet">2</span>
+            <p data-i18n="howItWorks2">只有第一个字体族命中名单时才会替换；动态页面会继续检查新增内容。</p>
+          </div>
+          <div class="details-item">
+            <span class="details-bullet">3</span>
+            <p data-i18n="howItWorks3">edge://、chrome://、扩展商店等浏览器受保护页面无法注入普通扩展。</p>
+          </div>
+          <div class="details-item">
+            <span class="details-bullet">4</span>
+            <p data-i18n="howItWorks4">自定义 CSS 在扩展样式之后注入，与替换字体、连字、Auto Spacing 等扩展规则冲突时以自定义 CSS 为准。</p>
+          </div>
         </div>
       </details>
     </div>
 
+    <!-- Sticky Bottom Action Bar -->
     <footer class="page-footer">
-      <span id="status" class="status" aria-live="polite"></span>
+      <div class="footer-left">
+        <span id="status" class="status" aria-live="polite"></span>
+        <div class="unsaved-hint" id="unsavedHint">
+          <span class="unsaved-dot"></span>
+          <span>有未保存的更改</span>
+        </div>
+      </div>
       <div class="actions">
         <button id="reset" class="button secondary" type="button" data-i18n="reset">恢复默认</button>
-        <button id="save" class="button primary" type="button" data-i18n="save">保存设置</button>
+        <button id="save" class="button primary" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          <span data-i18n="save">保存设置</span>
+          <span class="shortcut-badge">⌘S</span>
+        </button>
       </div>
     </footer>
   </main>
+
   <script src="options.js"></script>
 </body>
 </html>

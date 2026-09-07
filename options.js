@@ -110,7 +110,9 @@ const TEXT = {
   "zh-CN": {
     pageTitle: "字体替换器",
     pageSubtitle: "替换常见西文与简中系统/UI 字体，并保留网站的设计字体、代码字体与图标字体。",
-    enable: "启用全局替换",
+    enable: "启用",
+    running: "运行中",
+    paused: "已停用",
     replacementTitle: "替换字体",
     replacementDesc: "填写本机字体的 CSS font-family。可以使用单个字体，也可以填写完整 fallback 链。",
     replacementLabel: "字体族",
@@ -131,6 +133,8 @@ const TEXT = {
     triInherit: "跟随全局",
     triOn: "开启",
     triOff: "关闭",
+    emptyRulesTitle: "暂无站点特殊规则",
+    emptyRulesHint: "点击上方「添加站点」可为特定域名配置强制替换或关闭覆盖。",
     siteRulesHint: "域名支持主域名与子域名，例如 chatgpt.com、*.example.com；字体留空则使用全局替换字体。动作选「关闭覆盖」时扩展对该站点完全静默（不替换、不注入自定义 CSS），适合查看网站原生字体设置；选「强制替换」时可展开规则对下列功能单独选择开启或关闭，选择「跟随全局」时使用全局设置。",
     customCSSTitle: "自定义 CSS",
     customCSSDesc: "向页面注入自定义样式，可用于 @font-face、字体栈或全局排版；跟随全局启用开关，默认关闭。",
@@ -139,8 +143,8 @@ const TEXT = {
     customCSSHint: "开启时由自定义 CSS 接管页面字体，替换字体链自动失效（标记逻辑仅保留给标准连字与 Auto Spacing）。注入采用检测策略：仅当页面使用了替换名单字体时才全局注入，个人站等使用原生字体的页面保持原样；样式始终注入在扩展自身样式之后，站点特殊规则中也可按站点单独开关。留空则不注入、替换链恢复生效。",
     cssTooLarge: "自定义 CSS 过大，未能保存（其余设置已保存；同步存储单条上限约 8KB）",
     saveFailed: "保存失败，请重试",
-    protectionTitle: "保护规则",
-    protectionDesc: "避免全局替换破坏代码区域或图标字体。",
+    protectionTitle: "保护与排版规则",
+    protectionDesc: "避免全局替换破坏代码区域或图标字体，并优化高级排版特性。",
     protectCode: "保护代码字体",
     protectCodeDesc: "跳过 code、pre、kbd、samp 及其内部元素",
     protectIcons: "保护图标字体",
@@ -158,12 +162,15 @@ const TEXT = {
     save: "保存设置",
     saved: "已保存，已打开的网页会自动更新",
     resetDone: "已恢复默认",
-    emptyFont: "替换字体不能为空"
+    emptyFont: "替换字体不能为空",
+    unsavedChanges: "有未保存的更改"
   },
   en: {
     pageTitle: "System Font Substituter",
     pageSubtitle: "Replace common Western and Simplified Chinese system/UI fonts while preserving site design fonts, code fonts, and icon fonts.",
-    enable: "Enable globally",
+    enable: "Enable",
+    running: "Active",
+    paused: "Disabled",
     replacementTitle: "Replacement font",
     replacementDesc: "Enter a local font as CSS font-family syntax, or provide a complete fallback chain.",
     replacementLabel: "Font family",
@@ -176,7 +183,7 @@ const TEXT = {
     siteRulesDesc: "Choose a special behavior per site: force replacement, or turn off all extension overrides to inspect the site's native font settings.",
     addSite: "Add site",
     removeSite: "Remove this site",
-    siteFontPlaceholder: "Leave empty to use the global font",
+    siteFontPlaceholder: "Leave empty to use global font",
     siteActionLabel: "Action",
     siteActionForce: "Force replacement",
     siteActionOff: "Off (bypass)",
@@ -184,6 +191,8 @@ const TEXT = {
     triInherit: "Follow global",
     triOn: "On",
     triOff: "Off",
+    emptyRulesTitle: "No site special rules",
+    emptyRulesHint: "Click \"Add site\" above to configure forced replacement or bypass for specific domains.",
     siteRulesHint: "Domains match the main domain and subdomains, e.g. chatgpt.com, *.example.com. An empty font falls back to the global replacement font. With the \"Off (bypass)\" action the extension goes fully silent on that site (no replacement, no custom CSS), useful for inspecting the site's native font settings. With \"Force replacement\" you can expand a rule to force individual features on or off; options left as \"Follow global\" use the global settings.",
     customCSSTitle: "Custom CSS",
     customCSSDesc: "Inject custom styles into pages for @font-face, font stacks, or global typography; follows the global enable switch, off by default.",
@@ -192,8 +201,8 @@ const TEXT = {
     customCSSHint: "When enabled, custom CSS takes over page typography and the replacement chain is suspended (marking is kept only for standard ligatures and Auto Spacing). Injection is detection-based: it only goes global when the page actually uses fonts from the replacement list, while pages using their own fonts (e.g. personal sites) stay untouched. It is always injected after the extension's own styles and can be toggled per site in the site rules. Leave empty to inject nothing and restore the chain.",
     cssTooLarge: "Custom CSS is too large to save (other settings were saved; the per-item sync storage limit is about 8KB)",
     saveFailed: "Save failed, please try again",
-    protectionTitle: "Protection rules",
-    protectionDesc: "Prevent global replacement from breaking code areas or icon fonts.",
+    protectionTitle: "Protection and typography rules",
+    protectionDesc: "Prevent global replacement from breaking code areas or icon fonts, and optimize typographic features.",
     protectCode: "Protect code fonts",
     protectCodeDesc: "Skip code, pre, kbd, samp and their descendants",
     protectIcons: "Protect icon fonts",
@@ -211,13 +220,41 @@ const TEXT = {
     save: "Save settings",
     saved: "Saved. Open pages will update automatically.",
     resetDone: "Defaults restored",
-    emptyFont: "Replacement font cannot be empty"
+    emptyFont: "Replacement font cannot be empty",
+    unsavedChanges: "Unsaved changes"
   }
+};
+
+const PRESET_TEXTS = {
+  mixed: `The quick brown fox jumps over the lazy dog.
+天地玄黄，宇宙洪荒。汉字与西文字符协同排版预览。
+0123456789 · fi fl ffi ffl · “弯引号” 与 ‘单引号’ — 破折号`,
+  punct: `“双引号包裹内容”与‘单引号’测试，全角标点【】（）！：；？。
+破折号——与省略号……连接号与西文 Em Dash — En Dash –`,
+  ligatures: `fi fl ff ffi ffl fj ft fb Th st ct
+0123456789 (89/100) $123.45 €99.00 ¥688.00`,
+  latin: `Typography is the art and technique of arranging type to make written language legible, readable and appealing when displayed.
+SF Pro, Helvetica, HarmonyOS, PingFang SC.`
 };
 
 const $ = id => document.getElementById(id);
 const locale = ((chrome.i18n && chrome.i18n.getUILanguage && chrome.i18n.getUILanguage()) || navigator.language || "en").toLowerCase().startsWith("zh") ? "zh-CN" : "en";
 const t = key => TEXT[locale][key] || TEXT.en[key] || key;
+
+let isDirty = false;
+function markDirty() {
+  if (!isDirty) {
+    isDirty = true;
+    const hint = $("unsavedHint");
+    if (hint) hint.classList.add("visible");
+  }
+}
+
+function clearDirty() {
+  isDirty = false;
+  const hint = $("unsavedHint");
+  if (hint) hint.classList.remove("visible");
+}
 
 function applyLanguage() {
   document.documentElement.lang = locale;
@@ -225,6 +262,33 @@ function applyLanguage() {
   document.querySelectorAll("[data-i18n]").forEach(el => {
     el.textContent = t(el.dataset.i18n);
   });
+}
+
+function updateGlobalStatusBadge() {
+  const enabled = $("enabled").checked;
+  const badge = $("globalStatusBadge");
+  const text = $("globalStatusText");
+  if (!badge || !text) return;
+
+  if (enabled) {
+    badge.classList.remove("disabled");
+    text.textContent = t("running");
+  } else {
+    badge.classList.add("disabled");
+    text.textContent = t("paused");
+  }
+}
+
+function updateEmptyRulesState() {
+  const siteRules = $("siteRules");
+  const emptyBox = $("emptySiteRules");
+  if (!siteRules || !emptyBox) return;
+  const count = siteRules.querySelectorAll(".site-rule-row").length;
+  if (count === 0) {
+    emptyBox.classList.remove("hidden");
+  } else {
+    emptyBox.classList.add("hidden");
+  }
 }
 
 function parseTargets() {
@@ -248,7 +312,7 @@ function showStatus(message, type = "success") {
   showStatus.timer = setTimeout(() => {
     el.textContent = "";
     el.className = "status";
-  }, 2400);
+  }, 2800);
 }
 
 // 归一化三态覆盖值。旧版本规则存的是布尔值：true 视为开启，
@@ -312,13 +376,23 @@ function addSiteRuleRow(rule = {}) {
   });
   row.querySelector(".rule-remove").addEventListener("click", () => {
     row.remove();
+    updateEmptyRulesState();
+    markDirty();
   });
+
+  row.querySelectorAll("input, select").forEach(input => {
+    input.addEventListener("input", markDirty);
+    input.addEventListener("change", markDirty);
+  });
+
   $("siteRules").appendChild(row);
+  updateEmptyRulesState();
 }
 
 function renderSiteRules(rules) {
   $("siteRules").innerHTML = "";
   for (const rule of rules) addSiteRuleRow(rule);
+  updateEmptyRulesState();
 }
 
 function collectSiteRules() {
@@ -352,6 +426,8 @@ function fill(s) {
   renderSiteRules(s.siteRules || []);
   updateCount();
   updatePreview();
+  updateGlobalStatusBadge();
+  clearDirty();
 }
 
 async function load() {
@@ -365,6 +441,7 @@ async function load() {
     chrome.storage.sync.set(items);
     chrome.storage.sync.remove('customCSS');
   }
+  clearDirty();
 }
 
 async function save() {
@@ -395,6 +472,7 @@ async function save() {
     await chrome.storage.sync.set({ ...payload, ...items });
     await chrome.storage.sync.remove(stale);
     showStatus(t("saved"));
+    clearDirty();
   } catch (err) {
     console.warn("sfs save failed:", err);
     showStatus(t("saveFailed"), "error");
@@ -409,16 +487,81 @@ async function reset() {
   await chrome.storage.sync.set(syncDefaults);
   fill(DEFAULTS);
   showStatus(t("resetDone"));
+  clearDirty();
 }
 
-$("replacement").addEventListener("input", updatePreview);
-$("targets").addEventListener("input", updateCount);
-$("addSiteRule").addEventListener("click", () => addSiteRuleRow());
+// Preset Buttons for Live Preview
+function initPreviewControls() {
+  const presetGroup = $("presetButtons");
+  if (presetGroup) {
+    presetGroup.querySelectorAll(".preset-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        presetGroup.querySelectorAll(".preset-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const key = btn.dataset.preset;
+        if (PRESET_TEXTS[key]) {
+          $("previewText").textContent = PRESET_TEXTS[key];
+        }
+      });
+    });
+  }
+
+  const weightGroup = $("weightButtons");
+  if (weightGroup) {
+    weightGroup.querySelectorAll(".weight-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        weightGroup.querySelectorAll(".weight-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const weight = btn.dataset.weight;
+        $("previewText").style.fontWeight = weight;
+      });
+    });
+  }
+}
+
+// Event Listeners
+$("replacement").addEventListener("input", () => {
+  updatePreview();
+  markDirty();
+});
+
+$("targets").addEventListener("input", () => {
+  updateCount();
+  markDirty();
+});
+
+$("enabled").addEventListener("change", () => {
+  updateGlobalStatusBadge();
+  markDirty();
+});
+
+["protectCode", "protectIcons", "standardLigatures", "autoSpacing", "customCSSOn"].forEach(id => {
+  $(id).addEventListener("change", markDirty);
+});
+
+$("customCSS").addEventListener("input", markDirty);
+
+$("addSiteRule").addEventListener("click", () => {
+  addSiteRuleRow();
+  markDirty();
+});
+
 $("resetCustomCSS").addEventListener("click", () => {
   $("customCSS").value = DEFAULT_CUSTOM_CSS;
+  markDirty();
 });
+
 $("save").addEventListener("click", save);
 $("reset").addEventListener("click", reset);
 
+// Keyboard Shortcut: Ctrl/Cmd + S to Save
+window.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+    e.preventDefault();
+    save();
+  }
+});
+
+initPreviewControls();
 applyLanguage();
 load();
