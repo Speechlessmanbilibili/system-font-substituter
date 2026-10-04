@@ -86,7 +86,7 @@ npm test
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-release.ps1
 ```
 
-打包脚本生成 `dist/system-font-substituter-v<VERSION>.zip` 和 `dist/apple-ui-mix.css`，并将版本 ZIP 与日常 ZIP 同步至 Windows 定义的下载目录。ZIP 根目录直接包含 manifest，不包含测试和开发依赖。
+打包脚本生成 `dist/system-font-substituter-v<VERSION>.zip` 和 `dist/apple-ui-mix.css`，并将版本 ZIP 同步至 Windows 定义的下载目录。ZIP 根目录直接包含 manifest，不包含测试和开发依赖。
 
 当前扫描覆盖普通 DOM；Shadow DOM 内部节点和不产生 DOM 变动的 CSSOM 写入不在观察范围内。同步存储受总容量及单项配额限制；保存过程中旧块与新块短暂共存，超出配额时保存失败并保留原配置。
 

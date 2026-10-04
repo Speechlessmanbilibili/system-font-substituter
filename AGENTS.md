@@ -15,9 +15,8 @@
 
 ZIP 安装包也是 GitHub Release 的发布资产。Windows 的下载目录可由 `(New-Object -ComObject Shell.Application).Namespace('shell:Downloads').Self.Path` 获取；本机当前路径为 `D:\Downloads`。
 
-- 将每次生成的 ZIP 文件自动复制到系统定义的下载目录，包括日常测试构建和 Release 构建。
+- 将每次生成的版本 ZIP 文件自动复制到系统定义的下载目录，包括日常测试构建和 Release 构建。
 - 在运行时获取下载目录，不要硬编码本机路径。
-- 将日常构建命名为 `system-font-substituter.zip`。
 - 将 Release 安装包命名为 `system-font-substituter-v<VERSION>.zip`，并同时发布 `apple-ui-mix.css`。
 
 ### 更新日志与 Release 说明
@@ -51,7 +50,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-release.ps1
 | `content.js` | 监控 DOM 节点、文本、相关属性和样式表加载；采样页面原始字体，维护替换/保护标记，并应用站点三态规则 |
 | `options.html`、`options.css`、`options.js` | 提供字体配置、实时预览、目标名单、站点规则、保护规则和自定义 CSS 编辑功能；支持中文和英文 |
 | `apple-ui-mix.css` | 提供基于 SF Pro 和 PingFang UI SC 的 Unicode 范围划分与回退模板 |
-| `build-release.ps1` | 打包版本 ZIP 与 CSS，获取系统下载目录并复制版本 ZIP 和日常 ZIP |
+| `build-release.ps1` | 打包版本 ZIP 与 CSS，获取系统下载目录并复制版本 ZIP |
 | `CHANGELOG.md` | 按版本集中记录功能修改与历史变化，供 README 和发版时查阅 |
 | `tests/regression.test.cjs` | 验证匹配、存储、内容脚本与设置页，并通过独立测试浏览器加载真实 MV3 扩展 |
 | `tests/package.test.cjs` | 运行 PowerShell 5.1 打包，验证 ZIP 文件头、中央目录、路径和逐文件内容 |

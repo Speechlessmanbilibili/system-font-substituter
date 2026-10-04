@@ -60,14 +60,11 @@ $taskDownloadFolder = $taskShell.Namespace('shell:Downloads')
 if ($null -eq $taskDownloadFolder) { throw '无法取得 Windows 下载目录。' }
 $taskDownloads = [Environment]::ExpandEnvironmentVariables($taskDownloadFolder.Self.Path)
 $taskDownloadZip = Join-Path $taskDownloads ([System.IO.Path]::GetFileName($taskZip))
-$taskDailyZip = Join-Path $taskDownloads 'system-font-substituter.zip'
 Copy-Item -LiteralPath $taskZip -Destination $taskDownloadZip -Force
-Copy-Item -LiteralPath $taskZip -Destination $taskDailyZip -Force
 [pscustomobject]@{
     version = $taskVersion
     zip = $taskZip
     css = $taskCSS
     downloadZip = $taskDownloadZip
-    dailyZip = $taskDailyZip
     sha256 = (Get-FileHash -LiteralPath $taskZip -Algorithm SHA256).Hash.ToLowerInvariant()
 } | ConvertTo-Json
