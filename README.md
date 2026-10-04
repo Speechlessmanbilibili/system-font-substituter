@@ -16,42 +16,67 @@
 
 `Inter`、`Open Sans`、`Source Sans` 等可能由网站主动用于视觉设计的 WebFont 不在默认名单中。繁体中文、日文、韩文字体也不在默认名单中。
 
-为覆盖当前 ChatGPT Web 使用的平台系统字体栈，默认名单包含 `-apple-system-body` 与 `ui-sans-serif`。
+默认名单包含 `-apple-system-body`、`ui-sans-serif`、`OpenAI Sans` 和 `OpenAI Sans SC`。
 
 ## 站点强制覆盖
 
-在设置页可为指定站点配置「强制覆盖」规则：点击「添加站点」，左边填域名（支持主域名与子域名，如 `chatgpt.com`、`*.example.com`），右边可单独指定该站点使用的替换字体，留空则使用全局替换字体。
+在设置页点击“添加站点”，填写域名或主机:端口，例如 `chatgpt.com`、`127.0.0.1:3350`、`[::1]:3350`，也可粘贴 HTTP/HTTPS 地址。域名规则匹配该域名及其子域名；不指定端口时匹配全部端口，指定端口时只匹配该端口。HTTP 的默认端口按 80 匹配，HTTPS 按 443 匹配。
 
-强制覆盖的站点会跳过「首选字体命中名单」判断，所有文字元素直接替换；代码与图标保护规则仍然生效，避免破坏代码块和图标字体。
+更具体的主机规则优先；同一主机下端口规则优先，同等规则按列表顺序处理。`www.example.com` 不匹配 `example.com`，`*.example.com` 保留匹配主域名和子域名的原有行为。字体留空时使用全局替换字体。动作可选择“强制替换”或“关闭覆盖”；后者撤销该站的扩展样式和标记。
 
-每条站点规则还支持三态覆盖：展开规则后，可对保护代码字体、保护图标字体、标准连字、Auto Spacing、自定义 CSS 分别选择「跟随全局 / 开启 / 关闭」。选择「关闭」后，即使全局开启，该站点也不会应用对应功能；选择「跟随全局」时完全使用全局设置。
+强制覆盖的站点会跳过“首选字体命中名单”判断，所有文字元素直接替换；代码与图标保护规则仍然生效，避免破坏代码块和图标字体。
+
+每条站点规则还支持三态覆盖：展开规则后，可对保护代码字体、保护图标字体、标准连字、Auto Spacing、自定义 CSS 分别选择“跟随全局 / 开启 / 关闭”。选择“关闭”后，即使全局开启，该站点也不会应用对应功能；选择“跟随全局”时完全使用全局设置。
 
 ## Auto Spacing
 
-设置页可全局开启 Auto Spacing。启用后，扩展会对已被替换字体的文字及其后代强制应用 `text-autospace: normal !important`，覆盖网站自身设置；默认关闭。
+设置页可全局开启 Auto Spacing。启用后，扩展会对已标记为替换目标的文字强制应用 `text-autospace: normal !important`，覆盖网站自身设置；默认关闭。
 
 ## 自定义 CSS
 
-设置页可向页面注入自定义 CSS，默认关闭，内置一套 Apple UI Mix 模板作为起点。模板的 `@font-face` 分段与 unicode-range 按本机字体源文件实测（fontTools）划定：西文命中 SF Pro，中文命中苹方，中西文共有的标点符号交给苹方，PUA（E000-F8FF，含 Apple 标志）交给 SF Pro。mix 未覆盖的文种不参与其构建，走直接 fallback：SF Arabic / SF Hebrew / SF Armenian / SF Georgian 与 PingFang HK / TC / KR / JP，再落到 Microsoft YaHei 与霞鹜新晰黑。注入跟随全局启用开关，也可在站点规则中按站点单独开启或关闭；内容留空则不注入。
+设置页可向页面注入自定义 CSS，默认关闭，内置一套 Apple UI Mix 模板作为起点。模板的 `@font-face` 分段与 unicode-range 按本机字体源文件实测（fontTools）划定：西文命中 SF Pro Text，中文命中苹方 UI SC，中西文共有的标点符号交给苹方，PUA（E000-F8FF，含 Apple 标志）交给 SF Pro Text。模板以 SF Pro Text 静态套件提供西文，以苹方 UI SC 变量字体提供 CJK；其他文种经过 SF Arabic/SF Hebrew/SF Armenian/SF Georgian、苹方 UI HK/TC/MO、Hiragino Sans、Apple SD Gothic Neo，再回退至 Microsoft YaHei 与霞鹜新晰黑。注入跟随全局启用开关，也可在站点规则中按站点单独开启或关闭；内容留空则不注入。
 
-自定义 CSS 开启时接管替换：替换字体链自动失效，扩展照常检测并标记命中原名单的元素（代码与图标保护规则不变），这些元素及其占位文字改用自定义 CSS 的字体栈渲染；标准连字与 Auto Spacing 仍按各自开关作用于标记元素。关闭自定义 CSS 时替换链恢复。
+自定义 CSS 开启且内容非空时接管替换：替换字体链自动失效，扩展照常检测并标记命中原名单的元素（检测阶段仍遵循代码与图标保护规则），这些元素及其占位文字改用自定义 CSS 的字体栈渲染；标准连字与 Auto Spacing 仍按各自开关作用于标记元素。关闭自定义 CSS 或将内容留空时，普通替换链恢复。自定义 CSS 按用户填写的选择器生效，全局选择器也会影响未标记元素。
 
 ## 安装
 
-1. 解压发布包。
+1. 下载 Release 中的 `system-font-substituter-v<VERSION>.zip`。
 2. Edge 打开 `edge://extensions/`，Chrome 打开 `chrome://extensions/`。
-3. 开启“开发人员模式”。
-4. 点击“加载解压缩的扩展”，选择解压后的目录。
-5. 点击扩展图标进入设置页。
+3. 开启“开发人员模式”，将 ZIP 安装包拖入扩展管理页。
+4. 点击扩展图标进入设置页。
 
 ## 行为
 
-- 只在元素的首选 `font-family` 命中名单时替换。
+- 普通模式只替换首选 `font-family` 命中名单的元素；站点强制规则可以覆盖这一判断。
 - 默认保护 `code`、`pre`、`kbd`、`samp`。
 - 默认识别并保护常见图标字体。
-- 使用 `MutationObserver` 跟踪动态页面。
+- 通过 DOM 新增节点、文本和相关属性变化重新判断字体，并在样式表加载后补查。
 - WebFont 加载完成后会重新检查页面。
 - 浏览器受保护页面无法注入普通扩展。
+
+## v2.1.1
+
+- 修复端口规则被截断的问题：`127.0.0.1:3350` 不再影响其他端口，并支持默认端口、IPv6 和国际化域名。
+- 统一设置页与内容脚本的默认配置，保留 OpenAI Sans/SC。
+- 修复空 CSS 恢复默认模板、保存失败时旧 CSS 丢失、新旧分块短暂混合的问题；按实际序列化字节分块，新块与引用一次发布，成功后清理旧块。
+- 修复已替换祖先污染动态节点和后续扫描分片的字体判断，以及字体变化后标记未更新的问题。
+- 修复代码、图标、SVG 和独立设计字体被继承样式影响的问题；连字与 Auto Spacing 使用直接标记规则。
+- 修复禁用后残留扫描、删除网站自有内联属性、样式表异步加载漏检和设置页保存竞争。
+- 补齐双语界面文案，保留恢复 CSS 按钮图标，并按平台显示保存快捷键。
+- 新增自动回归测试、真实 MV3 加载验证和发布打包脚本；规范化 AGENTS.md。
+
+## 开发验证与打包
+
+```powershell
+npm ci
+npx playwright install chromium
+npm test
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-release.ps1
+```
+
+打包脚本生成 `dist/system-font-substituter-v<VERSION>.zip` 和 `dist/apple-ui-mix.css`，并将版本 ZIP 与日常 ZIP 同步至 Windows 定义的下载目录。ZIP 根目录直接包含 manifest，不包含测试和开发依赖。
+
+当前扫描覆盖普通 DOM；Shadow DOM 内部节点和不产生 DOM 变动的 CSSOM 写入不在观察范围内。同步存储受总容量及单项配额限制；保存过程中旧块与新块短暂共存，超出配额时保存失败并保留原配置。
 
 ## v2.1.0
 
@@ -74,9 +99,9 @@
 
 ## v1.9.0
 
-- 新增「自定义 CSS」：可向所有页面注入自定义样式，默认关闭；内置 Apple UI Mix 模板（SF Pro → PingFang SC → Microsoft YaHei），unicode-range 按本机字体源文件实测划定，mix 未覆盖的文种以直接 fallback 兜底（SF Arabic / Hebrew / Armenian / Georgian 与 PingFang HK / TC / KR / JP）。
+- 新增“自定义 CSS”：可向所有页面注入自定义样式，默认关闭；内置 Apple UI Mix 模板（SF Pro → PingFang SC → Microsoft YaHei），unicode-range 按本机字体源文件实测划定，mix 未覆盖的文种以直接 fallback 兜底（SF Arabic / Hebrew / Armenian / Georgian 与 PingFang HK / TC / KR / JP）。
 - 自定义 CSS 在扩展自身样式之后注入，与替换字体、标准连字、Auto Spacing 等扩展规则冲突时以自定义 CSS 为准。
-- 站点强制覆盖升级为三态覆盖：每条规则可对保护代码字体、保护图标字体、标准连字、Auto Spacing、自定义 CSS 单独选择「跟随全局 / 开启 / 关闭」，不再只能单向强制开启 Auto Spacing。
+- 站点强制覆盖升级为三态覆盖：每条规则可对保护代码字体、保护图标字体、标准连字、Auto Spacing、自定义 CSS 单独选择“跟随全局 / 开启 / 关闭”，不再只能单向强制开启 Auto Spacing。
 - 默认替换字体改为 `"Em Dash Bridge", "HarmonyOS Sans SC", "Noto Sans SC", "霞鹜新晰黑 屏幕阅读版 补全"`。
 
 ## v1.8.0
@@ -150,17 +175,17 @@
 
 ## v1.7.2
 
-- 替换规则同时作用于 `::placeholder`，输入框等控件的占位文字若声明了独立字体也会被替换，避免空输入框看起来「没生效」。
+- 替换规则同时作用于 `::placeholder`，输入框等控件的占位文字若声明了独立字体也会被替换，避免空输入框看起来“没生效”。
 - 扫描范围加入 `contenteditable` 可编辑区域（Claude、Notion 等站点输入框的实现方式），即使内容为空也会参与替换。
 
 ## v1.7.1
 
 - 修复字体加载完成后的补扫会造成整页字体闪回、并在大页面上持续卡顿的问题：补扫不再撤销已有替换标记，只标记此前漏掉的元素，已替换区域保持稳定。
-- 「挪回 head 末尾」的保底动作加 500ms 限流，避免 ChatGPT 等 CSS-in-JS 站点频繁插入样式标签时反复触发整页级联重算。
+- “挪回 head 末尾”的保底动作加 500ms 限流，避免 ChatGPT 等 CSS-in-JS 站点频繁插入样式标签时反复触发整页级联重算。
 
 ## v1.7.0
 
-- 新增「站点强制覆盖」：设置页可添加站点规则（域名 + 可选专属字体），命中站点后跳过字体名单判断、直接强制替换，解决 ChatGPT 等站点个别区域字体回退的问题；代码与图标保护规则仍然生效。
+- 新增“站点强制覆盖”：设置页可添加站点规则（域名 + 可选专属字体），命中站点后跳过字体名单判断、直接强制替换，解决 ChatGPT 等站点个别区域字体回退的问题；代码与图标保护规则仍然生效。
 - 替换规则改为挂在 `html[data-sfs]` 下并提高特异性，同时检测到页面新插入样式时把扩展样式表挪回 `head` 末尾，抵抗 ChatGPT 等 CSS-in-JS 应用动态注入样式的覆盖。
 - 大页面扫描改为分帧处理（每帧约 2000 个元素），消除整页扫描的长任务卡顿；MutationObserver 增量扫描增加祖先去重，避免父子节点重复扫描同一子树。
 - 页面没有 webfont 时跳过字体加载完成后的整页重扫，减少无谓开销。

@@ -1,110 +1,4 @@
-// 与 content.js 中的 DEFAULT_CUSTOM_CSS 保持一致。
-const DEFAULT_CUSTOM_CSS = `/* =========================================================
-   Apple UI Mix
-   =========================================================
-
-   Western: SF Pro Text→苹方UI SC→YaHei  CJK: 苹方UI SC→YaHei
-   共有标点:苹方UI  弯引号:苹方UI  PUA:SF Pro Text
-   fallback: SF Pro Text/SF Arabic/SF Hebrew/SF Armenian/SF Georgian
-   →苹方UI SC→苹方UI HK/TC/MO→Hiragino Sans→Apple SD Gothic Neo→YaHei→霞鹜新晰黑
-   西文用 SF Pro Text 静态套件（opsz 固定 Text 端）；苹方 UI 为变量全权重。
-   ========================================================= */
-
-/* ======== Western / Latin（SF Pro Text 静态套件：opsz 烤死 Text 端，
-   不受浏览器光学尺寸行为影响；单 family 九权重由 DWrite 按字重选面） ======== */
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("SF Pro Text");
-  font-weight: 100 900;
-  unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
-}
-
-/* ======== Chinese / CJK（苹方 UI SC 变量全权重，共有标点/弯引号归苹方） ======== */
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("PingFang UI SC");
-  font-weight: 100 900;
-  unicode-range: U+00B7,U+2010-2016,U+2018-2019,U+201C-201D,U+2020-2027,U+203B,U+2103,U+2160-217F,U+2460-24FF,U+2208,U+2229-222A,U+2266-2267,U+226E-226F,U+22EF,U+2E80-2FFF,U+3000-303F,U+3300-33FF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF,U+FF00-FFEF;
-}
-
-
-/* =========================================================
-   Global
-   ========================================================= */
-
-html,
-body,
-[data-sfs] [data-sfs-replaced="1"],
-[data-sfs] [data-sfs-replaced="1"]::placeholder {
-  font-family:
-    "Apple UI Mix",
-
-    /* 直接 fallback（不参与 mix） */
-    "SF Pro Text",
-    "SF Arabic",
-    "SF Hebrew",
-    "SF Armenian",
-    "SF Georgian",
-    "PingFang UI SC",
-    "PingFang UI HK",
-    "PingFang UI TC",
-    "PingFang UI MO",
-    "Hiragino Sans",
-    "Apple SD Gothic Neo",
-
-    /* 真正的 fallback */
-    "Microsoft YaHei",
-    "霞鹜新晰黑 屏幕阅读版 补全" !important;
-
-  font-variation-settings: normal !important;
-  text-autospace: normal !important;
-}`;
-
-const DEFAULTS = {
-  enabled: true,
-  replacement: '"Em Dash Bridge", "HarmonyOS Sans SC", "Noto Sans SC", "霞鹜新晰黑 屏幕阅读版 补全"',
-  targets: [
-    "-apple-system-body", "ui-sans-serif", "system-ui", "-apple-system", "BlinkMacSystemFont",
-    "Segoe UI", "Segoe UI Variable", "Segoe UI Variable Text", "Segoe UI Variable Display",
-    "Arial", "Arial Unicode MS", "Helvetica", "Helvetica Neue", "Tahoma", "Verdana", "Trebuchet MS",
-    "Calibri", "Aptos", "Aptos Display", "Aptos Narrow",
-    "SF Pro", "SF Pro Text", "SF Pro Display", "SF UI Text", "SF UI Display",
-    "Roboto", "Roboto Flex", "Roboto Condensed", "Ubuntu", "Ubuntu Sans", "Cantarell", "Liberation Sans", "DejaVu Sans", "Droid Sans",
-    "Microsoft YaHei", "Microsoft YaHei UI", "微软雅黑", "PingFang SC", "苹方-简", "Hiragino Sans GB", "冬青黑体简体中文",
-    "Noto Sans SC", "Noto Sans CJK SC", "Source Han Sans SC", "思源黑体 CN", "思源黑体"
-  ],
-  protectCode: true,
-  protectIcons: true,
-  standardLigatures: false,
-  autoSpacing: false,
-  customCSSOn: false,
-  customCSS: DEFAULT_CUSTOM_CSS,
-  siteRules: []
-};
-
-// 自定义 CSS 超过 sync 单键 8KB 配额，按 2500 字符切块存储
-// （customCSS#0、customCSS#1…），读取时按序号拼回；与 content.js 一致。
-const CC_PREFIX = 'customCSS#';
-function chunkCustomCSS(css) {
-  const items = {};
-  const count = Math.ceil(css.length / 2500);
-  for (let i = 0; i < count; i++) items[CC_PREFIX + i] = css.slice(i * 2500, (i + 1) * 2500);
-  return { items, count };
-}
-function assembleCustomCSS(stored) {
-  const parts = [];
-  for (const key of Object.keys(stored)) {
-    if (key.startsWith(CC_PREFIX)) parts.push([Number(key.slice(CC_PREFIX.length)), stored[key]]);
-  }
-  parts.sort((a, b) => a[0] - b[0]);
-  if (parts.length) return parts.map(p => p[1]).join('');
-  return typeof stored.customCSS === 'string' ? stored.customCSS : null;
-}
-
-// 站点规则可三态覆盖的功能项，与 content.js 的 SITE_OVERRIDE_KEYS 保持一致。
-const OVERRIDE_KEYS = ["protectCode", "protectIcons", "standardLigatures", "autoSpacing", "customCSSOn"];
+const { DEFAULT_CUSTOM_CSS, DEFAULTS, normalizeSettings, parseDomain, writeSettings, ruleOverride: normalizeOverride, OVERRIDE_KEYS } = SFS;
 
 const TEXT = {
   "zh-CN": {
@@ -117,6 +11,13 @@ const TEXT = {
     replacementDesc: "填写本机字体的 CSS font-family。可以使用单个字体，也可以填写完整 fallback 链。",
     replacementLabel: "字体族",
     preview: "预览",
+    previewTag: "实时渲染 · 支持直接编辑",
+    presetMixed: "综合",
+    presetPunct: "标点破折号",
+    presetLigatures: "连字数字",
+    presetLatin: "西文短文",
+    globalToggle: "全局启用/停用",
+    targetsLabel: "目标字体族",
     targetsTitle: "默认替换名单",
     targetsDesc: "每行一个字体族。只有元素的首选字体命中此名单时才会替换。",
     families: "个字体族",
@@ -126,6 +27,7 @@ const TEXT = {
     addSite: "添加站点",
     removeSite: "删除该站点",
     siteFontPlaceholder: "留空使用全局替换字体",
+    domainLabel: "域名或主机:端口",
     siteActionLabel: "动作",
     siteActionForce: "强制替换",
     siteActionOff: "关闭覆盖（旁观）",
@@ -135,13 +37,16 @@ const TEXT = {
     triOff: "关闭",
     emptyRulesTitle: "暂无站点特殊规则",
     emptyRulesHint: "点击上方「添加站点」可为特定域名配置强制替换或关闭覆盖。",
-    siteRulesHint: "域名支持主域名与子域名，例如 chatgpt.com、*.example.com；字体留空则使用全局替换字体。动作选「关闭覆盖」时扩展对该站点完全静默（不替换、不注入自定义 CSS），适合查看网站原生字体设置；选「强制替换」时可展开规则对下列功能单独选择开启或关闭，选择「跟随全局」时使用全局设置。",
+    siteRulesHint: "域名匹配主域名及其子域名；可填写 127.0.0.1:3350 或 [::1]:3350 指定端口，不填端口则匹配全部端口。同一主机下端口规则优先，更具体的域名优先；www.example.com 不匹配 example.com。字体留空则使用全局替换字体。动作选「关闭覆盖」时扩展对该站点完全静默（不替换、不注入自定义 CSS），适合查看网站原生字体设置；选「强制替换」时可展开规则对下列功能单独选择开启或关闭，选择「跟随全局」时使用全局设置。",
     customCSSTitle: "自定义 CSS",
     customCSSDesc: "向页面注入自定义样式，可用于 @font-face、字体栈或全局排版；跟随全局启用开关，默认关闭。",
     customCSSToggle: "插入自定义 CSS",
     customCSSReset: "恢复默认内容",
     customCSSHint: "开启时由自定义 CSS 接管页面字体，替换字体链自动失效（标记逻辑仅保留给标准连字与 Auto Spacing）。注入采用检测策略：仅当页面使用了替换名单字体时才全局注入，个人站等使用原生字体的页面保持原样；样式始终注入在扩展自身样式之后，站点特殊规则中也可按站点单独开关。留空则不注入、替换链恢复生效。",
-    cssTooLarge: "自定义 CSS 过大，未能保存（其余设置已保存；同步存储单条上限约 8KB）",
+    cssTooLarge: "同步存储配额不足，未保存更改；请缩短自定义 CSS 或站点规则。",
+    invalidDomain: "站点格式无效，请填写域名、域名:端口或 HTTP/HTTPS 地址。",
+    invalidFont: "字体族格式无效，请使用有效的 CSS font-family 语法。",
+    loadFailed: "设置读取失败，请重新打开设置页。",
     saveFailed: "保存失败，请重试",
     protectionTitle: "保护与排版规则",
     protectionDesc: "避免全局替换破坏代码区域或图标字体，并优化高级排版特性。",
@@ -175,6 +80,13 @@ const TEXT = {
     replacementDesc: "Enter a local font as CSS font-family syntax, or provide a complete fallback chain.",
     replacementLabel: "Font family",
     preview: "Preview",
+    previewTag: "Live rendering · Editable",
+    presetMixed: "Mixed",
+    presetPunct: "Punctuation",
+    presetLigatures: "Ligatures",
+    presetLatin: "Latin",
+    globalToggle: "Enable/disable globally",
+    targetsLabel: "Target font families",
     targetsTitle: "Default replacement list",
     targetsDesc: "One family per line. Replacement only happens when the element's first-choice family matches this list.",
     families: "families",
@@ -184,6 +96,7 @@ const TEXT = {
     addSite: "Add site",
     removeSite: "Remove this site",
     siteFontPlaceholder: "Leave empty to use global font",
+    domainLabel: "Domain or host:port",
     siteActionLabel: "Action",
     siteActionForce: "Force replacement",
     siteActionOff: "Off (bypass)",
@@ -193,13 +106,16 @@ const TEXT = {
     triOff: "Off",
     emptyRulesTitle: "No site special rules",
     emptyRulesHint: "Click \"Add site\" above to configure forced replacement or bypass for specific domains.",
-    siteRulesHint: "Domains match the main domain and subdomains, e.g. chatgpt.com, *.example.com. An empty font falls back to the global replacement font. With the \"Off (bypass)\" action the extension goes fully silent on that site (no replacement, no custom CSS), useful for inspecting the site's native font settings. With \"Force replacement\" you can expand a rule to force individual features on or off; options left as \"Follow global\" use the global settings.",
+    siteRulesHint: "Domains match the domain and its subdomains. Add a port, e.g. 127.0.0.1:3350 or [::1]:3350, to match only that port; omit it to match all ports. More specific hosts take precedence, followed by explicit ports; www.example.com does not match example.com. An empty font falls back to the global replacement font. With the \"Off (bypass)\" action the extension goes fully silent on that site (no replacement, no custom CSS), useful for inspecting the site's native font settings. With \"Force replacement\" you can expand a rule to force individual features on or off; options left as \"Follow global\" use the global settings.",
     customCSSTitle: "Custom CSS",
     customCSSDesc: "Inject custom styles into pages for @font-face, font stacks, or global typography; follows the global enable switch, off by default.",
     customCSSToggle: "Insert custom CSS",
     customCSSReset: "Restore default content",
     customCSSHint: "When enabled, custom CSS takes over page typography and the replacement chain is suspended (marking is kept only for standard ligatures and Auto Spacing). Injection is detection-based: it only goes global when the page actually uses fonts from the replacement list, while pages using their own fonts (e.g. personal sites) stay untouched. It is always injected after the extension's own styles and can be toggled per site in the site rules. Leave empty to inject nothing and restore the chain.",
-    cssTooLarge: "Custom CSS is too large to save (other settings were saved; the per-item sync storage limit is about 8KB)",
+    cssTooLarge: "Sync storage quota exceeded. Changes were not saved; shorten the custom CSS or site rules.",
+    invalidDomain: "Invalid site. Enter a domain, domain:port, or HTTP/HTTPS URL.",
+    invalidFont: "Invalid font family. Use valid CSS font-family syntax.",
+    loadFailed: "Could not load settings. Reopen this page.",
     saveFailed: "Save failed, please try again",
     protectionTitle: "Protection and typography rules",
     protectionDesc: "Prevent global replacement from breaking code areas or icon fonts, and optimize typographic features.",
@@ -242,7 +158,11 @@ const locale = ((chrome.i18n && chrome.i18n.getUILanguage && chrome.i18n.getUILa
 const t = key => TEXT[locale][key] || TEXT.en[key] || key;
 
 let isDirty = false;
+let editRevision = 0;
+let busy = false;
+let loaded = false;
 function markDirty() {
+  editRevision++;
   if (!isDirty) {
     isDirty = true;
     const hint = $("unsavedHint");
@@ -262,6 +182,14 @@ function applyLanguage() {
   document.querySelectorAll("[data-i18n]").forEach(el => {
     el.textContent = t(el.dataset.i18n);
   });
+  document.querySelectorAll("[data-i18n-title]").forEach(el => {
+    el.title = t(el.dataset.i18nTitle);
+  });
+  document.querySelectorAll("[data-i18n-aria]").forEach(el => {
+    el.setAttribute("aria-label", t(el.dataset.i18nAria));
+  });
+  const shortcut = document.querySelector(".shortcut-badge");
+  if (shortcut) shortcut.textContent = /Mac/i.test(navigator.platform) ? "⌘S" : "Ctrl+S";
 }
 
 function updateGlobalStatusBadge() {
@@ -315,14 +243,6 @@ function showStatus(message, type = "success") {
   }, 2800);
 }
 
-// 归一化三态覆盖值。旧版本规则存的是布尔值：true 视为开启，
-// false / 缺省视为跟随全局，与 content.js 的 ruleOverride 一致。
-function normalizeOverride(value) {
-  if (value === "on" || value === true) return "on";
-  if (value === "off") return "off";
-  return "";
-}
-
 function overrideLabel(key) {
   return key === "customCSSOn" ? t("customCSSToggle") : t(key);
 }
@@ -332,8 +252,8 @@ function addSiteRuleRow(rule = {}) {
   row.className = "site-rule-row";
   row.innerHTML = `
     <div class="site-rule-main">
-      <input class="text-input rule-domain" type="text" spellcheck="false" placeholder="chatgpt.com" aria-label="Domain">
-      <input class="text-input rule-font" type="text" spellcheck="false" placeholder="${t("siteFontPlaceholder")}" aria-label="Font">
+      <input class="text-input rule-domain" type="text" spellcheck="false" placeholder="chatgpt.com" aria-label="${t("domainLabel")}">
+      <input class="text-input rule-font" type="text" spellcheck="false" placeholder="${t("siteFontPlaceholder")}" aria-label="${t("replacementLabel")}">
       <button class="rule-expand" type="button" title="${t("siteOverridesToggle")}" aria-label="${t("siteOverridesToggle")}" aria-expanded="false"></button>
       <button class="rule-remove" type="button" title="${t("removeSite")}" aria-label="${t("removeSite")}">×</button>
     </div>
@@ -408,6 +328,14 @@ function collectSiteRules() {
     for (const select of row.querySelectorAll(".rule-override")) {
       rule[select.dataset.key] = select.value;
     }
+    if (!parseDomain(domain)) {
+      row.querySelector(".rule-domain").focus();
+      throw new Error(t("invalidDomain"));
+    }
+    if (rule.font && !CSS.supports("font-family", rule.font)) {
+      row.querySelector(".rule-font").focus();
+      throw new Error(t("invalidFont"));
+    }
     rules.push(rule);
   }
   return rules;
@@ -430,67 +358,83 @@ function fill(s) {
   clearDirty();
 }
 
+function setBusy(value) {
+  busy = value;
+  $("save").disabled = value || !loaded;
+  $("reset").disabled = value || !loaded;
+}
+
 async function load() {
-  const stored = await chrome.storage.sync.get(null);
-  const merged = { ...DEFAULTS, ...stored };
-  merged.customCSS = assembleCustomCSS(stored) ?? DEFAULT_CUSTOM_CSS;
-  fill(merged);
-  // 旧版单键 customCSS 迁移为分块
-  if (typeof stored.customCSS === 'string') {
-    const { items } = chunkCustomCSS(stored.customCSS);
-    chrome.storage.sync.set(items);
-    chrome.storage.sync.remove('customCSS');
+  setBusy(true);
+  try {
+    fill(normalizeSettings(await chrome.storage.sync.get(null)));
+    loaded = true;
+  } catch (error) {
+    console.warn("sfs settings load failed:", error);
+    showStatus(t("loadFailed"), "error");
+  } finally {
+    setBusy(false);
   }
-  clearDirty();
 }
 
 async function save() {
+  if (busy || !loaded) return;
   const replacement = $("replacement").value.trim();
-  if (!replacement) {
-    showStatus(t("emptyFont"), "error");
+  if (!replacement || !CSS.supports("font-family", replacement)) {
+    showStatus(t(replacement ? "invalidFont" : "emptyFont"), "error");
     $("replacement").focus();
     return;
   }
-
-  const payload = {
-    enabled: $("enabled").checked,
-    replacement,
-    targets: parseTargets(),
-    protectCode: $("protectCode").checked,
-    protectIcons: $("protectIcons").checked,
-    standardLigatures: $("standardLigatures").checked,
-    autoSpacing: $("autoSpacing").checked,
-    customCSSOn: $("customCSSOn").checked,
-    siteRules: collectSiteRules()
-  };
-  const { items, count } = chunkCustomCSS($("customCSS").value);
-
+  const revision = editRevision;
+  let payload;
   try {
-    // 块数缩小时清理残留的旧块与旧版单键
-    const stale = ['customCSS'];
-    for (let i = count; i < 64; i++) stale.push(CC_PREFIX + i);
-    await chrome.storage.sync.set({ ...payload, ...items });
-    await chrome.storage.sync.remove(stale);
+    payload = {
+      enabled: $("enabled").checked,
+      replacement,
+      targets: parseTargets(),
+      protectCode: $("protectCode").checked,
+      protectIcons: $("protectIcons").checked,
+      standardLigatures: $("standardLigatures").checked,
+      autoSpacing: $("autoSpacing").checked,
+      customCSSOn: $("customCSSOn").checked,
+      siteRules: collectSiteRules()
+    };
+  } catch (error) {
+    showStatus(error.message, "error");
+    return;
+  }
+  const css = $("customCSS").value;
+  setBusy(true);
+  try {
+    await writeSettings(chrome.storage.sync, payload, css);
     showStatus(t("saved"));
-    clearDirty();
-  } catch (err) {
-    console.warn("sfs save failed:", err);
-    showStatus(t("saveFailed"), "error");
+    if (revision === editRevision) clearDirty();
+  } catch (error) {
+    console.warn("sfs save failed:", error);
+    showStatus(t(/quota/i.test(error.message || "") ? "cssTooLarge" : "saveFailed"), "error");
+  } finally {
+    setBusy(false);
   }
 }
 
 async function reset() {
-  const stored = await chrome.storage.sync.get(null);
-  const stale = Object.keys(stored).filter(k => k === 'customCSS' || k.startsWith(CC_PREFIX));
-  if (stale.length) await chrome.storage.sync.remove(stale);
-  const { customCSS, ...syncDefaults } = DEFAULTS;
-  await chrome.storage.sync.set(syncDefaults);
-  fill(DEFAULTS);
-  showStatus(t("resetDone"));
-  clearDirty();
+  if (busy || !loaded) return;
+  const revision = editRevision;
+  setBusy(true);
+  try {
+    const { customCSS, ...payload } = DEFAULTS;
+    await writeSettings(chrome.storage.sync, payload, customCSS);
+    if (revision === editRevision) fill(DEFAULTS);
+    showStatus(t("resetDone"));
+  } catch (error) {
+    console.warn("sfs reset failed:", error);
+    showStatus(t("saveFailed"), "error");
+  } finally {
+    setBusy(false);
+  }
 }
 
-// Preset Buttons for Live Preview
+// 实时预览的文本预设与字重按钮
 function initPreviewControls() {
   const presetGroup = $("presetButtons");
   if (presetGroup) {
@@ -519,7 +463,7 @@ function initPreviewControls() {
   }
 }
 
-// Event Listeners
+// 设置项与操作按钮的事件
 $("replacement").addEventListener("input", () => {
   updatePreview();
   markDirty();
@@ -554,7 +498,7 @@ $("resetCustomCSS").addEventListener("click", () => {
 $("save").addEventListener("click", save);
 $("reset").addEventListener("click", reset);
 
-// Keyboard Shortcut: Ctrl/Cmd + S to Save
+// Ctrl/Cmd + S 保存设置
 window.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
     e.preventDefault();

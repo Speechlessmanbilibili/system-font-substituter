@@ -29,7 +29,7 @@
       </div>
       
       <div class="header-action">
-        <label class="toggle-control main-toggle" for="enabled" title="全局启用/停用">
+        <label class="toggle-control main-toggle" for="enabled" title="全局启用/停用" data-i18n-title="globalToggle">
           <span class="toggle-label" data-i18n="enable">启用</span>
           <span class="switch">
             <input id="enabled" type="checkbox">
@@ -68,15 +68,15 @@
           <div class="preview-header">
             <div class="preview-title-box">
               <span class="preview-caption" data-i18n="preview">预览</span>
-              <span class="preview-tag">实时渲染 · 支持直接编辑</span>
+              <span class="preview-tag" data-i18n="previewTag">实时渲染 · 支持直接编辑</span>
             </div>
             <div class="preview-toolbar">
               <!-- Sample Preset Buttons -->
               <div class="sample-preset-group" id="presetButtons">
-                <button type="button" class="preset-btn active" data-preset="mixed">综合</button>
-                <button type="button" class="preset-btn" data-preset="punct">标点破折号</button>
-                <button type="button" class="preset-btn" data-preset="ligatures">连字数字</button>
-                <button type="button" class="preset-btn" data-preset="latin">西文短文</button>
+                <button type="button" class="preset-btn active" data-preset="mixed" data-i18n="presetMixed">综合</button>
+                <button type="button" class="preset-btn" data-preset="punct" data-i18n="presetPunct">标点破折号</button>
+                <button type="button" class="preset-btn" data-preset="ligatures" data-i18n="presetLigatures">连字数字</button>
+                <button type="button" class="preset-btn" data-preset="latin" data-i18n="presetLatin">西文短文</button>
               </div>
               <!-- Font Weight Switcher -->
               <div class="weight-switcher-group" id="weightButtons">
@@ -189,7 +189,7 @@
         </div>
 
         <div class="editor-container">
-          <textarea id="targets" class="text-area code-input" rows="12" spellcheck="false" aria-label="Target font families"></textarea>
+          <textarea id="targets" class="text-area code-input" rows="12" spellcheck="false" aria-label="Target font families" data-i18n-aria="targetsLabel"></textarea>
         </div>
         <p class="note" data-i18n="targetsHint">默认仅包含常见西文与简中系统/UI 字体；可能用于视觉设计的 WebFont 不在默认名单中。</p>
       </section>
@@ -206,7 +206,7 @@
             </div>
             <p data-i18n="siteRulesDesc">对指定站点选择特殊行为：强制替换，或关闭扩展的一切覆盖以便查看网站原生字体设置。</p>
           </div>
-          <button id="addSiteRule" class="button secondary add-site-btn" type="button" aria-label="Add site rule">
+          <button id="addSiteRule" class="button secondary add-site-btn" type="button" aria-label="Add site rule" data-i18n-aria="addSite">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             <span data-i18n="addSite">添加站点</span>
           </button>
@@ -220,8 +220,8 @@
           <div class="empty-rules-icon">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
           </div>
-          <div class="empty-rules-text">暂无站点特殊规则</div>
-          <div class="empty-rules-hint">点击上方「添加站点」可为特定域名配置强制替换或关闭覆盖。</div>
+          <div class="empty-rules-text" data-i18n="emptyRulesTitle">暂无站点特殊规则</div>
+          <div class="empty-rules-hint" data-i18n="emptyRulesHint">点击上方“添加站点”可为特定域名配置强制替换或关闭覆盖。</div>
         </div>
 
         <p class="note" data-i18n="siteRulesHint">域名支持主域名与子域名，例如 chatgpt.com、*.example.com；字体留空则使用全局替换字体。代码与图标保护规则仍然生效。</p>
@@ -258,13 +258,13 @@
             </div>
             <span class="code-editor-title">Apple UI Mix.css</span>
             <div class="code-editor-actions">
-              <button id="resetCustomCSS" class="button button-sm secondary" type="button" data-i18n="customCSSReset">
+              <button id="resetCustomCSS" class="button button-sm secondary" type="button">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-                <span>恢复默认内容</span>
+                <span data-i18n="customCSSReset">恢复默认内容</span>
               </button>
             </div>
           </div>
-          <textarea id="customCSS" class="text-area code-input custom-css-input" rows="14" spellcheck="false" aria-label="Custom CSS"></textarea>
+          <textarea id="customCSS" class="text-area code-input custom-css-input" rows="14" spellcheck="false" aria-label="Custom CSS" data-i18n-aria="customCSSTitle"></textarea>
         </div>
 
         <p class="note" data-i18n="customCSSHint">自定义 CSS 始终注入在扩展自身样式之后：与替换字体、标准连字、Auto Spacing 等扩展规则冲突时，以自定义 CSS 为准；留空则不注入。</p>
@@ -300,7 +300,7 @@
         <span id="status" class="status" aria-live="polite"></span>
         <div class="unsaved-hint" id="unsavedHint">
           <span class="unsaved-dot"></span>
-          <span>有未保存的更改</span>
+          <span data-i18n="unsavedChanges">有未保存的更改</span>
         </div>
       </div>
       <div class="actions">
@@ -314,6 +314,7 @@
     </footer>
   </main>
 
+  <script src="shared.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

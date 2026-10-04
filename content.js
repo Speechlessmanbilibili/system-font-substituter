@@ -1,167 +1,13 @@
 (() => {
   "use strict";
 
-  // 默认自定义 CSS：Apple UI Mix（SF Pro → PingFang SC → Microsoft YaHei）
-  // 的 @font-face 分段与全局字体栈。内容不含反引号与 ${，可安全内联。
-  const DEFAULT_CUSTOM_CSS = `/* =========================================================
-   Apple UI Mix
-   =========================================================
-
-   Western: SF Pro Text→苹方UI SC→YaHei  CJK: 苹方UI SC→YaHei
-   共有标点:苹方UI  弯引号:苹方UI  PUA:SF Pro Text
-   fallback: SF Pro Text/SF Arabic/SF Hebrew/SF Armenian/SF Georgian
-   →苹方UI SC→苹方UI HK/TC/MO→Hiragino Sans→Apple SD Gothic Neo→YaHei→霞鹜新晰黑
-   西文用 SF Pro Text 静态套件（opsz 固定 Text 端）；苹方 UI 为变量全权重。
-   ========================================================= */
-
-/* ======== Western / Latin（SF Pro Text 静态套件：opsz 烤死 Text 端，
-   不受浏览器光学尺寸行为影响；单 family 九权重由 DWrite 按字重选面） ======== */
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("SF Pro Text");
-  font-weight: 100 900;
-  unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
-}
-
-/* ======== Chinese / CJK（苹方 UI SC 变量全权重，共有标点/弯引号归苹方） ======== */
-
-@font-face {
-  font-family: "Apple UI Mix";
-  src: local("PingFang UI SC");
-  font-weight: 100 900;
-  unicode-range: U+00B7,U+2010-2016,U+2018-2019,U+201C-201D,U+2020-2027,U+203B,U+2103,U+2160-217F,U+2460-24FF,U+2208,U+2229-222A,U+2266-2267,U+226E-226F,U+22EF,U+2E80-2FFF,U+3000-303F,U+3300-33FF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF,U+FF00-FFEF;
-}
-
-
-/* =========================================================
-   Global
-   ========================================================= */
-
-html,
-body,
-[data-sfs] [data-sfs-replaced="1"],
-[data-sfs] [data-sfs-replaced="1"]::placeholder {
-  font-family:
-    "Apple UI Mix",
-
-    /* 直接 fallback（不参与 mix） */
-    "SF Pro Text",
-    "SF Arabic",
-    "SF Hebrew",
-    "SF Armenian",
-    "SF Georgian",
-    "PingFang UI SC",
-    "PingFang UI HK",
-    "PingFang UI TC",
-    "PingFang UI MO",
-    "Hiragino Sans",
-    "Apple SD Gothic Neo",
-
-    /* 真正的 fallback */
-    "Microsoft YaHei",
-    "霞鹜新晰黑 屏幕阅读版 补全" !important;
-
-  font-variation-settings: normal !important;
-  text-autospace: normal !important;
-}`;
-
-  const DEFAULTS = {
-    enabled: true,
-    replacement: '"Em Dash Bridge", "HarmonyOS Sans SC", "Noto Sans SC", "霞鹜新晰黑 屏幕阅读版 补全"',
-    targets: [
-    "-apple-system-body",
-    "ui-sans-serif",
-    "system-ui",
-    "-apple-system",
-    "BlinkMacSystemFont",
-    "Segoe UI",
-    "Segoe UI Variable",
-    "Segoe UI Variable Text",
-    "Segoe UI Variable Display",
-    "OpenAI Sans",
-    "OpenAI Sans SC",
-    "Arial",
-    "Arial Unicode MS",
-    "Helvetica",
-    "Helvetica Neue",
-    "Tahoma",
-    "Verdana",
-    "Trebuchet MS",
-    "Calibri",
-    "Aptos",
-    "Aptos Display",
-    "Aptos Narrow",
-    "SF Pro",
-    "SF Pro Text",
-    "SF Pro Display",
-    "SF UI Text",
-    "SF UI Display",
-    "Roboto",
-    "Roboto Flex",
-    "Roboto Condensed",
-    "Ubuntu",
-    "Ubuntu Sans",
-    "Cantarell",
-    "Liberation Sans",
-    "DejaVu Sans",
-    "Droid Sans",
-    "Microsoft YaHei",
-    "Microsoft YaHei UI",
-    "微软雅黑",
-    "PingFang SC",
-    "苹方-简",
-    "Hiragino Sans GB",
-    "冬青黑体简体中文",
-    "Noto Sans SC",
-    "Noto Sans CJK SC",
-    "Source Han Sans SC",
-    "思源黑体 CN",
-    "思源黑体"
-],
-    protectCode: true,
-    protectIcons: true,
-    standardLigatures: false,
-    autoSpacing: false,
-    customCSSOn: false,
-    customCSS: DEFAULT_CUSTOM_CSS,
-    siteRules: []
-  };
-
-  // 自定义 CSS 超过 sync 单键 8KB 配额，按 2500 字符切块存储
-  // （customCSS#0、customCSS#1…），读取时按序号拼回；
-  // 旧版单键 customCSS 在读取时自动迁移为分块。
-  const CC_PREFIX = "customCSS#";
-  function chunkCustomCSS(css) {
-    const items = {};
-    const count = Math.ceil(css.length / 2500);
-    for (let i = 0; i < count; i++) items[CC_PREFIX + i] = css.slice(i * 2500, (i + 1) * 2500);
-    return { items, count };
-  }
-  function assembleCustomCSS(stored) {
-    const parts = [];
-    for (const key of Object.keys(stored)) {
-      if (key.startsWith(CC_PREFIX)) parts.push([Number(key.slice(CC_PREFIX.length)), stored[key]]);
-    }
-    parts.sort((a, b) => a[0] - b[0]);
-    if (parts.length) return parts.map(p => p[1]).join("");
-    return typeof stored.customCSS === "string" ? stored.customCSS : null;
-  }
+  const { DEFAULTS, normalizeSettings, siteState, CC_PREFIX, META_KEY, OVERRIDE_KEYS: SITE_OVERRIDE_KEYS } = SFS;
 
   const MARK = "data-sfs-replaced";
   const ROOT_MARK = "data-sfs";
   const STYLE_ID = "sfs-style";
   const CUSTOM_STYLE_ID = "sfs-custom-style";
   const SCAN_CHUNK = 2000;
-
-  // 站点规则可三态覆盖的功能项："on" / "off" 为强制开关，其余值跟随全局。
-  const SITE_OVERRIDE_KEYS = [
-    "protectCode",
-    "protectIcons",
-    "standardLigatures",
-    "autoSpacing",
-    "customCSSOn"
-  ];
 
   let settings = DEFAULTS;
   let targetSet = new Set();
@@ -183,8 +29,25 @@ body,
   let pending = new Set();
   let scheduled = false;
   let styleNeedsReposition = false;
+  let stylesheetTimer = null;
   let scanQueue = [];
+  const queuedNodes = new Set();
   let scanning = false;
+  let scanEpoch = 0;
+  let loadEpoch = 0;
+  let cssGeneration = null;
+
+  function cancelScans() {
+    scanEpoch++;
+    scanQueue = [];
+    queuedNodes.clear();
+    pending.clear();
+    scanning = false;
+    scheduled = false;
+    styleNeedsReposition = false;
+    clearTimeout(stylesheetTimer);
+    stylesheetTimer = null;
+  }
 
   function normalizeFamily(name) {
     return name.trim().replace(/^["']|["']$/g, "").trim().toLowerCase();
@@ -219,46 +82,8 @@ body,
     return parts.length ? normalizeFamily(parts[0]) : "";
   }
 
-  function normalizeDomain(value) {
-    let s = String(value || "").trim().toLowerCase();
-    s = s.replace(/^https?:\/\//, "").replace(/^\*\./, "").replace(/^www\./, "");
-    s = s.split("/")[0].split(":")[0];
-    return s;
-  }
-
-  // 归一化站点规则里的三态覆盖值。旧版本存的是布尔值：
-  // true 视为强制开启，false / 缺省视为跟随全局。
-  function ruleOverride(value) {
-    if (value === "on" || value === true) return "on";
-    if (value === "off") return "off";
-    return "";
-  }
-
-  // 返回站点规则状态。action="off" 表示关闭覆盖（扩展对该站完全静默，
-  // 用于查看网站原生字体设置）；默认 "force" 沿用强制替换行为。
-  // font 为空表示沿用全局替换字体；overrides 内各键为 "" / "on" / "off"。
   function computeSiteState() {
-    const rules = settings.siteRules || [];
-    const host = (location.hostname || "").toLowerCase();
-    for (const rule of rules) {
-      const d = normalizeDomain(rule && rule.domain);
-      if (!d) continue;
-      if (host === d || host.endsWith("." + d)) {
-        const off = (rule && rule.action) === "off";
-        const overrides = {};
-        for (const key of SITE_OVERRIDE_KEYS) {
-          overrides[key] = ruleOverride(rule && rule[key]);
-        }
-        return {
-          action: off ? "off" : "force",
-          off,
-          force: !off,
-          font: String(rule.font || "").trim(),
-          overrides
-        };
-      }
-    }
-    return { action: "force", off: false, force: false, font: "", overrides: {} };
+    return siteState(settings.siteRules, location);
   }
 
   // 把站点覆盖落到工作副本上：settings 在每次 loadSettings 时都会
@@ -286,7 +111,7 @@ body,
   function isProtected(el, computedFamily) {
     if (!(el instanceof Element)) return true;
 
-    const tag = el.tagName;
+    const tag = el.tagName.toUpperCase();
     if (tag === "SVG" || tag === "PATH" || tag === "USE" || tag === "IMG" || tag === "CANVAS") {
       return true;
     }
@@ -299,7 +124,7 @@ body,
       return true;
     }
 
-    if (looksLikeIconElement(el, computedFamily)) {
+    if (el.closest("svg, img, canvas") || looksLikeIconElement(el, computedFamily)) {
       return true;
     }
 
@@ -324,9 +149,8 @@ body,
     const font = forceSite && siteFont ? siteFont : settings.replacement;
     const rootSel = `html[${ROOT_MARK}]`;
 
-    // 自定义 CSS 开启时由它接管页面字体：替换链（含 ::placeholder）整体
-    // 失效，标记仅保留给标准连字与 Auto Spacing 使用；关闭时恢复替换链。
-    const chainActive = settings.enabled && !settings.customCSSOn;
+    // 非空自定义 CSS 接管字体；内容为空时继续使用普通替换链。
+    const chainActive = settings.enabled && !(settings.customCSSOn && settings.customCSS.trim());
     const chainRules = chainActive
       ? `
         ${rootSel} [${MARK}="1"] { font-family: ${font} !important; }
@@ -336,8 +160,7 @@ body,
 
     const descendantLigatures = settings.standardLigatures
       ? `
-        ${rootSel} [${MARK}="1"],
-        ${rootSel} [${MARK}="1"] * {
+        ${rootSel} [${MARK}="1"] {
           font-variant-ligatures: common-ligatures !important;
           font-feature-settings: "liga" 1, "clig" 1 !important;
         }
@@ -346,20 +169,21 @@ body,
 
     const descendantAutoSpacing = settings.autoSpacing
       ? `
-        ${rootSel} [${MARK}="1"],
-        ${rootSel} [${MARK}="1"] * {
+        ${rootSel} [${MARK}="1"] {
           text-autospace: normal !important;
         }
       `
       : "";
 
-    style.textContent = settings.enabled
+    const css = settings.enabled
       ? `
         ${chainRules}
         ${descendantLigatures}
         ${descendantAutoSpacing}
+        ${preserveRules()}
       `
       : "";
+    if (style.textContent !== css) style.textContent = css;
   }
 
   // 自定义 CSS 开启时接管页面字体（替换链自动失效），始终注入在扩展自身
@@ -382,30 +206,41 @@ body,
       style.id = CUSTOM_STYLE_ID;
     }
     if (style.textContent !== css) style.textContent = css;
-    (document.head || document.documentElement).appendChild(style);
+    const parent = document.head || document.documentElement;
+    if (style.parentNode !== parent) parent.appendChild(style);
   }
 
   // 把扩展样式表挪回 head 末尾，保证同优先级下声明顺序靠后；
   // 自定义样式压轴，冲突时优先于扩展自身规则。
-  // 限流：CSS-in-JS 站点（如 ChatGPT）会频繁插入 style 标签，
-  // 每次移动都会触发级联重算，节流避免持续抢占主线程。
-  let lastReposition = 0;
+  // 仅在顺序实际改变时移动，避免自身的 DOM 变动触发反复追加。
   function ensureStylePosition() {
-    const now = performance.now();
-    if (now - lastReposition < 500) return;
-    lastReposition = now;
-
     if (!document.head) return;
-    for (const id of [STYLE_ID, CUSTOM_STYLE_ID]) {
-      const style = document.getElementById(id);
-      if (style && style.parentNode === document.head) {
+    const styles = [STYLE_ID, CUSTOM_STYLE_ID].map(id => document.getElementById(id)).filter(Boolean);
+    const lastExternal = [...document.head.children].reverse().find(el => !styles.includes(el) && el.matches("style, link[rel='stylesheet']"));
+    if (!lastExternal && styles.every(el => el.parentNode === document.head)) return;
+    for (const style of styles) {
+      if (style.parentNode !== document.head || lastExternal && (style.compareDocumentPosition(lastExternal) & Node.DOCUMENT_POSITION_FOLLOWING)) {
         document.head.appendChild(style);
       }
     }
+    const custom = document.getElementById(CUSTOM_STYLE_ID);
+    const normal = document.getElementById(STYLE_ID);
+    if (custom && normal && (custom.compareDocumentPosition(normal) & Node.DOCUMENT_POSITION_FOLLOWING)) document.head.appendChild(custom);
+  }
+
+  const PRESERVE = "data-sfs-preserve";
+  const preserved = new Map();
+  function preserveRules() {
+    if (!settings.enabled || settings.customCSSOn && settings.customCSS.trim()) return "";
+    return [...preserved.entries()].map(([css, id]) => `html[${ROOT_MARK}] [${PRESERVE}="${id}"] { ${css} }`).join("\n");
   }
 
   function unmarkAll() {
-    document.querySelectorAll(`[${MARK}]`).forEach(el => el.removeAttribute(MARK));
+    document.querySelectorAll(`[${MARK}], [${PRESERVE}]`).forEach(el => {
+      el.removeAttribute(MARK);
+      el.removeAttribute(PRESERVE);
+    });
+    preserved.clear();
   }
 
   // 站点规则"关闭覆盖"：撤样式、撤标记、断开观察器，
@@ -415,25 +250,17 @@ body,
       observer.disconnect();
       observer = null;
     }
+    cancelScans();
     unmarkAll();
-    document.documentElement.style.removeProperty("font-variation-settings");
     document.documentElement.removeAttribute(ROOT_MARK);
     for (const id of [STYLE_ID, CUSTOM_STYLE_ID]) {
       document.getElementById(id)?.remove();
     }
   }
 
-  function shouldReplace(el) {
+  function shouldReplace(el, family) {
     if (!settings.enabled || !(el instanceof Element)) return false;
 
-    let cs;
-    try {
-      cs = getComputedStyle(el);
-    } catch {
-      return false;
-    }
-
-    const family = cs.fontFamily || "";
     if (isProtected(el, family)) return false;
 
     // 站点强制覆盖：跳过首选字体命中名单的判断，保护规则仍然生效。
@@ -493,25 +320,46 @@ body,
     return out;
   }
 
-  // 片内两阶段：先快照判断、再统一打标，避免同批内父元素先被替换
-  // 而污染子元素继承后的 font-family 判断。
+  // 采样时暂时关闭扩展样式，避免已替换祖先污染动态节点和后续分片。
   function applyBatch(nodes) {
-    const matches = [];
-
-    for (const el of nodes) {
-      if (el.hasAttribute(MARK)) continue;
-      if (shouldReplace(el)) matches.push(el);
+    if (!settings.enabled || siteOff) return;
+    const sheets = [STYLE_ID, CUSTOM_STYLE_ID].map(id => document.getElementById(id)?.sheet).filter(Boolean);
+    const disabled = sheets.map(sheet => sheet.disabled);
+    const snapshots = [];
+    try {
+      sheets.forEach(sheet => { sheet.disabled = true; });
+      for (const el of nodes) {
+        if (!el.isConnected) continue;
+        const cs = getComputedStyle(el);
+        snapshots.push({
+          el, match: shouldReplace(el, cs.fontFamily),
+          css: `font-family: ${cs.fontFamily} !important; font-variant-ligatures: ${cs.fontVariantLigatures} !important; font-feature-settings: ${cs.fontFeatureSettings} !important; text-autospace: ${cs.getPropertyValue("text-autospace") || "normal"} !important;`
+        });
+      }
+    } finally {
+      sheets.forEach((sheet, i) => { sheet.disabled = disabled[i]; });
     }
 
-    for (const el of matches) {
-      applyReplacement(el);
-      // 首次命中替换名单字体 → 全局注入自定义 CSS（用户策略：
-      // 页面正文使用名单字体才接管，个人站等原生字体页面保持原样）。
-      if (settings.customCSSOn && !cssDetected) {
-        cssDetected = true;
-        ensureCustomStyle();
+    for (const { el, match } of snapshots) {
+      if (match) {
+        if (!el.hasAttribute(MARK)) applyReplacement(el);
+      } else {
+        el.removeAttribute(MARK);
+      }
+      el.removeAttribute(PRESERVE);
+    }
+    for (const { el, match, css } of snapshots) {
+      if (!match && el.parentElement?.closest(`[${MARK}="1"]`)) {
+        if (!preserved.has(css)) preserved.set(css, preserved.size + 1);
+        el.setAttribute(PRESERVE, preserved.get(css));
       }
     }
+    if (snapshots.some(item => item.match) && settings.customCSSOn && !cssDetected) {
+      cssDetected = true;
+      ensureCustomStyle();
+    }
+    ensureStyle();
+    ensureStylePosition();
   }
 
   function scanSubtree(root) {
@@ -524,7 +372,12 @@ body,
     }
 
     // 大子树分片处理，避免一次扫描阻塞主线程。
-    scanQueue.push(...nodes);
+    for (const node of nodes) {
+      if (!queuedNodes.has(node)) {
+        queuedNodes.add(node);
+        scanQueue.push(node);
+      }
+    }
     scheduleScan();
   }
 
@@ -532,9 +385,13 @@ body,
     if (scanning) return;
     scanning = true;
 
+    const epoch = scanEpoch;
     const step = () => {
+      if (epoch !== scanEpoch) return;
       if (scanQueue.length) {
-        applyBatch(scanQueue.splice(0, SCAN_CHUNK));
+        const batch = scanQueue.splice(0, SCAN_CHUNK);
+        batch.forEach(node => queuedNodes.delete(node));
+        applyBatch(batch);
         requestAnimationFrame(step);
       } else {
         scanning = false;
@@ -580,88 +437,109 @@ body,
     pending.add(node);
     if (!scheduled) {
       scheduled = true;
-      requestAnimationFrame(flushPending);
+      const epoch = scanEpoch;
+      requestAnimationFrame(() => { if (epoch === scanEpoch) flushPending(); });
     }
+  }
+
+  // 合并密集的样式表变化；加载完成的 LINK 也会触发检查。
+  function queueStylesheetScan() {
+    if (!settings.enabled || siteOff || stylesheetTimer !== null) return;
+    const epoch = scanEpoch;
+    stylesheetTimer = setTimeout(() => {
+      stylesheetTimer = null;
+      if (epoch !== scanEpoch) return;
+      styleNeedsReposition = true;
+      queue(document.documentElement);
+    }, 100);
   }
 
   function startObserver() {
     if (observer) observer.disconnect();
-
     observer = new MutationObserver(mutations => {
       for (const m of mutations) {
-        if (m.type !== "childList") continue;
-
-        for (const node of m.addedNodes) {
-          if (node instanceof Element) {
-            const tag = node.tagName;
-            if (tag === "STYLE" || tag === "LINK") styleNeedsReposition = true;
-            queue(node);
-          } else if (node.nodeType === Node.TEXT_NODE && node.parentElement) {
-            queue(node.parentElement);
+        const parent = m.target instanceof Element ? m.target : m.target.parentElement;
+        if (!parent || parent.closest(`#${STYLE_ID}, #${CUSTOM_STYLE_ID}`)) continue;
+        if (m.type === "attributes" && parent.matches("style, link[rel='stylesheet']")) {
+          queueStylesheetScan();
+        } else if (m.type === "attributes") {
+          queue(parent);
+        } else if (parent.matches("style, link[rel='stylesheet']")) {
+          queueStylesheetScan();
+        } else if (m.type === "characterData") {
+          queue(parent);
+        } else {
+          for (const node of [...m.addedNodes, ...m.removedNodes]) {
+            if (node instanceof Element && [STYLE_ID, CUSTOM_STYLE_ID].includes(node.id)) {
+              if (!node.isConnected) queue(document.documentElement);
+              continue;
+            }
+            if (node instanceof Element && node.matches("style, link[rel='stylesheet']")) {
+              queueStylesheetScan();
+            } else if (node.isConnected) {
+              queue(node instanceof Element ? node : node.parentElement);
+            }
           }
         }
       }
     });
-
     observer.observe(document.documentElement, {
-      subtree: true,
-      childList: true
+      subtree: true, childList: true, characterData: true, attributes: true,
+      attributeFilter: ["class", "style", "id", "contenteditable", "aria-hidden", "href", "media", "disabled"]
     });
   }
 
   async function loadSettings() {
-    const stored = await chrome.storage.sync.get(null);
-    settings = { ...DEFAULTS, ...stored };
-    settings.customCSS = assembleCustomCSS(stored) ?? DEFAULT_CUSTOM_CSS;
-    targetSet = new Set((settings.targets || []).map(normalizeFamily).filter(Boolean));
-
-    // 旧版单键 customCSS 迁移为分块
-    if (typeof stored.customCSS === "string") {
-      const { items } = chunkCustomCSS(stored.customCSS);
-      chrome.storage.sync.set(items);
-      chrome.storage.sync.remove("customCSS");
+    const epoch = ++loadEpoch;
+    let stored;
+    try {
+      stored = await chrome.storage.sync.get(null);
+    } catch (error) {
+      console.warn("sfs settings load failed:", error);
+      return;
     }
-
+    if (epoch !== loadEpoch) return;
+    if (observer) observer.disconnect();
+    cancelScans();
+    settings = normalizeSettings(stored);
+    cssGeneration = stored[META_KEY]?.id || null;
+    targetSet = new Set(settings.targets.map(normalizeFamily).filter(Boolean));
     const site = computeSiteState();
     siteOff = site.off;
     forceSite = site.force;
     siteFont = site.font;
     siteOverrides = site.overrides;
     applySiteOverrides();
-
     cssDetected = false;
-
-    // 站点规则"关闭覆盖"：本站完全静默，不扫描不打标不注入任何样式。
-    if (siteOff) {
+    if (siteOff || !settings.enabled) {
       sleepForSite();
       return;
     }
-
-    scanQueue = [];
+    unmarkAll();
     ensureRootMark();
     ensureStyle();
     ensureCustomStyle();
-    unmarkAll();
-
-    if (settings.enabled) {
-      scanSubtree(document);
-      startObserver();
-
-      // 页面存在 webfont 时，加载完成后补扫一次：只标记此前漏掉的元素，
-      // 不撤销已有标记，避免整页字体闪回；无 webfont 则跳过。
-      if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(() => {
-          if (document.fonts.size === 0) return;
-          scanSubtree(document);
-        }).catch(() => {});
-      }
-    } else if (observer) {
-      observer.disconnect();
+    startObserver();
+    scanSubtree(document);
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(() => {
+        if (epoch === loadEpoch && settings.enabled && !siteOff && document.fonts.size) queue(document.documentElement);
+      }).catch(() => {});
     }
   }
 
+  document.addEventListener("load", event => {
+    if (event.target instanceof Element && event.target.matches("link[rel='stylesheet']")) queueStylesheetScan();
+  }, true);
+
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === "sync") loadSettings();
+    if (area !== "sync") return;
+    // 已发布的新引用不受旧块清理影响；仅重新读取设置与当前 CSS 块。
+    const relevant = Object.keys(changes).some(key =>
+      key === META_KEY || key in DEFAULTS && key !== "customCSS"
+      || (cssGeneration ? key.startsWith(CC_PREFIX + cssGeneration + "/") : key === "customCSS" || /^customCSS#\d+$/.test(key))
+    );
+    if (relevant) loadSettings();
   });
 
   if (document.documentElement) {
