@@ -60,6 +60,21 @@ test("更具体的站点规则优先，同等规则维持顺序", () => {
   assert.equal(SFS.ruleOverride("off"), "off");
 });
 
+test("连字等级兼容旧开关，显式等级优先且站点继承不强制替换", () => {
+  assert.equal(SFS.normalizeSettings({ standardLigatures: true }).ligatureLevel, "standard");
+  assert.equal(SFS.normalizeSettings({ standardLigatures: false }).ligatureLevel, "native");
+  assert.equal(SFS.normalizeSettings({ standardLigatures: true, ligatureLevel: "none" }).ligatureLevel, "none");
+  assert.equal(SFS.normalizeSettings({ ligatureLevel: "extended" }).standardLigatures, true);
+  assert.equal(SFS.siteLigatureLevel({ standardLigatures: "off" }), "native");
+  assert.equal(SFS.siteLigatureLevel({ standardLigatures: "on" }), "standard");
+  assert.equal(SFS.siteLigatureLevel({ standardLigatures: "on", ligatureLevel: "" }), "");
+  const site = SFS.siteState([{ domain: "example.com", action: "inherit", autoSpacing: "on", ligatureLevel: "none" }], "https://example.com");
+  assert.equal(site.force, false);
+  assert.equal(site.off, false);
+  assert.equal(site.overrides.autoSpacing, "on");
+  assert.equal(site.overrides.ligatureLevel, "none");
+});
+
 test("默认值一致，损坏的存储项不会导致崩溃", () => {
   const settings = SFS.normalizeSettings({ enabled: "false", targets: [null, 12, "Arial"], siteRules: [null, "bad", { domain: "example.com" }], replacement: "" });
   assert.equal(settings.enabled, true);
@@ -109,6 +124,40 @@ test("CSS 发布一次切换引用，失败保留旧内容，清理失败不改�
   storage.remove = async () => { throw Error("cleanup"); };
   await SFS.writeSettings(storage, {}, "", "empty");
   assert.equal(SFS.assembleCustomCSS(store), "");
+});
+
+test("本站 CSS 分块与引用一次发布，显式空内容不继承，失败与删除正确处理", async () => {
+  let store = { customCSS: "global-old", "siteCSS#old/0": "site-old" };
+  const reads = [];
+  const storage = {
+    get: async () => structuredClone(store),
+    set: async values => { Object.assign(store, values); reads.push(SFS.normalizeSettings(store)); },
+    remove: async keys => keys.forEach(key => delete store[key])
+  };
+  const css = "/*中文𬎆*/".repeat(1400);
+  await SFS.writeSettings(storage, { siteRules: [
+    { domain: "example.com", action: "inherit", customCSSMode: "site", customCSS: css },
+    { domain: "empty.example.com", customCSSMode: "site", customCSS: "" },
+    { domain: "global.example.com" }
+  ] }, "global-new", "sites");
+  assert.equal(reads[0].siteRules[0].customCSS, css);
+  assert.equal(SFS.normalizeSettings(store).siteRules[1].customCSS, "");
+  assert.equal(SFS.siteState(SFS.normalizeSettings(store).siteRules, "https://empty.example.com").customCSS, "");
+  assert.equal(SFS.siteState(SFS.normalizeSettings(store).siteRules, "https://global.example.com").customCSS, null);
+  assert.ok(!("customCSS" in store.siteRules[0]));
+  assert.ok(Buffer.byteLength(JSON.stringify(store.siteRules)) < 7500);
+  for (const [key, value] of Object.entries(store).filter(([key]) => key.startsWith("siteCSS#"))) {
+    assert.ok(value.length <= 2500);
+    assert.ok(Buffer.byteLength(key + JSON.stringify(value)) <= 7500);
+  }
+  assert.equal(store["siteCSS#old/0"], undefined);
+  const before = JSON.stringify(store);
+  storage.set = async () => { throw Error("quota"); };
+  await assert.rejects(SFS.writeSettings(storage, { siteRules: [] }, "", "failed"), /quota/);
+  assert.equal(JSON.stringify(store), before);
+  storage.set = async values => Object.assign(store, values);
+  await SFS.writeSettings(storage, { siteRules: [] }, "global-new", "removed");
+  assert.equal(Object.keys(store).some(key => key.startsWith("siteCSS#")), false);
 });
 
 let browser, server, origin;
@@ -193,6 +242,10 @@ async function pageFor(html, stored = {}, options = false, language = "zh-CN") {
 async function family(page, id) {
   return page.locator("#" + id).evaluate(el => getComputedStyle(el).fontFamily);
 }
+async function selectChoice(page, control, value) {
+  await control.click();
+  await page.locator('.select-option[data-value="' + value + '"]').click();
+}
 async function marked(page, id, value = true) {
   await page.waitForFunction(({ id, value }) => document.getElementById(id).hasAttribute("data-sfs-replaced") === value, { id, value });
 }
@@ -221,6 +274,68 @@ test("代码、图标和 SVG 保护不会被已替换祖先的继承样式破坏
   assert.equal(await page.locator("#code").evaluate(el => getComputedStyle(el).fontVariantLigatures), "none");
   assert.deepEqual(page.__errors, []);
   await page.close();
+});
+
+test("各档连字保留其他 OpenType 特性，动态切换与旁观恢复网站样式", async () => {
+  const page = await pageFor('<div id="text" style="font-family:Arial;font-variant-ligatures:no-contextual;font-feature-settings:&quot;tnum&quot; 1,&quot;zero&quot; 1,&quot;calt&quot; 0,&quot;rlig&quot; 1">fi fl ct st <code id="code">fi fl</code></div>', { ...base, ligatureLevel: "none" });
+  await marked(page, "text");
+  for (const [level, liga, dlig] of [["none", 0, 0], ["standard", 1, 0], ["extended", 1, 1]]) {
+    await page.evaluate(level => __change({ ligatureLevel: level }), level);
+    await page.waitForFunction(({ liga, dlig }) => {
+      const css = getComputedStyle(document.getElementById("text"));
+      const features = Object.fromEntries([...css.fontFeatureSettings.matchAll(/"(.{4})"(?:\s+(\d+))?/g)].map(match => [match[1], Number(match[2] ?? 1)]));
+      return features.liga === liga && features.dlig === dlig;
+    }, { liga, dlig });
+    const css = await page.locator("#text").evaluate(el => ({ features: Object.fromEntries([...getComputedStyle(el).fontFeatureSettings.matchAll(/"(.{4})"(?:\s+(\d+))?/g)].map(match => [match[1], Number(match[2] ?? 1)])), variants: getComputedStyle(el).fontVariantLigatures }));
+    for (const [feature, value] of Object.entries({ tnum: 1, zero: 1, calt: 0, rlig: 1, hlig: 0 })) assert.equal(css.features[feature], value, level + ": " + feature);
+    assert.ok(css.variants === "none" || css.variants.includes("no-contextual"));
+    assert.equal(await page.locator("#code").evaluate(el => getComputedStyle(el).fontFeatureSettings), '"calt" 0, "rlig", "tnum", "zero"');
+  }
+  await page.evaluate(() => __change({ ligatureLevel: "native" }));
+  await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-ligatures"));
+  assert.equal(await page.locator("#text").evaluate(el => getComputedStyle(el).fontFeatureSettings), '"calt" 0, "rlig", "tnum", "zero"');
+  await page.evaluate(() => __change({ ligatureLevel: "extended", siteRules: [{ domain: "127.0.0.1", action: "off" }] }));
+  await page.waitForFunction(() => !document.documentElement.hasAttribute("data-sfs"));
+  assert.equal(await page.locator("[data-sfs-ligatures]").count(), 0);
+  assert.equal(await family(page, "text"), "Arial");
+  assert.deepEqual(page.__errors, []);
+  await page.close();
+});
+
+test("站点沿用全局策略仅替换名单字体，各项覆盖仍生效", async () => {
+  const page = await pageFor('<p id="text" style="font-family:Arial;text-autospace:no-autospace">中文text</p><p id="design" style="font-family:CustomFont">Design</p><code id="code" style="font-family:Arial">Code</code>', {
+    ...base, autoSpacing: false, ligatureLevel: "standard",
+    siteRules: [{ domain: "127.0.0.1", action: "inherit", autoSpacing: "on", ligatureLevel: "none", protectCode: "off", font: "monospace" }]
+  });
+  await marked(page, "text");
+  await marked(page, "code");
+  assert.equal(await family(page, "text"), "serif");
+  assert.equal(await page.locator("#design").getAttribute("data-sfs-replaced"), null);
+  assert.equal(await page.locator("#text").evaluate(el => getComputedStyle(el).getPropertyValue("text-autospace")), "normal");
+  assert.ok((await page.locator("#text").evaluate(el => getComputedStyle(el).fontFeatureSettings)).includes('"liga" 0'));
+  await page.evaluate(() => __change({ enabled: false }));
+  await page.waitForFunction(() => !document.documentElement.hasAttribute("data-sfs"));
+  assert.deepEqual(page.__errors, []);
+  await page.close();
+});
+
+test("连字等级改变实际字形渲染，保持网站设置恢复原图", async t => {
+  for (const [font, enabled] of [["Cambria", "standard"], ["Times New Roman", "extended"]]) {
+    const page = await pageFor('<style>@font-face{font-family:LigatureTest;src:local("' + font + '")}#text{display:inline-block;font-size:72px;line-height:1.5;color:black;background:white}</style><span id="text" style="font-family:Arial;font-variant-ligatures:none">fi fl ffi ffl Th</span>', { targets: ["Arial"], replacement: "LigatureTest, serif", ligatureLevel: "none" });
+    await marked(page, "text");
+    const faces = await page.evaluate(async () => (await document.fonts.load('72px LigatureTest')).length);
+    if (!faces) { await page.close(); t.skip("本机缺少连字渲染测试字体：" + font); return; }
+    const original = await page.locator("#text").screenshot();
+    await page.evaluate(level => __change({ ligatureLevel: level }), enabled);
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFeatureSettings.includes('"liga"'));
+    const ligatures = await page.locator("#text").screenshot();
+    assert.equal(original.equals(ligatures), false, font + " 应显示不同连字字形");
+    await page.evaluate(() => __change({ ligatureLevel: "native" }));
+    await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-ligatures"));
+    assert.equal(original.equals(await page.locator("#text").screenshot()), true, font + " 应恢复网站原图");
+    assert.deepEqual(page.__errors, []);
+    await page.close();
+  }
 });
 
 test("属性、文本、继承字体与新增样式变化会重新检查", async () => {
@@ -277,6 +392,32 @@ test("空 CSS 恢复普通链，非空 CSS 只在检测命中后注入，禁用�
   assert.equal(await page.locator("#sfs-style, #sfs-custom-style").count(), 0);
   assert.deepEqual(page.__errors, []);
   await page.close();
+});
+
+test("本站 CSS 替换全局内容，分块更新、空内容与关闭覆盖均正确应用", async () => {
+  const globalCSS = "#text{color:rgb(255,0,0)!important}";
+  const rule = { domain: "127.0.0.1", action: "inherit", customCSSMode: "site", customCSSOn: "on", customCSS: "#text{color:rgb(0,0,255)!important}" };
+  const page = await pageFor('<p id="text" style="font-family:Arial">Text</p>', { ...base, customCSSOn: true, customCSS: globalCSS, siteRules: [rule] });
+  await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).color === "rgb(0, 0, 255)");
+  assert.ok(!(await page.locator("#sfs-custom-style").textContent()).includes("255,0,0"));
+  await page.evaluate(({ rule, globalCSS }) => SFS.writeSettings(chrome.storage.sync, { siteRules: [{ ...rule, customCSS: "#text{color:rgb(0,128,0)!important}" }] }, globalCSS, "local"), { rule, globalCSS });
+  await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).color === "rgb(0, 128, 0)");
+  await page.evaluate(() => __change({ "siteCSS#local-0/0": "#text{color:rgb(128,0,128)!important}" }));
+  await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).color === "rgb(128, 0, 128)");
+  await page.evaluate(rule => __change({ siteRules: [{ ...rule, customCSSMode: "global" }] }), rule);
+  await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).color === "rgb(255, 0, 0)");
+  await page.evaluate(rule => __change({ siteRules: [{ ...rule, customCSS: "" }] }), rule);
+  await page.waitForFunction(() => !document.getElementById("sfs-custom-style"));
+  assert.equal(await family(page, "text"), "serif");
+  await page.evaluate(rule => __change({ siteRules: [{ ...rule, action: "off" }] }), rule);
+  await page.waitForFunction(() => !document.documentElement.hasAttribute("data-sfs"));
+  assert.equal(await page.locator("#sfs-custom-style").count(), 0);
+  assert.equal(await family(page, "text"), "Arial");
+  assert.deepEqual(page.__errors, []);
+  await page.close();
+  const other = await pageFor('<p id="text" style="font-family:Arial">Text</p>', { ...base, customCSSOn: true, customCSS: globalCSS, siteRules: [{ ...rule, domain: "example.com" }] });
+  await other.waitForFunction(() => getComputedStyle(document.getElementById("text")).color === "rgb(255, 0, 0)");
+  await other.close();
 });
 
 test("内容脚本只读取旧 CSS，不在多个网页中触发迁移写入", async () => {
@@ -341,6 +482,163 @@ test("规则格式验证和双语设置页", async () => {
   }
 });
 
+test("站点条目三个主设置常驻，继承提示更新，旁观保留配置", async () => {
+  const page = await pageFor("", { siteRules: [{ domain: "example.com", action: "inherit", autoSpacing: "on", ligatureLevel: "extended" }] }, true);
+  await page.waitForFunction(() => !document.getElementById("save").disabled);
+  assert.equal(await page.locator(".site-rule-primary .rule-override").count(), 3);
+  assert.equal(await page.locator(".rule-secondary").evaluate(el => el.open), false);
+  assert.equal(await page.locator("button button").count(), 0);
+  await selectChoice(page, page.locator("#ligatureLevel"), "none");
+  await page.locator('[data-key="ligatureLevel"]').click();
+  assert.ok((await page.locator('.select-option[data-value=""]').textContent()).includes("关闭可选连字"));
+  await page.keyboard.press("Escape");
+  await selectChoice(page, page.locator(".rule-action"), "off");
+  assert.equal(await page.locator('.rule-override[data-key="autoSpacing"]').isEnabled(), false);
+  assert.equal(await page.locator(".site-rule-row .rule-state-note").isVisible(), true);
+  await selectChoice(page, page.locator(".rule-action"), "inherit");
+  assert.equal(await page.locator('.rule-override[data-key="autoSpacing"]').evaluate(el => el.value), "on");
+  assert.equal(await page.locator('.rule-override[data-key="ligatureLevel"]').evaluate(el => el.value), "extended");
+  await page.locator("#save").click();
+  await page.waitForFunction(() => !document.getElementById("save").disabled && document.getElementById("status").classList.contains("success"));
+  assert.equal(await page.locator("#unsavedHint").isVisible(), false);
+  assert.equal(await page.evaluate(() => __store.siteRules[0].action), "inherit");
+  assert.equal(await page.evaluate(() => __store.ligatureLevel), "none");
+  assert.deepEqual(page.__errors, []);
+  await page.close();
+});
+
+test("自绘下拉框支持键盘选择和取消，窄屏浮层保持在视口内", async () => {
+  const page = await pageFor("", { siteRules: [{ domain: "example.com", action: "inherit" }] }, true);
+  await page.waitForFunction(() => !document.getElementById("save").disabled);
+  assert.equal(await page.locator("select").count(), 0);
+  await page.locator("#ligatureLevel").press("ArrowDown");
+  assert.equal(await page.locator("#ligatureLevel").getAttribute("aria-expanded"), "true");
+  await page.locator("#ligatureLevel").press("End");
+  await page.locator("#ligatureLevel").press("Enter");
+  assert.equal(await page.locator("#ligatureLevel").evaluate(el => el.value), "extended");
+  await page.locator("#ligatureLevel").press("ArrowUp");
+  await page.locator("#ligatureLevel").press("Home");
+  await page.locator("#ligatureLevel").press("Escape");
+  assert.equal(await page.locator("#ligatureLevel").evaluate(el => el.value), "extended");
+  assert.equal(await page.locator("#ligatureLevel").evaluate(el => document.activeElement === el), true);
+  for (const width of [360, 480, 720, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.locator('[data-key="ligatureLevel"]').click();
+    assert.ok(await page.locator("#sfs-select-menu").evaluate(el => {
+      const rect = el.getBoundingClientRect();
+      return rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight;
+    }));
+    await page.keyboard.press("Escape");
+  }
+  await page.locator(".rule-action").click();
+  await page.locator(".rule-domain").click();
+  assert.equal(await page.locator("#sfs-select-menu").isVisible(), false);
+  assert.deepEqual(page.__errors, []);
+  await page.close();
+});
+
+test("本站 CSS 子界面保留草稿，保存大段 CSS，删除撤销与失败不丢失内容", async () => {
+  const page = await pageFor("", { customCSS: "/* global */", siteRules: [{ domain: "example.com", action: "inherit", customCSSOn: "on" }] }, true);
+  await page.waitForFunction(() => !document.getElementById("save").disabled);
+  await page.locator(".rule-edit-css").click();
+  assert.equal(await page.locator("#siteCSSView").isVisible(), true);
+  assert.equal(await page.locator("#settingsView").isVisible(), false);
+  assert.equal(await page.locator("#siteCSSContent").inputValue(), "/* global */");
+  assert.equal(await page.locator("#siteCSSContent").evaluate(el => el.readOnly), true);
+  assert.equal(await page.locator("#unsavedHint").isVisible(), false);
+  await page.locator("#copyGlobalCSS").click();
+  assert.equal(await page.locator("#siteCSSContent").inputValue(), "/* global */");
+  const css = "/*本站 CSS 中文*/".repeat(900);
+  await page.locator("#siteCSSContent").fill(css);
+  await page.locator("#useGlobalCSS").click();
+  await page.locator("#useSiteCSS").click();
+  assert.equal(await page.locator("#siteCSSContent").inputValue(), css);
+  await page.locator("#save").click();
+  await page.waitForFunction(() => !document.getElementById("save").disabled && document.getElementById("status").classList.contains("success"));
+  assert.equal(await page.locator("#unsavedHint").isVisible(), false);
+  assert.equal(await page.evaluate(() => "customCSS" in __store.siteRules[0]), false);
+  assert.equal(await page.evaluate(() => SFS.normalizeSettings(__store).siteRules[0].customCSS), css);
+  await page.locator("#backToRules").click();
+  await page.locator(".rule-delete").click();
+  await page.locator("#undoSiteRule").click();
+  await page.locator(".rule-edit-css").click();
+  assert.equal(await page.locator("#siteCSSContent").inputValue(), css);
+  await page.evaluate(() => { __failSet = true; });
+  await page.locator("#siteCSSContent").fill("/* changed */");
+  await page.locator("#save").click();
+  await page.waitForFunction(() => !document.getElementById("save").disabled && document.getElementById("status").classList.contains("error"));
+  assert.equal(await page.evaluate(() => SFS.normalizeSettings(__store).siteRules[0].customCSS), css);
+  assert.equal(await page.locator("#siteCSSContent").inputValue(), "/* changed */");
+  assert.deepEqual(page.__errors, []);
+  await page.close();
+});
+
+test("本站 CSS 草稿缺少域名时，保存会返回并定位规则错误", async () => {
+  const page = await pageFor("", {}, true);
+  await page.waitForFunction(() => !document.getElementById("save").disabled);
+  await page.locator("#addSiteRule").click();
+  assert.equal(await page.locator(".rule-domain").getAttribute("placeholder"), "example.com");
+  await page.locator(".rule-edit-css").click();
+  await page.locator("#useSiteCSS").click();
+  await page.locator("#siteCSSContent").fill("body{color:red}");
+  await page.locator("#save").click();
+  assert.equal(await page.evaluate(() => __writes), 0);
+  assert.equal(await page.locator("#settingsView").isVisible(), true);
+  assert.equal(await page.locator(".domain-error").isVisible(), true);
+  assert.equal(await page.locator(".rule-domain").evaluate(el => document.activeElement === el), true);
+  await page.close();
+});
+
+test("删除撤销恢复原位置和完整设置，展开和恢复原值不计为修改", async () => {
+  const rules = [{ domain: "first.example", action: "force", font: "serif", protectCode: "off", ligatureLevel: "extended" }, { domain: "second.example", action: "off" }];
+  const page = await pageFor("", { siteRules: rules }, true);
+  await page.waitForFunction(() => !document.getElementById("save").disabled);
+  assert.equal(await page.locator("#unsavedHint").isVisible(), false);
+  await page.locator(".rule-secondary summary").first().click();
+  assert.equal(await page.locator("#unsavedHint").isVisible(), false);
+  await selectChoice(page, page.locator(".rule-action").first(), "inherit");
+  assert.equal(await page.locator("#unsavedHint").isVisible(), true);
+  await selectChoice(page, page.locator(".rule-action").first(), "force");
+  assert.equal(await page.locator("#unsavedHint").isVisible(), false);
+  await page.locator(".rule-delete").first().click();
+  assert.equal(await page.locator(".site-rule-row").count(), 1);
+  assert.equal(await page.locator(".rule-domain").evaluate(el => document.activeElement === el), true);
+  await page.locator("#undoSiteRule").click();
+  assert.equal(await page.locator(".rule-domain").first().inputValue(), "first.example");
+  assert.equal(await page.locator(".rule-font").first().inputValue(), "serif");
+  assert.equal(await page.locator('[data-key="protectCode"]').first().evaluate(el => el.value), "off");
+  assert.equal(await page.locator('[data-key="ligatureLevel"]').first().evaluate(el => el.value), "extended");
+  assert.equal(await page.locator(".rule-secondary").first().evaluate(el => el.open), true);
+  assert.equal(await page.locator("#unsavedHint").isVisible(), false);
+  assert.deepEqual(page.__errors, []);
+  await page.close();
+});
+
+test("无域名草稿不能静默丢弃，字体错误显示在对应字段", async () => {
+  const page = await pageFor("", {}, true);
+  await page.waitForFunction(() => !document.getElementById("save").disabled);
+  await page.locator("#addSiteRule").click();
+  assert.equal(await page.locator(".rule-domain").evaluate(el => document.activeElement === el), true);
+  await selectChoice(page, page.locator('[data-key="autoSpacing"]'), "on");
+  await page.locator("#save").click();
+  assert.equal(await page.evaluate(() => __writes), 0);
+  assert.equal(await page.locator(".domain-error").isVisible(), true);
+  assert.equal(await page.locator(".rule-domain").getAttribute("aria-invalid"), "true");
+  await page.locator(".rule-domain").fill("example.com");
+  assert.equal(await page.locator(".domain-error").isVisible(), false);
+  await page.locator(".rule-secondary summary").click();
+  await page.locator(".rule-font").fill("serif;");
+  await page.locator("#save").click();
+  assert.equal(await page.locator(".font-error").isVisible(), true);
+  assert.equal(await page.evaluate(() => __writes), 0);
+  await page.locator(".rule-font").fill("serif");
+  await page.locator("#save").click();
+  await page.waitForFunction(() => !document.getElementById("save").disabled && document.getElementById("status").classList.contains("success"));
+  assert.equal(await page.locator("#unsavedHint").isVisible(), false);
+  assert.deepEqual(page.__errors, []);
+  await page.close();
+});
+
 test("异步样式表加载与扩展样式被移除后的恢复", async () => {
   const page = await pageFor('<p id="text" class="delayed">Text</p>', base);
   await page.waitForFunction(() => document.documentElement.hasAttribute("data-sfs"));
@@ -377,13 +675,35 @@ test("未完成扫描时禁用与恢复默认失败都保留正确状态", async
 });
 
 test("中文与英文设置页在常用窄屏宽度下不发生水平溢出", async () => {
-  const page = await pageFor("", {}, true, "en");
+  for (const language of ["zh-CN", "en"]) {
+  const page = await pageFor("", { siteRules: [{ domain: "example.com", action: "force", protectCode: "off", ligatureLevel: "extended" }, { domain: "native.example.com", action: "off" }] }, true, language);
   await page.waitForFunction(() => !document.getElementById("save").disabled);
   for (const width of [360, 480, 720, 1024]) {
     await page.setViewportSize({ width, height: 900 });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "width=" + width);
+    assert.ok(await page.locator(".site-rule-row").evaluateAll(rows => rows.every(row => {
+      const bounds = row.getBoundingClientRect();
+      return [...row.querySelectorAll("input, .sfs-select, .rule-delete")].filter(el => el.getBoundingClientRect().width).every(el => {
+        const rect = el.getBoundingClientRect();
+        return rect.left >= bounds.left && rect.right <= bounds.right;
+      });
+    })), language + " fields width=" + width);
+    assert.equal(await page.locator(".rule-delete svg").first().evaluate(el => el.getBoundingClientRect().width), 16);
+  }
+  await page.locator(".rule-edit-css").first().click();
+  for (const width of [360, 480, 720, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), language + " CSS editor width=" + width);
+    assert.ok(await page.locator("#siteCSSView").evaluate(view => {
+      const bounds = view.getBoundingClientRect();
+      return [...view.querySelectorAll("button, textarea")].every(el => {
+        const rect = el.getBoundingClientRect();
+        return rect.left >= bounds.left && rect.right <= bounds.right;
+      });
+    }), language + " CSS editor controls width=" + width);
   }
   await page.close();
+  }
 });
 
 test("真实 MV3 加载、隔离内容脚本与同步存储联动", async () => {
@@ -396,7 +716,8 @@ test("真实 MV3 加载、隔离内容脚本与同步存储联动", async () => 
     const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker");
     const id = new URL(worker.url()).host;
     assert.equal(id, "ecgcpjehkelnjfcgldmifejcoefohdcp");
-    assert.equal(await worker.evaluate(() => chrome.runtime.getManifest().version), "2.1.1");
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.json"), "utf8"));
+    assert.equal(await worker.evaluate(() => chrome.runtime.getManifest().version), manifest.version);
     const port = new URL(origin).port;
     await worker.evaluate(({ port, base }) => chrome.storage.sync.set({
       ...base, siteRules: [{ domain: "127.0.0.1:" + port }]

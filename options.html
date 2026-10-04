@@ -40,7 +40,7 @@
     </header>
 
     <!-- Main Settings Container -->
-    <div class="settings-panel">
+    <div id="settingsView" class="settings-panel">
 
       <!-- Section: Replacement Font & Live Preview Board -->
       <section class="setting-section vertical-section">
@@ -138,20 +138,17 @@
             </span>
           </label>
 
-          <!-- Standard Ligatures -->
-          <label class="rule-card" for="standardLigatures">
+          <!-- 连字程度 -->
+          <div class="rule-card ligature-card">
             <div class="rule-card-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M8 15V5a3 3 0 0 1 6 0v10"/><path d="M6 10h8"/></svg>
             </div>
             <div class="rule-card-content">
-              <strong data-i18n="standardLigatures">标准连字</strong>
-              <small data-i18n="standardLigaturesDesc">仅对已被替换字体的文字强制开启 fi、fl 等标准连字</small>
+              <strong data-i18n="ligatureLevel">连字程度</strong>
+              <small data-i18n="ligatureLevelDesc">选择已替换文字的连字程度；默认保持网站设置</small>
             </div>
-            <span class="switch">
-              <input id="standardLigatures" type="checkbox">
-              <span class="track" aria-hidden="true"></span>
-            </span>
-          </label>
+            <button id="ligatureLevel" class="sfs-select global-ligature-select" type="button" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-label="连字程度" data-i18n-aria="ligatureLevel"></button>
+          </div>
 
           <!-- Auto Spacing -->
           <label class="rule-card" for="autoSpacing">
@@ -194,8 +191,8 @@
         <p class="note" data-i18n="targetsHint">默认仅包含常见西文与简中系统/UI 字体；可能用于视觉设计的 WebFont 不在默认名单中。</p>
       </section>
 
-      <!-- Section: Site Rules -->
-      <section class="setting-section vertical-section">
+      <!-- 站点特殊规则 -->
+      <section class="setting-section vertical-section site-rules-section">
         <div class="section-title-row">
           <div class="section-copy">
             <div class="section-label-group">
@@ -224,7 +221,14 @@
           <div class="empty-rules-hint" data-i18n="emptyRulesHint">点击上方“添加站点”可为特定域名配置强制替换或关闭覆盖。</div>
         </div>
 
-        <p class="note" data-i18n="siteRulesHint">域名支持主域名与子域名，例如 chatgpt.com、*.example.com；字体留空则使用全局替换字体。代码与图标保护规则仍然生效。</p>
+        <div id="siteRuleUndo" class="site-rule-undo" hidden>
+          <span id="siteRuleUndoText" role="status"></span>
+          <button id="undoSiteRule" class="button secondary button-sm" type="button" data-i18n="undoDelete">撤销删除</button>
+        </div>
+        <details class="site-rules-help">
+          <summary data-i18n="siteRulesHelp">域名匹配与规则优先级</summary>
+          <p class="note" data-i18n="siteRulesHint">域名匹配主域名及其子域名；填写端口可限定端口。更具体的主机优先，同一主机下端口规则优先，同等规则保持列表顺序。</p>
+        </details>
       </section>
 
       <!-- Section: Custom CSS -->
@@ -293,6 +297,39 @@
         </div>
       </details>
     </div>
+
+    <!-- 本站 CSS 子界面，与主界面共用保存状态 -->
+    <section id="siteCSSView" class="settings-panel site-css-view" hidden>
+      <div class="setting-section">
+        <button id="backToRules" class="site-css-back" type="button">
+          <span aria-hidden="true">←</span><span data-i18n="backToRules">返回站点规则</span>
+        </button>
+        <div class="site-css-heading">
+          <div>
+            <h2 id="siteCSSHeading" tabindex="-1" data-i18n="siteCSSTitle">本站自定义 CSS</h2>
+            <p id="siteCSSDomain" class="site-css-domain"></p>
+          </div>
+          <div class="override-item site-css-toggle-field">
+            <span data-i18n="siteCSSSwitch">本站 CSS 开关</span>
+            <button id="siteCSSEnabled" class="sfs-select" type="button" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-label="本站 CSS 开关" data-i18n-aria="siteCSSSwitch"></button>
+          </div>
+        </div>
+        <p class="note" data-i18n="siteCSSDesc">本站内容替换全局 CSS 内容；跟随本站 CSS 开关和站点行为，与整页设置一起保存。</p>
+        <div class="site-css-source" role="group" aria-label="CSS 内容来源" data-i18n-aria="siteCSSSource">
+          <button id="useGlobalCSS" type="button" aria-pressed="true" data-i18n="siteCSSGlobal">使用全局内容</button>
+          <button id="useSiteCSS" type="button" aria-pressed="false" data-i18n="siteCSSLocal">使用本站内容</button>
+        </div>
+        <p id="siteCSSEffect" class="rule-state-note"></p>
+        <div class="code-editor-card">
+          <div class="code-editor-topbar">
+            <span class="code-editor-title">example.com.css</span>
+            <button id="copyGlobalCSS" class="button button-sm secondary" type="button" data-i18n="copyGlobalCSS">复制全局内容到本站</button>
+          </div>
+          <textarea id="siteCSSContent" class="text-area code-input custom-css-input site-css-input" rows="18" spellcheck="false" aria-label="本站自定义 CSS" data-i18n-aria="siteCSSTitle"></textarea>
+        </div>
+        <p id="siteCSSContentHint" class="note"></p>
+      </div>
+    </section>
 
     <!-- Sticky Bottom Action Bar -->
     <footer class="page-footer">

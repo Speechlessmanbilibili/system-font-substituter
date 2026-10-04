@@ -1,9 +1,11 @@
 (() => {
   "use strict";
 
-  const { DEFAULTS, normalizeSettings, siteState, CC_PREFIX, META_KEY, OVERRIDE_KEYS: SITE_OVERRIDE_KEYS } = SFS;
+  const { DEFAULTS, normalizeSettings, siteState, ligatureDeclarations, CC_PREFIX, SITE_CC_PREFIX, META_KEY, OVERRIDE_KEYS: SITE_OVERRIDE_KEYS } = SFS;
 
   const MARK = "data-sfs-replaced";
+  const LIGATURE_MARK = "data-sfs-ligatures";
+  const ligatureStyles = new Map();
   const ROOT_MARK = "data-sfs";
   const STYLE_ID = "sfs-style";
   const CUSTOM_STYLE_ID = "sfs-custom-style";
@@ -36,6 +38,7 @@
   let scanEpoch = 0;
   let loadEpoch = 0;
   let cssGeneration = null;
+  let siteCSSGenerations = [];
 
   function cancelScans() {
     scanEpoch++;
@@ -90,10 +93,12 @@
   // 从存储重建，这里的改写不会跨会话残留。
   function applySiteOverrides() {
     for (const key of SITE_OVERRIDE_KEYS) {
+      if (key === "standardLigatures") continue;
       const v = siteOverrides[key];
       if (v === "on") settings[key] = true;
       else if (v === "off") settings[key] = false;
     }
+    if (siteOverrides.ligatureLevel) settings.ligatureLevel = siteOverrides.ligatureLevel;
   }
 
   function looksLikeIconElement(el, family) {
@@ -158,14 +163,8 @@
       `
       : "";
 
-    const descendantLigatures = settings.standardLigatures
-      ? `
-        ${rootSel} [${MARK}="1"] {
-          font-variant-ligatures: common-ligatures !important;
-          font-feature-settings: "liga" 1, "clig" 1 !important;
-        }
-      `
-      : "";
+    const descendantLigatures = settings.ligatureLevel === "native" ? "" :
+      [...ligatureStyles].map(([css, id]) => `${rootSel} [${MARK}="1"][${LIGATURE_MARK}="${id}"] { ${css} }`).join("\n");
 
     const descendantAutoSpacing = settings.autoSpacing
       ? `
@@ -236,11 +235,13 @@
   }
 
   function unmarkAll() {
-    document.querySelectorAll(`[${MARK}], [${PRESERVE}]`).forEach(el => {
+    document.querySelectorAll(`[${MARK}], [${PRESERVE}], [${LIGATURE_MARK}]`).forEach(el => {
       el.removeAttribute(MARK);
       el.removeAttribute(PRESERVE);
+      el.removeAttribute(LIGATURE_MARK);
     });
     preserved.clear();
+    ligatureStyles.clear();
   }
 
   // 站点规则"关闭覆盖"：撤样式、撤标记、断开观察器，
@@ -333,6 +334,7 @@
         const cs = getComputedStyle(el);
         snapshots.push({
           el, match: shouldReplace(el, cs.fontFamily),
+          ligatures: ligatureDeclarations(settings.ligatureLevel, cs.fontFeatureSettings, cs.fontVariantLigatures),
           css: `font-family: ${cs.fontFamily} !important; font-variant-ligatures: ${cs.fontVariantLigatures} !important; font-feature-settings: ${cs.fontFeatureSettings} !important; text-autospace: ${cs.getPropertyValue("text-autospace") || "normal"} !important;`
         });
       }
@@ -340,11 +342,17 @@
       sheets.forEach((sheet, i) => { sheet.disabled = disabled[i]; });
     }
 
-    for (const { el, match } of snapshots) {
+    for (const { el, match, ligatures } of snapshots) {
       if (match) {
         if (!el.hasAttribute(MARK)) applyReplacement(el);
       } else {
         el.removeAttribute(MARK);
+      }
+      if (match && ligatures) {
+        if (!ligatureStyles.has(ligatures)) ligatureStyles.set(ligatures, ligatureStyles.size + 1);
+        el.setAttribute(LIGATURE_MARK, ligatureStyles.get(ligatures));
+      } else {
+        el.removeAttribute(LIGATURE_MARK);
       }
       el.removeAttribute(PRESERVE);
     }
@@ -503,6 +511,7 @@
     cancelScans();
     settings = normalizeSettings(stored);
     cssGeneration = stored[META_KEY]?.id || null;
+    siteCSSGenerations = Array.isArray(stored.siteRules) ? stored.siteRules.map(rule => rule?.customCSSChunks?.id).filter(Boolean) : [];
     targetSet = new Set(settings.targets.map(normalizeFamily).filter(Boolean));
     const site = computeSiteState();
     siteOff = site.off;
@@ -510,6 +519,7 @@
     siteFont = site.font;
     siteOverrides = site.overrides;
     applySiteOverrides();
+    if (site.customCSS !== null) settings.customCSS = site.customCSS;
     cssDetected = false;
     if (siteOff || !settings.enabled) {
       sleepForSite();
@@ -537,6 +547,7 @@
     // 已发布的新引用不受旧块清理影响；仅重新读取设置与当前 CSS 块。
     const relevant = Object.keys(changes).some(key =>
       key === META_KEY || key in DEFAULTS && key !== "customCSS"
+      || siteCSSGenerations.some(id => key.startsWith(SITE_CC_PREFIX + id + "/"))
       || (cssGeneration ? key.startsWith(CC_PREFIX + cssGeneration + "/") : key === "customCSS" || /^customCSS#\d+$/.test(key))
     );
     if (relevant) loadSettings();

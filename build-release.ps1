@@ -15,7 +15,7 @@ if ($taskVersion -notmatch '^\d+\.\d+\.\d+(?:\.\d+)?$') {
 $taskNames = @(
     'manifest.json', 'background.js', 'shared.js', 'content.js', 'apple-ui-mix.css',
     'options.html', 'options.css', 'options.js', 'icons', '_locales',
-    'LICENSE', 'README.md', 'PRIVACY.md'
+    'LICENSE', 'README.md', 'CHANGELOG.md', 'PRIVACY.md'
 )
 $taskFiles = @($taskNames | ForEach-Object {
     $taskPath = Join-Path $PSScriptRoot $_
@@ -25,7 +25,32 @@ $taskFiles = @($taskNames | ForEach-Object {
 $taskOutput = [System.IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $taskOutput -Force | Out-Null
 $taskZip = Join-Path $taskOutput "system-font-substituter-v$taskVersion.zip"
-Compress-Archive -LiteralPath $taskFiles -DestinationPath $taskZip -Force
+
+# 显式使用 ZIP 标准的 / 路径；PowerShell 5.1 的 Compress-Archive 会
+# 仅规范化中央目录，留下带反斜杠的本地文件头，导致 Edge 拖入安装失败。
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$taskRoot = [System.IO.Path]::GetFullPath($PSScriptRoot).TrimEnd('\') + '\'
+$taskStream = [System.IO.File]::Open($taskZip, [System.IO.FileMode]::Create)
+$taskArchive = $null
+try {
+    $taskArchive = New-Object System.IO.Compression.ZipArchive($taskStream, [System.IO.Compression.ZipArchiveMode]::Create, $true)
+    foreach ($taskPath in $taskFiles) {
+        $taskItem = Get-Item -LiteralPath $taskPath
+        $taskEntries = if ($taskItem.PSIsContainer) {
+            @(Get-ChildItem -LiteralPath $taskPath -File -Recurse | Sort-Object FullName)
+        } else { @($taskItem) }
+        foreach ($taskEntry in $taskEntries) {
+            $taskEntryName = $taskEntry.FullName.Substring($taskRoot.Length).Replace('\', '/')
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                $taskArchive, $taskEntry.FullName, $taskEntryName, [System.IO.Compression.CompressionLevel]::Optimal
+            ) | Out-Null
+        }
+    }
+} finally {
+    if ($null -ne $taskArchive) { $taskArchive.Dispose() }
+    $taskStream.Dispose()
+}
 $taskCSS = Join-Path $taskOutput 'apple-ui-mix.css'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'apple-ui-mix.css') -Destination $taskCSS -Force
 

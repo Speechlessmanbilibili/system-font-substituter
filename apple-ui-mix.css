@@ -1,16 +1,16 @@
 /* =========================================================
-   Apple UI Mix
+   Apple UI Mix 字体模板
    =========================================================
 
-   Western: SF Pro Text→苹方UI SC→YaHei  CJK: 苹方UI SC→YaHei
-   共有标点:苹方UI  弯引号:苹方UI  PUA:SF Pro Text
-   fallback: SF Pro Text/SF Arabic/SF Hebrew/SF Armenian/SF Georgian
-   →苹方UI SC→苹方UI HK/TC/MO→Hiragino Sans→Apple SD Gothic Neo→YaHei→霞鹜新晰黑
-   西文用 SF Pro Text 静态套件（opsz 固定 Text 端）；苹方 UI 为变量全权重。
+   按 Unicode 范围分配本机字体：西文使用 SF Pro Text，汉字使用苹方 UI SC。
+   中西文共有标点、弯引号和带圈数字使用苹方 UI SC；私用区使用 SF Pro Text。
+   西文段按 SF Pro Text 静态套件配置，使用 Text 光学尺寸；汉字段支持变量字重。
+   模板未覆盖的字符或字体缺失时，按下方字体链依次回退。
+   所有字体均从本机读取，使用前需安装相应字体。
    ========================================================= */
 
-/* ======== Western / Latin（SF Pro Text 静态套件：opsz 烤死 Text 端，
-   不受浏览器光学尺寸行为影响；单 family 九权重由 DWrite 按字重选面） ======== */
+/* 西文与私用区：使用 SF Pro Text 静态套件，避免光学尺寸自动切换至 Display。
+   同一字体族声明 100～900 的字重范围，由字体匹配机制选择对应字重。 */
 
 @font-face {
   font-family: "Apple UI Mix";
@@ -19,7 +19,8 @@
   unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
 }
 
-/* ======== Chinese / CJK（苹方 UI SC 变量全权重，共有标点/弯引号归苹方） ======== */
+/* 汉字与中文标点：使用苹方 UI SC 变量字体，支持 100～900 的字重范围。
+   中西文共有标点与弯引号划入本段，以保持中文排版中的字形一致。 */
 
 @font-face {
   font-family: "Apple UI Mix";
@@ -30,7 +31,7 @@
 
 
 /* =========================================================
-   Global
+   全局字体链与排版规则
    ========================================================= */
 
 html,
@@ -40,7 +41,7 @@ body,
   font-family:
     "Apple UI Mix",
 
-    /* 直接 fallback（不参与 mix） */
+    /* 模板范围之外的字符按本机字体依次回退，不参与 Unicode 范围分配。 */
     "SF Pro Text",
     "SF Arabic",
     "SF Hebrew",
@@ -53,7 +54,7 @@ body,
     "Hiragino Sans",
     "Apple SD Gothic Neo",
 
-    /* 真正的 fallback */
+    /* 前述字体缺失或缺字时，继续回退至微软雅黑与霞鹜新晰黑。 */
     "Microsoft YaHei",
     "霞鹜新晰黑 屏幕阅读版 补全" !important;
 

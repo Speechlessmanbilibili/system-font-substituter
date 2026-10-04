@@ -2,18 +2,18 @@
   "use strict";
 
   const DEFAULT_CUSTOM_CSS = `/* =========================================================
-   Apple UI Mix
+   Apple UI Mix 字体模板
    =========================================================
 
-   Western: SF Pro Text→苹方UI SC→YaHei  CJK: 苹方UI SC→YaHei
-   共有标点:苹方UI  弯引号:苹方UI  PUA:SF Pro Text
-   fallback: SF Pro Text/SF Arabic/SF Hebrew/SF Armenian/SF Georgian
-   →苹方UI SC→苹方UI HK/TC/MO→Hiragino Sans→Apple SD Gothic Neo→YaHei→霞鹜新晰黑
-   西文用 SF Pro Text 静态套件（opsz 固定 Text 端）；苹方 UI 为变量全权重。
+   按 Unicode 范围分配本机字体：西文使用 SF Pro Text，汉字使用苹方 UI SC。
+   中西文共有标点、弯引号和带圈数字使用苹方 UI SC；私用区使用 SF Pro Text。
+   西文段按 SF Pro Text 静态套件配置，使用 Text 光学尺寸；汉字段支持变量字重。
+   模板未覆盖的字符或字体缺失时，按下方字体链依次回退。
+   所有字体均从本机读取，使用前需安装相应字体。
    ========================================================= */
 
-/* ======== Western / Latin（SF Pro Text 静态套件：opsz 烤死 Text 端，
-   不受浏览器光学尺寸行为影响；单 family 九权重由 DWrite 按字重选面） ======== */
+/* 西文与私用区：使用 SF Pro Text 静态套件，避免光学尺寸自动切换至 Display。
+   同一字体族声明 100～900 的字重范围，由字体匹配机制选择对应字重。 */
 
 @font-face {
   font-family: "Apple UI Mix";
@@ -22,7 +22,8 @@
   unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
 }
 
-/* ======== Chinese / CJK（苹方 UI SC 变量全权重，共有标点/弯引号归苹方） ======== */
+/* 汉字与中文标点：使用苹方 UI SC 变量字体，支持 100～900 的字重范围。
+   中西文共有标点与弯引号划入本段，以保持中文排版中的字形一致。 */
 
 @font-face {
   font-family: "Apple UI Mix";
@@ -33,7 +34,7 @@
 
 
 /* =========================================================
-   Global
+   全局字体链与排版规则
    ========================================================= */
 
 html,
@@ -43,7 +44,7 @@ body,
   font-family:
     "Apple UI Mix",
 
-    /* 直接 fallback（不参与 mix） */
+    /* 模板范围之外的字符按本机字体依次回退，不参与 Unicode 范围分配。 */
     "SF Pro Text",
     "SF Arabic",
     "SF Hebrew",
@@ -56,7 +57,7 @@ body,
     "Hiragino Sans",
     "Apple SD Gothic Neo",
 
-    /* 真正的 fallback */
+    /* 前述字体缺失或缺字时，继续回退至微软雅黑与霞鹜新晰黑。 */
     "Microsoft YaHei",
     "霞鹜新晰黑 屏幕阅读版 补全" !important;
 
@@ -120,6 +121,7 @@ body,
     protectCode: true,
     protectIcons: true,
     standardLigatures: false,
+    ligatureLevel: "native",
     autoSpacing: false,
     customCSSOn: false,
     customCSS: DEFAULT_CUSTOM_CSS,
@@ -129,11 +131,56 @@ body,
 
 
   const CC_PREFIX = "customCSS#";
+  const SITE_CC_PREFIX = "siteCSS#";
   const META_KEY = "customCSSChunks";
   const OVERRIDE_KEYS = ["protectCode", "protectIcons", "standardLigatures", "autoSpacing", "customCSSOn"];
+  const LIGATURE_LEVELS = ["native", "none", "standard", "extended"];
 
   function ruleOverride(value) {
     return value === "on" || value === true ? "on" : value === "off" ? "off" : "";
+  }
+
+  function normalizeLigatureLevel(value, fallback = "native") {
+    return LIGATURE_LEVELS.includes(value) ? value : fallback;
+  }
+
+  function siteLigatureLevel(rule) {
+    // 显式空值表示继承，优先于旧版标准连字开关。
+    if (rule.ligatureLevel === "" || LIGATURE_LEVELS.includes(rule.ligatureLevel)) return rule.ligatureLevel;
+    const legacy = ruleOverride(rule.standardLigatures);
+    return legacy === "on" ? "standard" : legacy === "off" ? "native" : "";
+  }
+
+  function normalizeSiteRule(rule, stored = null) {
+    const level = siteLigatureLevel(rule);
+    return {
+      domain: String(rule.domain || "").trim(),
+      font: typeof rule.font === "string" ? rule.font.trim() : "",
+      action: rule.action === "off" || rule.action === "inherit" ? rule.action : "force",
+      ...Object.fromEntries(OVERRIDE_KEYS.map(key => [key, ruleOverride(rule[key])])),
+      // 保留旧键供旧版本读取，等级设置以新枚举为准。
+      standardLigatures: level ? (["standard", "extended"].includes(level) ? "on" : "off") : "",
+      ligatureLevel: level,
+      customCSSMode: rule.customCSSMode === "site" ? "site" : "global",
+      customCSS: typeof rule.customCSS === "string" ? rule.customCSS
+        : stored ? assembleCSSChunks(stored, rule.customCSSChunks, SITE_CC_PREFIX) ?? "" : ""
+    };
+  }
+
+  function ligatureDeclarations(level, features = "normal", variants = "normal") {
+    if (level === "native") return "";
+    // 只改连字相关标签，保留 tnum、zero、calt、rlig 等原有特性。
+    const values = new Map();
+    for (const match of features.matchAll(/"([\x20-\x7e]{4})"\s*(on|off|\d+)?/g)) {
+      values.set(match[1], match[2] === "off" ? 0 : match[2] === "on" || !match[2] ? 1 : Number(match[2]));
+    }
+    const common = level !== "none";
+    values.set("liga", common ? 1 : 0);
+    values.set("clig", common ? 1 : 0);
+    values.set("dlig", level === "extended" ? 1 : 0);
+    values.set("hlig", 0);
+    const contextual = variants === "none" || variants.includes("no-contextual") ? "no-contextual" : "contextual";
+    return `font-variant-ligatures: ${common ? "common-ligatures" : "no-common-ligatures"} ${level === "extended" ? "discretionary-ligatures" : "no-discretionary-ligatures"} no-historical-ligatures ${contextual} !important; font-feature-settings: ${[...values].map(([tag, value]) => `"${tag.replace(/["\\]/g, "\\$&")}" ${value}`).join(", ")} !important;`;
   }
 
   function parseDomain(value) {
@@ -173,22 +220,31 @@ body,
       score = specificity;
       selected = rule;
     }
-    if (!selected) return { off: false, force: false, font: "", overrides: {} };
+    if (!selected) return { off: false, force: false, font: "", customCSS: null, overrides: {} };
     return {
       off: selected.action === "off",
-      force: selected.action !== "off",
+      force: selected.action !== "off" && selected.action !== "inherit",
       font: typeof selected.font === "string" ? selected.font.trim() : "",
-      overrides: Object.fromEntries(OVERRIDE_KEYS.map(key => [key, ruleOverride(selected[key])]))
+      customCSS: selected.customCSSMode === "site" ? String(selected.customCSS || "") : null,
+      overrides: {
+        ...Object.fromEntries(OVERRIDE_KEYS.map(key => [key, ruleOverride(selected[key])])),
+        ligatureLevel: siteLigatureLevel(selected)
+      }
     };
   }
 
-  function assembleCustomCSS(stored) {
-    const meta = stored[META_KEY];
+  function assembleCSSChunks(stored, meta, prefix = CC_PREFIX) {
     if (meta && typeof meta.id === "string" && /^[a-z\d-]+$/i.test(meta.id)
         && Number.isInteger(meta.count) && meta.count >= 0 && meta.count <= 512) {
-      const parts = Array.from({ length: meta.count }, (_, i) => stored[CC_PREFIX + meta.id + "/" + i]);
+      const parts = Array.from({ length: meta.count }, (_, i) => stored[prefix + meta.id + "/" + i]);
       return parts.every(part => typeof part === "string") ? parts.join("") : null;
     }
+    return null;
+  }
+
+  function assembleCustomCSS(stored) {
+    const chunks = assembleCSSChunks(stored, stored[META_KEY]);
+    if (chunks !== null) return chunks;
     // 兼容旧版连续编号分块；忽略无效后缀，缺块时不拼接损坏内容。
     const keys = Object.keys(stored).filter(key => /^customCSS#\d+$/.test(key));
     if (keys.length) {
@@ -205,22 +261,24 @@ body,
     for (const key of ["enabled", ...OVERRIDE_KEYS]) {
       if (typeof stored[key] === "boolean") result[key] = stored[key];
     }
+    result.ligatureLevel = normalizeLigatureLevel(stored.ligatureLevel, result.standardLigatures ? "standard" : "native");
+    result.standardLigatures = ["standard", "extended"].includes(result.ligatureLevel);
     if (typeof stored.replacement === "string" && stored.replacement.trim()) result.replacement = stored.replacement;
     if (Array.isArray(stored.targets)) result.targets = stored.targets.filter(value => typeof value === "string");
     if (Array.isArray(stored.siteRules)) {
-      result.siteRules = stored.siteRules.filter(rule => rule && typeof rule === "object" && typeof rule.domain === "string");
+      result.siteRules = stored.siteRules.filter(rule => rule && typeof rule === "object" && typeof rule.domain === "string").map(rule => normalizeSiteRule(rule, stored));
     }
     result.customCSS = assembleCustomCSS(stored) ?? DEFAULT_CUSTOM_CSS;
     return result;
   }
 
-  function chunkCustomCSS(css, id) {
+  function chunkCustomCSS(css, id, prefix = CC_PREFIX) {
     const items = {};
     let offset = 0;
     let count = 0;
     const encoder = new TextEncoder();
     while (offset < css.length) {
-      const key = CC_PREFIX + id + "/" + count;
+      const key = prefix + id + "/" + count;
       let lo = 1, hi = Math.min(2500, css.length - offset);
       while (lo < hi) {
         const middle = Math.ceil((lo + hi) / 2);
@@ -238,9 +296,20 @@ body,
   async function writeSettings(storage, payload, css, id = crypto.randomUUID()) {
     const old = await storage.get(null);
     const { items, meta } = chunkCustomCSS(css, id);
+    const siteRules = (payload.siteRules || []).map((rule, index) => {
+      const normalized = normalizeSiteRule(rule);
+      const { customCSS, ...reference } = normalized;
+      // 本站 CSS 同样分块，正文不写入 siteRules 单项。
+      if (customCSS || normalized.customCSSMode === "site") {
+        const chunks = chunkCustomCSS(customCSS, id + "-" + index, SITE_CC_PREFIX);
+        Object.assign(items, chunks.items);
+        reference.customCSSChunks = chunks.meta;
+      }
+      return reference;
+    });
     // 新块与引用一次发布，读者不会看到新旧 CSS 拼接。失败时保留旧数据。
-    await storage.set({ ...payload, ...items, [META_KEY]: meta });
-    const stale = Object.keys(old).filter(key => key === "customCSS" || key.startsWith(CC_PREFIX) && !(key in items));
+    await storage.set({ ...payload, ...(Array.isArray(payload.siteRules) ? { siteRules } : {}), ...items, [META_KEY]: meta });
+    const stale = Object.keys(old).filter(key => key === "customCSS" || (key.startsWith(CC_PREFIX) || Array.isArray(payload.siteRules) && key.startsWith(SITE_CC_PREFIX)) && !(key in items));
     if (stale.length) {
       try { await storage.remove(stale); }
       catch (error) { console.warn("sfs CSS cleanup failed:", error); }
@@ -248,7 +317,8 @@ body,
   }
 
   globalThis.SFS = {
-    DEFAULT_CUSTOM_CSS, DEFAULTS, CC_PREFIX, META_KEY, OVERRIDE_KEYS,
-    ruleOverride, parseDomain, siteState, assembleCustomCSS, normalizeSettings, chunkCustomCSS, writeSettings
+    DEFAULT_CUSTOM_CSS, DEFAULTS, CC_PREFIX, SITE_CC_PREFIX, META_KEY, OVERRIDE_KEYS, LIGATURE_LEVELS,
+    ruleOverride, normalizeLigatureLevel, normalizeSiteRule, siteLigatureLevel, ligatureDeclarations,
+    parseDomain, siteState, assembleCSSChunks, assembleCustomCSS, normalizeSettings, chunkCustomCSS, writeSettings
   };
 })();
