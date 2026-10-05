@@ -11,6 +11,8 @@
   const CUSTOM_STYLE_ID = "sfs-custom-style";
   const SCAN_CHUNK = 2000;
   const INPUT_QUIET_MS = 180;
+  const VIDEO_SCAN_INTERVAL_MS = 200;
+  const VIDEO_SCAN_CHUNK = 64;
 
   let settings = DEFAULTS;
   let targetSet = new Set();
@@ -50,6 +52,10 @@
   let selectionPointer = null;
   let selecting = false;
   let inputTimer = null;
+  let videoTimer = null;
+  let videoIdleTask = null;
+  const videoFontWork = new Set();
+  const activeVideos = new Set();
   let typographyIndex = null;
   let typographyContexts = new WeakMap();
   const fontSamples = new Map();
@@ -66,6 +72,12 @@
     pending.clear();
     pendingAttributes.clear();
     deferredFontWork.clear();
+    videoFontWork.clear();
+    activeVideos.clear();
+    clearTimeout(videoTimer);
+    videoTimer = null;
+    if (videoIdleTask !== null) cancelIdleCallback(videoIdleTask);
+    videoIdleTask = null;
     clearTimeout(inputTimer);
     inputTimer = null;
     scanning = false;
@@ -83,6 +95,54 @@
     return composing || selecting || performance.now() < inputDeadline;
   }
 
+  function videoPlaying() {
+    for (const video of activeVideos) trackVideo(video);
+    return activeVideos.size > 0;
+  }
+
+  function trackVideo(video) {
+    if (video.isConnected && !video.paused && !video.ended && video.readyState >= 2) activeVideos.add(video);
+    else activeVideos.delete(video);
+  }
+
+  // 播放期间把动画、弹幕等变动合并到空闲时段，限制单批采样量。
+  // 设置和真正的字体变化仍最终处理，不改变用户 CSS 或播放器行为。
+  function scheduleVideoWork(task) {
+    videoFontWork.add(task);
+    if (videoTimer !== null || videoIdleTask !== null) return;
+    videoTimer = setTimeout(() => {
+      videoTimer = null;
+      videoIdleTask = requestIdleCallback(() => {
+        videoIdleTask = null;
+        const work = [...videoFontWork];
+        videoFontWork.clear();
+        work.forEach(run => run());
+      }, { timeout: VIDEO_SCAN_INTERVAL_MS });
+    }, VIDEO_SCAN_INTERVAL_MS);
+  }
+
+  function releaseVideoWork() {
+    if (!videoFontWork.size || videoPlaying()) return;
+    clearTimeout(videoTimer);
+    videoTimer = null;
+    if (videoIdleTask !== null) cancelIdleCallback(videoIdleTask);
+    videoIdleTask = null;
+    const work = [...videoFontWork];
+    videoFontWork.clear();
+    work.forEach(run => requestAnimationFrame(run));
+  }
+
+  // 由原生事件维护正在播放的视频，避免每次调度都查询整页 DOM。
+  // 暂停、结束或移除最后一个视频后恢复普通调度。
+  for (const type of ["playing", "loadeddata", "canplay", "pause", "ended", "emptied"]) {
+    document.addEventListener(type, event => {
+      if (!(event.target instanceof HTMLVideoElement)) return;
+      trackVideo(event.target);
+      videoPlaying();
+      releaseVideoWork();
+    }, true);
+  }
+
   function releaseFontWork() {
     clearTimeout(inputTimer);
     inputTimer = null;
@@ -94,7 +154,7 @@
     }
     const work = [...deferredFontWork];
     deferredFontWork.clear();
-    work.forEach(task => requestAnimationFrame(task));
+    work.forEach(task => videoPlaying() ? scheduleVideoWork(task) : requestAnimationFrame(task));
   }
 
   // 连续输入、组词和鼠标拖选时暂缓扫描，结束后合并处理，避免反复开关全页样式。
@@ -106,7 +166,8 @@
         releaseFontWork();
       } else task();
     };
-    requestAnimationFrame(run);
+    if (videoPlaying()) scheduleVideoWork(run);
+    else requestAnimationFrame(run);
   }
 
   function trackEditing(event) {
@@ -183,13 +244,43 @@
       const parsed = new CSSStyleSheet();
       parsed.replaceSync(result.css);
       externalSheetRules.set(sheet, { href, rules: parsed.cssRules });
-      invalidateTypography();
-      if (settings.enabled && !siteOff) queue(document.documentElement);
+      queueStylesheetScan();
     }).catch(() => {});
   }
 
   // 只为可能改变字体的属性变化重检。高度、颜色、位置等交互样式由浏览器
   // 正常处理，不必为它们停用整张扩展样式表。无法读取的样式表保留完整采样。
+  function elementSelectors(selector) {
+    // 选择器列表中的逗号可能位于函数、属性或引号中，不能直接按逗号拆分。
+    const selectors = [];
+    let start = 0, depth = 0, quote = null;
+    for (let i = 0; i < selector.length; i++) {
+      const char = selector[i];
+      if (char === "\\") { i++; continue; }
+      if (quote) { if (char === quote) quote = null; continue; }
+      if (char === '"' || char === "'") quote = char;
+      else if (char === "(" || char === "[") depth++;
+      else if (char === ")" || char === "]") depth--;
+      else if (char === "," && !depth) { selectors.push(selector.slice(start, i)); start = i + 1; }
+    }
+    selectors.push(selector.slice(start));
+    // 伪元素的字体不参与 getComputedStyle(element) 的结果，也不会传回宿主。
+    // 不把图标 ::before 等规则的 [class] 条件扩大成全页属性依赖。
+    return selectors.filter(part => {
+      let bracket = 0, quote = null;
+      for (let i = 0; i < part.length; i++) {
+        const char = part[i];
+        if (char === "\\") { i++; continue; }
+        if (quote) { if (char === quote) quote = null; continue; }
+        if (char === '"' || char === "'") quote = char;
+        else if (char === "[") bracket++;
+        else if (char === "]") bracket--;
+        else if (!bracket && char === ":" && /^(?:::|:(?:before|after|first-letter|first-line)\b)/i.test(part.slice(i))) return false;
+      }
+      return true;
+    }).join(",");
+  }
+
   function getTypographyIndex() {
     if (typographyIndex) return typographyIndex;
     const index = { rules: [], classes: new Set(), attributes: new Set(), variables: new Set(), media: [],
@@ -202,8 +293,9 @@
         if (rule.styleSheet) {
           try { visit(rule.styleSheet.cssRules, ancestors, unsafe); } catch { index.unknown = true; }
         }
-        const selectors = rule.selectorText ? [...ancestors, rule.selectorText] : ancestors;
-        if (rule.style && rule.selectorText) declarations.push({ rule, selectors, unsafe });
+        const selector = rule.selectorText ? elementSelectors(rule.selectorText) : "";
+        const selectors = selector ? [...ancestors, selector] : ancestors;
+        if (rule.style && selector) declarations.push({ rule, selector, selectors, unsafe });
         if (rule.media) index.media.push(rule.media.mediaText);
         const childUnsafe = unsafe || rule.constructor.name === "CSSContainerRule" || rule.constructor.name === "CSSScopeRule";
         // 字体动画的中间值和嵌套选择器不能通过静态匹配确定，走原始采样路径。
@@ -236,12 +328,12 @@
     } while (previousSize !== index.variables.size);
     if (keyframeStyles.some(style => [...style].some(name => index.variables.has(name)))) index.unknown = true;
     const identifier = /\.((?:\\[0-9a-fA-F]{1,6}\s?|\\[^\r\n\f]|[\w\u0080-\uffff-])+)/g;
-    for (const { rule, selectors, unsafe } of declarations) {
+    for (const { rule, selector: elementSelector, selectors, unsafe } of declarations) {
       const names = [...rule.style].filter(name => FONT_PROPERTY_RE.test(name) || index.variables.has(name));
       if (!names.length) continue;
       if (unsafe) index.unknown = true;
       const selector = selectors.join(" ");
-      index.rules.push(rule.selectorText);
+      index.rules.push(elementSelector);
       if (selectors.length > 1 || /:(?:hover|focus|active|visited|has|nth-|first-|last-|only-|empty|dir|lang|target|checked|disabled|enabled|valid|invalid|read-|placeholder|open)|[+~]|data-sfs-/i.test(selector)) index.cacheable = false;
       if (/:(?:disabled|enabled)/i.test(selector)) index.attributes.add("disabled");
       if (/:(?:link|visited)/i.test(selector)) index.attributes.add("href");
@@ -256,7 +348,7 @@
       if (selector.includes("#")) index.attributes.add("id");
       if (index.attributes.has("class")) index.classAttribute = true;
       if (index.attributes.has("style")) index.styleAttribute = true;
-      try { document.documentElement.matches(rule.selectorText); } catch { index.unknown = true; }
+      try { document.documentElement.matches(elementSelector); } catch { index.unknown = true; }
     }
     typographyIndex = index;
     return index;
@@ -670,7 +762,8 @@
 
   function scanNodes(nodes) {
     if (!nodes.size) return;
-    if (!scanning && nodes.size <= SCAN_CHUNK && !editingBusy()) {
+    const chunk = videoPlaying() ? VIDEO_SCAN_CHUNK : SCAN_CHUNK;
+    if (!scanning && nodes.size <= chunk && !editingBusy()) {
       applyBatch(nodes);
       return;
     }
@@ -693,7 +786,7 @@
     const step = () => {
       if (epoch !== scanEpoch) return;
       if (scanQueue.length) {
-        const batch = scanQueue.splice(0, SCAN_CHUNK);
+        const batch = scanQueue.splice(0, videoPlaying() ? VIDEO_SCAN_CHUNK : SCAN_CHUNK);
         batch.forEach(node => queuedNodes.delete(node));
         applyBatch(batch);
         scheduleFontWork(step, epoch);
@@ -778,6 +871,25 @@
     }, 100);
   }
 
+  // 新增、移动和移除整段子树时，同步发现内部样式表和已在播放的视频。
+  // 包含样式表的变动由整页补扫覆盖，不再单独重复扫描该子树。
+  function inspectResources(node) {
+    const selector = "style, link[rel='stylesheet'], video";
+    const resources = node.firstElementChild ? [...node.querySelectorAll(selector)] : [];
+    if (node.matches(selector)) resources.push(node);
+    let stylesheet = false;
+    let video = false;
+    for (const resource of resources) {
+      if (resource instanceof HTMLVideoElement) {
+        trackVideo(resource);
+        video = true;
+      } else if (![STYLE_ID, CUSTOM_STYLE_ID].includes(resource.id)) stylesheet = true;
+    }
+    if (video) releaseVideoWork();
+    if (stylesheet) queueStylesheetScan();
+    return stylesheet;
+  }
+
   function startObserver() {
     if (observer) observer.disconnect();
     observer = new MutationObserver(mutations => {
@@ -789,6 +901,9 @@
             || parent.tagName === "LINK" && m.attributeName === "rel" && /(?:^|\s)stylesheet(?:\s|$)/i.test(m.oldValue || ""))) {
           queueStylesheetScan();
         } else if (m.type === "attributes") {
+          // SVG 本身始终受保护；自定义 CSS 接管时无需保存原样式快照。
+          // 保留 SVG 内样式表和结构变化的观察，动画属性则不重复遍历文字。
+          if (settings.customCSSOn && settings.customCSS.trim() && parent.closest("svg")) continue;
           if (!pendingAttributes.has(parent)) pendingAttributes.set(parent, new Map());
           const attributes = pendingAttributes.get(parent);
           if (!attributes.has(m.attributeName)) attributes.set(m.attributeName, { attributeName: m.attributeName, oldValue: m.oldValue });
@@ -829,11 +944,8 @@
               if (!node.isConnected) queue(document.documentElement);
               continue;
             }
-            if (node instanceof Element && node.matches("style, link[rel='stylesheet']")) {
-              queueStylesheetScan();
-            } else if (node.isConnected) {
-              queue(node instanceof Element ? node : node.parentElement);
-            }
+            if (node instanceof Element && inspectResources(node)) continue;
+            if (node.isConnected) queue(node instanceof Element ? node : node.parentElement);
           }
         }
       }
@@ -876,6 +988,7 @@
     ensureRootMark();
     ensureStyle();
     ensureCustomStyle();
+    document.querySelectorAll("video").forEach(trackVideo);
     startObserver();
     scanSubtree(document);
     if (document.fonts?.status === "loading") {

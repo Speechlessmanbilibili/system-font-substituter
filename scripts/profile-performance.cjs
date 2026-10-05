@@ -1,4 +1,4 @@
-// 在同一模拟对话页面上比较指定 Git 版本与工作区的内容脚本。
+// 在同一模拟对话页面与视频动画场景上比较指定 Git 版本和工作区的内容脚本。
 const fs = require("node:fs");
 const path = require("node:path");
 const http = require("node:http");
@@ -97,8 +97,40 @@ async function measure(browser, origin, version, customCSSOn) {
       menu.remove();
     }
   }));
+  await page.evaluate(() => {
+    const player = document.createElement("section");
+    player.id = "player";
+    const source = document.createElement("style");
+    source.textContent = '#player{container-type:inline-size;width:200px}@container (width > 300px){.video-font{font-family:CustomFont}}';
+    document.head.appendChild(source);
+    player.innerHTML = '<video muted></video>' +
+      '<p class="target video-font">Control</p>'.repeat(160) + '<div id="danmaku"></div>';
+    document.body.appendChild(player);
+  });
+  await page.waitForFunction(() => document.querySelectorAll("#player [data-sfs-replaced]").length === 160);
+  await page.waitForTimeout(250);
+  const video = await scenario(() => page.evaluate(async () => {
+    const video = document.querySelector("video");
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 32;
+    const stream = canvas.captureStream(30);
+    video.srcObject = stream;
+    const frame = setInterval(() => canvas.getContext("2d").fillRect(0, 0, 32, 32), 30);
+    await video.play();
+    for (let i = 0; i < 30; i++) {
+      document.getElementById("player").style.width = (200 + i) + "px";
+      const row = document.createElement("div");
+      row.className = "target";
+      row.textContent = "Danmaku " + i;
+      document.getElementById("danmaku").appendChild(row);
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    }
+    clearInterval(frame);
+    window.__videoCleanup = () => { video.pause(); stream.getTracks().forEach(track => track.stop()); };
+  }));
+  await page.evaluate(() => window.__videoCleanup());
   await page.close();
-  return { streaming, branches, interaction, popups };
+  return { streaming, branches, interaction, popups, video };
 }
 
 (async () => {
@@ -111,7 +143,7 @@ async function measure(browser, origin, version, customCSSOn) {
     for (const [mode, customCSSOn] of [["ordinary", false], ["appleUIMix", true]]) {
       modes[mode] = { before: await measure(browser, origin, "before", customCSSOn), after: await measure(browser, origin, "after", customCSSOn) };
     }
-    process.stdout.write(JSON.stringify({ baseline: ref, historyTextElements: 2500, streamingUpdates: 40, independentBranches: 64, interactionUpdates: 20, popupUpdates: 30, modes }, null, 2) + "\n");
+    process.stdout.write(JSON.stringify({ baseline: ref, historyTextElements: 2500, streamingUpdates: 40, independentBranches: 64, interactionUpdates: 20, popupUpdates: 30, videoUpdates: 30, videoTextElements: 160, modes }, null, 2) + "\n");
   } finally {
     await browser?.close();
     await new Promise(resolve => server.close(resolve));

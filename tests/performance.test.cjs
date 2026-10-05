@@ -293,6 +293,199 @@ test("容器查询改变字体时保留原始采样，不误用布局变化过�
   await page.close();
 });
 
+test("播放中的弹幕和动画变化合并空闲采样，暂停后完整处理字体变化", async t => {
+  const customCSS = fs.readFileSync(path.join(root, "apple-ui-mix.css"), "utf8");
+  const page = await pageFor('<style>#player { container-type: inline-size; width: 200px; } @container (width > 300px) { .conditional { font-family: CustomFont; } }</style><div id="player"><video id="video" muted></video>' +
+    '<p class="target conditional">Control</p>'.repeat(160) + '<div id="danmaku"></div></div>', { customCSS });
+  const during = await page.evaluate(async () => {
+    const video = document.getElementById("video");
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 32;
+    const context = canvas.getContext("2d");
+    const stream = canvas.captureStream(30);
+    video.srcObject = stream;
+    const frame = setInterval(() => context.fillRect(0, 0, 32, 32), 30);
+    await video.play();
+    __styleReads = __sheetDisables = 0;
+    for (let i = 0; i < 30; i++) {
+      document.getElementById("player").style.width = (200 + i) + "px";
+      const row = document.createElement("div");
+      row.className = "target";
+      row.style.transform = "translateX(" + i + "px)";
+      row.textContent = "Danmaku " + i;
+      document.getElementById("danmaku").appendChild(row);
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    }
+    clearInterval(frame);
+    const metrics = { reads: __styleReads, disables: __sheetDisables, playing: !video.paused && video.readyState >= 2 };
+    document.getElementById("player").style.width = "400px";
+    video.pause();
+    stream.getTracks().forEach(track => track.stop());
+    return metrics;
+  });
+  t.diagnostic(JSON.stringify(during));
+  assert.equal(during.playing, true);
+  assert.ok(during.disables <= 12, "播放期间不应每帧停用全页 CSS");
+  assert.ok(during.reads <= 384, "空闲分片应限制单次和累计采样量");
+  await page.waitForFunction(() => !document.querySelector(".conditional[data-sfs-replaced]") && document.querySelectorAll("#danmaku [data-sfs-replaced]").length === 30);
+  assert.equal(await page.locator("#sfs-custom-style").textContent(), customCSS);
+  await page.close();
+});
+
+test("禁用配置会取消播放期间尚未执行的检查，旧任务不恢复标记", async () => {
+  const page = await pageFor('<p class="target">Primer</p><video id="video" muted></video><div id="new"></div>');
+  await page.evaluate(async () => {
+    const video = document.getElementById("video");
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 32;
+    const stream = canvas.captureStream(30);
+    video.srcObject = stream;
+    const frame = setInterval(() => canvas.getContext("2d").fillRect(0, 0, 32, 32), 30);
+    await video.play();
+    document.getElementById("new").innerHTML = '<p class="target">New text</p>';
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    __settings.enabled = false;
+    __storageChanged({ enabled: { newValue: false } }, "sync");
+    setTimeout(() => { clearInterval(frame); video.pause(); stream.getTracks().forEach(track => track.stop()); }, 500);
+  });
+  await page.waitForTimeout(650);
+  assert.equal(await page.locator("[data-sfs-replaced], #sfs-custom-style, #sfs-style").count(), 0);
+  await page.close();
+});
+
+test("子树内新增和移除样式表仍重新判断已有文字字体", async () => {
+  const page = await pageFor('<p id="outside" class="target">Existing text</p>');
+  await page.evaluate(() => {
+    const panel = document.createElement("section");
+    panel.id = "panel";
+    panel.innerHTML = '<style>#outside { font-family: CustomFont !important; }</style><p>Panel</p>';
+    document.body.appendChild(panel);
+  });
+  await page.waitForFunction(() => !document.getElementById("outside").hasAttribute("data-sfs-replaced"));
+  await page.evaluate(() => document.getElementById("panel").remove());
+  await page.waitForFunction(() => document.getElementById("outside").hasAttribute("data-sfs-replaced"));
+  await page.close();
+});
+
+test("自定义 CSS 下受保护的 SVG 动画属性不引发重复子树遍历", async t => {
+  const page = await pageFor('<style>@container (width > 100px) { .conditional { font-family: Arial; } }</style><p class="target">Primer</p><svg><g id="animation">' + '<text>Protected</text>'.repeat(1000) + '</g></svg>');
+  const traversals = await page.evaluate(async () => {
+    const original = document.createTreeWalker;
+    let traversals = 0;
+    document.createTreeWalker = function(...args) { traversals++; return Reflect.apply(original, this, args); };
+    try {
+      for (let i = 0; i < 12; i++) {
+        document.getElementById("animation").style.display = i % 2 ? "block" : "none";
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }
+      return traversals;
+    } finally { document.createTreeWalker = original; }
+  });
+  t.diagnostic(JSON.stringify({ svgTextElements: 1000, traversals }));
+  assert.equal(traversals, 0);
+  assert.equal(await page.locator("svg [data-sfs-replaced]").count(), 0);
+  // SVG 中的样式表仍可能影响外部 HTML，不能把整棵 SVG 从观察范围删除。
+  await page.evaluate(() => {
+    const style = document.createElementNS("http://www.w3.org/2000/svg", "style");
+    style.textContent = '.target { font-family: CustomFont !important; }';
+    document.querySelector("svg").appendChild(style);
+  });
+  await page.waitForFunction(() => !document.querySelector("p").hasAttribute("data-sfs-replaced"));
+  await page.close();
+});
+
+test("持续播放中的新文字最终替换，不重复查询全页视频", async t => {
+  const page = await pageFor('<p class="target">Primer</p><video id="video" muted></video><div id="rows"></div>');
+  const metrics = await page.evaluate(async () => {
+    const video = document.getElementById("video");
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 32;
+    const stream = canvas.captureStream(30);
+    const frame = setInterval(() => canvas.getContext("2d").fillRect(0, 0, 32, 32), 30);
+    video.srcObject = stream;
+    await video.play();
+    const original = document.querySelectorAll;
+    let videoQueries = 0;
+    document.querySelectorAll = function(selector) {
+      if (selector === "video") videoQueries++;
+      return original.call(this, selector);
+    };
+    try {
+      for (let i = 0; i < 20; i++) {
+        document.getElementById("rows").insertAdjacentHTML("beforeend", '<p class="target">New ' + i + '</p>');
+        await new Promise(resolve => setTimeout(resolve, 40));
+      }
+      const start = performance.now();
+      while (document.querySelectorAll("#rows [data-sfs-replaced]").length !== 20 && performance.now() - start < 2500) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      return { videoQueries, replaced: document.querySelectorAll("#rows [data-sfs-replaced]").length, playing: !video.paused };
+    } finally {
+      document.querySelectorAll = original;
+      clearInterval(frame);
+      video.pause();
+      stream.getTracks().forEach(track => track.stop());
+    }
+  });
+  t.diagnostic(JSON.stringify(metrics));
+  assert.equal(metrics.playing, true);
+  assert.equal(metrics.replaced, 20);
+  assert.equal(metrics.videoQueries, 0);
+  await page.close();
+});
+
+test("持续播放时完成分片重检，多视频暂停和移除保持调度正确", async () => {
+  const page = await pageFor('<style>#wrap { container-type: inline-size; width: 200px; } @container (width > 300px) { .conditional { font-family: CustomFont; } }</style><video id="first" muted></video><video id="second" muted></video><div id="wrap">' +
+    '<p class="target conditional">Control</p>'.repeat(160) + '</div><div id="new"></div>');
+  await page.evaluate(async () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 32;
+    const stream = canvas.captureStream(30);
+    const frame = setInterval(() => canvas.getContext("2d").fillRect(0, 0, 32, 32), 30);
+    for (const id of ["first", "second"]) document.getElementById(id).srcObject = stream;
+    await Promise.all([document.getElementById("first").play(), document.getElementById("second").play()]);
+    window.__stopVideos = () => { clearInterval(frame); stream.getTracks().forEach(track => track.stop()); };
+    document.getElementById("wrap").style.width = "400px";
+  });
+  await page.waitForFunction(() => !document.querySelector(".conditional[data-sfs-replaced]"), undefined, { timeout: 2500 });
+  assert.equal(await page.evaluate(() => document.getElementById("second").paused), false);
+  const early = await page.evaluate(async () => {
+    document.getElementById("first").pause();
+    document.getElementById("new").innerHTML = '<p id="late" class="target">New</p>';
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return document.getElementById("late").hasAttribute("data-sfs-replaced");
+  });
+  assert.equal(early, false, "仍有视频播放时不应提前恢复普通调度");
+  await page.evaluate(() => document.getElementById("second").remove());
+  await page.waitForFunction(() => document.getElementById("late").hasAttribute("data-sfs-replaced"), undefined, { timeout: 180 });
+  await page.evaluate(() => window.__stopVideos());
+  await page.close();
+});
+
+test("多张跨域样式表读取完成后合并补扫", async t => {
+  const page = await pageFor('<p class="target">Primer</p>' + '<p class="target">Text</p>'.repeat(40));
+  await page.evaluate(() => {
+    chrome.runtime = { sendMessage: async ({ url }) => {
+      await new Promise(resolve => setTimeout(resolve, 20 + Number(url.match(/font-(\d)/)[1]) * 20));
+      return { css: '.target { font-family: Arial; }' };
+    } };
+    for (let i = 0; i < 3; i++) {
+      const style = document.createElement("style");
+      style.textContent = '.target { font-family: Arial; }';
+      document.head.appendChild(style);
+      Object.defineProperty(style.sheet, "href", { value: "https://example.com/font-" + i + ".css" });
+      Object.defineProperty(style.sheet, "cssRules", { get() { throw new DOMException("Cross-origin", "SecurityError"); } });
+    }
+    __styleReads = __sheetDisables = 0;
+  });
+  await page.waitForTimeout(450);
+  const metrics = await page.evaluate(() => ({ reads: __styleReads, disables: __sheetDisables }));
+  t.diagnostic(JSON.stringify(metrics));
+  assert.ok(metrics.reads <= 50, "跨域读取结果不应逐张引发整页补扫");
+  assert.ok(metrics.disables <= 4);
+  await page.close();
+});
+
 test("dir=auto 的富文本输入保持方向时不反复停用全页 CSS", async t => {
   const customCSS = fs.readFileSync(path.join(root, "apple-ui-mix.css"), "utf8");
   const page = await pageFor('<style>#composer:dir(rtl) p { font-family: CustomFont; }</style><div id="composer" class="target" contenteditable="true" dir="auto"><p id="draft">Start</p></div>', { customCSS });
@@ -485,12 +678,44 @@ test("拖选中切换启用状态取消旧任务，恢复后的扫描等待松�
   await page.close();
 });
 
+test("图标伪元素的 class 条件不扩大成播放器和搜索栏的字体依赖", async t => {
+  const controls = Array.from({ length: 180 }, (_, i) => '<span class="target">Control ' + i + '</span>').join("");
+  const page = await pageFor('<style>[class^="van-icon-"]::before { font-family: vanfont; } .tip:hover::after { font-family: IconFont; }</style>' +
+    '<div id="player">' + controls + '</div><div id="nav"><input class="target"><span class="target">Search</span></div>');
+  const result = await page.evaluate(async () => {
+    const original = document.createTreeWalker;
+    let traversals = 0;
+    document.createTreeWalker = function(...args) { traversals++; return Reflect.apply(original, this, args); };
+    for (let i = 0; i < 15; i++) {
+      document.getElementById("player").className = "bpx-state-hover-" + i;
+      document.getElementById("nav").className = "search-focus-" + i;
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    }
+    document.createTreeWalker = original;
+    return { traversals, reads: __styleReads, disables: __sheetDisables };
+  });
+  t.diagnostic(JSON.stringify(result));
+  assert.deepEqual(result, { traversals: 0, reads: 0, disables: 0 });
+  await page.close();
+});
+
+test("混合伪元素列表保留真正的字体规则，选择器中的逗号和冒号保持原义", async () => {
+  const page = await pageFor('<style>.glyph::before, :is(.switch, .alternate) { font-family: CustomFont; } [data-label="x,::before"] { font-family: CustomFont; }</style>' +
+    '<p id="change" class="target">Change</p><p id="quoted" class="target" data-label="x,::before">Quoted</p>');
+  assert.equal(await page.locator("#quoted").getAttribute("data-sfs-replaced"), null);
+  await page.locator("#change").evaluate(el => { el.classList.add("switch"); });
+  await page.waitForFunction(() => !document.getElementById("change").hasAttribute("data-sfs-replaced"));
+  await page.locator("#change").evaluate(el => { el.classList.remove("switch"); });
+  await page.waitForFunction(() => document.getElementById("change").hasAttribute("data-sfs-replaced"));
+  await page.close();
+});
+
 test("真实 MV3 读取跨域 CSS 后，交互优化生效且字体变化仍重检", async t => {
   let requests = 0;
   const remote = http.createServer((request, response) => {
     requests++;
     response.setHeader("Content-Type", "text/css");
-    response.end('.target { font-family: Arial; } .design { font-family: CustomFont; }');
+    response.end('.target { font-family: Arial; } .design { font-family: CustomFont; } [class^="van-icon-"]::before { font-family: vanfont; }');
   });
   await new Promise(resolve => remote.listen(0, "127.0.0.1", resolve));
   let context;
@@ -515,7 +740,9 @@ test("真实 MV3 读取跨域 CSS 后，交互优化生效且字体变化仍重�
     const world = worlds.find(world => world.origin.startsWith("chrome-extension://"));
     assert.ok(world, "应找到扩展的隔离执行环境");
     await cdp.send("Runtime.evaluate", { contextId: world.id, expression: `
-      window.__reads = window.__disables = 0;
+      window.__reads = window.__disables = window.__walks = 0;
+      const walk = document.createTreeWalker;
+      document.createTreeWalker = function(...args) { __walks++; return Reflect.apply(walk, this, args); };
       const getStyle = window.getComputedStyle;
       window.getComputedStyle = function(...args) { __reads++; return Reflect.apply(getStyle, this, args); };
       const disabled = Object.getOwnPropertyDescriptor(StyleSheet.prototype, "disabled");
@@ -540,7 +767,7 @@ test("真实 MV3 读取跨域 CSS 后，交互优化生效且字体变化仍重�
       })()
     ` });
     assert.equal(idle.result.value, true, "初始化字体扫描应稳定后再测量交互");
-    await cdp.send("Runtime.evaluate", { contextId: world.id, expression: "__reads = __disables = 0" });
+    await cdp.send("Runtime.evaluate", { contextId: world.id, expression: "__reads = __disables = __walks = 0" });
     await page.evaluate(async () => {
       for (let i = 0; i < 10; i++) {
         document.getElementById("shell").className = "layout hover-" + i;
@@ -548,9 +775,9 @@ test("真实 MV3 读取跨域 CSS 后，交互优化生效且字体变化仍重�
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       }
     });
-    const result = await cdp.send("Runtime.evaluate", { contextId: world.id, expression: "({reads: __reads, disables: __disables})", returnByValue: true });
+    const result = await cdp.send("Runtime.evaluate", { contextId: world.id, expression: "({reads: __reads, disables: __disables, walks: __walks})", returnByValue: true });
     t.diagnostic(JSON.stringify(result.result.value));
-    assert.deepEqual(result.result.value, { reads: 0, disables: 0 });
+    assert.deepEqual(result.result.value, { reads: 0, disables: 0, walks: 0 });
     await page.evaluate(() => { document.getElementById("text").className = "design"; });
     await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
     await page.locator("#composer").click();
