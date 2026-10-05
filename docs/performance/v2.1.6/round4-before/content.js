@@ -71,7 +71,6 @@
   const NONSPACE_RE = /\S/;
   // 字号、字重等仍由浏览器正常排版；只有影响判断或原样式快照的声明参与索引。
   const FONT_PROPERTY_RE = /^(?:font|font-family|font-feature-settings|font-variant|font-variant-ligatures|text-autospace|direction|unicode-bidi|all)$/;
-  const FONT_INLINE_RE = /(?:^|;)\s*(?:font|font-family|font-feature-settings|font-variant|font-variant-ligatures|text-autospace|direction|unicode-bidi|all)\s*:/i;
   const externalSheetRules = new WeakMap();
   const externalSheetPending = new WeakSet();
   const mediaListeners = [];
@@ -353,60 +352,6 @@
     return anchors.length ? anchors : null;
   }
 
-  function decodeIdentifier(value) {
-    return value.replace(/\\([0-9a-fA-F]{1,6})\s?|\\(.)/g, (_, hex, char) => {
-      const code = parseInt(hex, 16);
-      return hex ? String.fromCodePoint(code > 0 && code <= 0x10ffff ? code : 0xfffd) : char;
-    });
-  }
-
-  // 属性值和字符串中的标点不表示关系或状态；转义标点也保留标识符原义。
-  // 函数内部的选择器继续分析，属性名单独记录，供观察器跟踪真实依赖。
-  function selectorDependencies(selector) {
-    const identifier = /^(?:\\[0-9a-fA-F]{1,6}\s?|\\[^\r\n\f]|[\w\u0080-\uffff-])+/;
-    const classes = new Set(), attributes = new Set();
-    let syntax = "", id = false;
-    for (let i = 0; i < selector.length; i++) {
-      const char = selector[i];
-      if (char === "\\") {
-        const escape = selector.slice(i).match(/^\\(?:[0-9a-fA-F]{1,6}\s?|[^\r\n\f])/);
-        if (!escape) { syntax += "_"; continue; }
-        const decoded = decodeIdentifier(escape[0]);
-        syntax += /^[\w-]$/.test(decoded) ? decoded : "_";
-        i += escape[0].length - 1;
-        continue;
-      }
-      if (char === "[" || char === '"' || char === "'") {
-        if (char === "[") {
-          let start = i + 1;
-          while (/\s/.test(selector[start] || "") && start < selector.length) start++;
-          let name = selector.slice(start).match(identifier)?.[0] || "";
-          start += name.length;
-          if (selector[start] === "*" && !name) start++;
-          if (selector[start] === "|" && selector[start + 1] !== "=") name = selector.slice(start + 1).match(identifier)?.[0] || "";
-          if (name) attributes.add(decodeIdentifier(name).toLowerCase());
-        }
-        let quote = char === "[" ? null : char;
-        for (i++; i < selector.length; i++) {
-          const next = selector[i];
-          if (next === "\\") { i++; continue; }
-          if (quote) {
-            if (next === quote) { quote = null; if (char !== "[") break; }
-          } else if (next === '"' || next === "'") quote = next;
-          else if (next === "]" && char === "[") break;
-        }
-        syntax += " ";
-        continue;
-      }
-      if (char === ".") {
-        const name = selector.slice(i + 1).match(identifier)?.[0];
-        if (name) classes.add(decodeIdentifier(name));
-      } else if (char === "#") id = true;
-      syntax += char;
-    }
-    return { syntax, classes, attributes, id };
-  }
-
   function getTypographyIndex() {
     if (typographyIndex) return typographyIndex;
     const index = { rules: [], classes: new Set(), attributes: new Set(), variables: new Set(), media: [],
@@ -460,21 +405,17 @@
       }
     }
     if (keyframeStyles.some(style => [...style].some(name => index.variables.has(name)))) index.unknown = true;
+    const identifier = /\.((?:\\[0-9a-fA-F]{1,6}\s?|\\[^\r\n\f]|[\w\u0080-\uffff-])+)/g;
     for (const { rule, selector: elementSelector, selectors, unsafe, media } of declarations) {
       const names = [...rule.style].filter(name => FONT_PROPERTY_RE.test(name) || index.variables.has(name));
       if (!names.length) continue;
       index.media.push(...media);
       if (unsafe) index.unknown = true;
       const selector = selectors.join(" ");
-      const dependencies = selectorDependencies(selector);
-      const syntax = dependencies.syntax;
       const id = index.rules.push(elementSelector) - 1;
       // 列表中每个分支都有必要条件时，按这些条件查找候选，再由浏览器判断。
       const simple = elementSelector.trim().match(/^([.#]?)([a-zA-Z_][\w-]*)$/);
-      // 单个类名或 ID 解码后可精确索引；复合转义选择器继续完整匹配。
-      const literal = elementSelector.trim().match(/^([.#])((?:\\[0-9a-fA-F]{1,6}\s?|\\[^\r\n\f]|[\w\u0080-\uffff-])+)$/);
-      const branches = literal ? [[{ kind: literal[1], name: decodeIdentifier(literal[2]) }]]
-        : selectorList(elementSelector.trim()).map(part => selectorAnchors(part.trim()));
+      const branches = selectorList(elementSelector.trim()).map(part => selectorAnchors(part.trim()));
       if (branches.every(Boolean) && document.compatMode !== "BackCompat") {
         anchoredRules.push({ id, branches });
         for (const branch of branches) {
@@ -482,16 +423,21 @@
             anchorFrequency.set(key, (anchorFrequency.get(key) || 0) + 1);
           }
         }
-        if (literal) index.exactRules.add(id);
+        if (simple && simple[1]) index.exactRules.add(id);
       } else index.generalRules.push(id);
-      if (selectors.length > 1 || /:(?:hover|focus|active|visited|has|nth-|first-|last-|only-|empty|dir|lang|target|checked|disabled|enabled|valid|invalid|read-|placeholder|open)|[+~]|data-sfs-/i.test(syntax) || [...dependencies.attributes].some(name => name.startsWith("data-sfs-"))) index.cacheable = false;
-      if (selectors.length > 1 || /:(?:has|nth-|first-|last-|only-|empty)|[+~]/i.test(syntax)) index.relational = true;
-      if (/:(?:disabled|enabled)/i.test(syntax)) index.attributes.add("disabled");
-      if (/:(?:link|visited)/i.test(syntax)) index.attributes.add("href");
+      if (selectors.length > 1 || /:(?:hover|focus|active|visited|has|nth-|first-|last-|only-|empty|dir|lang|target|checked|disabled|enabled|valid|invalid|read-|placeholder|open)|[+~]|data-sfs-/i.test(selector)) index.cacheable = false;
+      if (selectors.length > 1 || /:(?:has|nth-|first-|last-|only-|empty)|[+~]/i.test(selector)) index.relational = true;
+      if (/:(?:disabled|enabled)/i.test(selector)) index.attributes.add("disabled");
+      if (/:(?:link|visited)/i.test(selector)) index.attributes.add("href");
       if (names.some(name => /\b(?:attr|env)\(/.test(rule.style.getPropertyValue(name)))) index.cacheable = false;
-      dependencies.classes.forEach(name => index.classes.add(name));
-      dependencies.attributes.forEach(name => index.attributes.add(name));
-      if (dependencies.id) index.attributes.add("id");
+      for (const match of selector.matchAll(identifier)) {
+        index.classes.add(match[1].replace(/\\([0-9a-fA-F]{1,6})\s?|\\(.)/g, (_, hex, char) => {
+          const value = parseInt(hex, 16);
+          return hex ? String.fromCodePoint(value > 0 && value <= 0x10ffff ? value : 0xfffd) : char;
+        }));
+      }
+      for (const match of selector.matchAll(/\[\s*([\w-]+)/g)) index.attributes.add(match[1].toLowerCase());
+      if (selector.includes("#")) index.attributes.add("id");
       if (index.attributes.has("class")) index.classAttribute = true;
       if (index.attributes.has("style")) index.styleAttribute = true;
       if (!simple || document.compatMode === "BackCompat") {
@@ -526,10 +472,6 @@
   function typographyInline(style, index) {
     return [...style].filter(name => FONT_PROPERTY_RE.test(name) || index.variables.has(name))
       .sort().map(name => [name, style.getPropertyValue(name), style.getPropertyPriority(name)]);
-  }
-
-  function inlineCouldAffectTypography(value, index) {
-    return FONT_INLINE_RE.test(value) || /\\|\/\*/.test(value) || index.variables.size && value.includes("--");
   }
 
   // 小分支变化只清除该分支的继承路径；大分支直接重建整页缓存，限制清理开销。
@@ -569,11 +511,8 @@
     }
     if (name === "style") {
       if (index.styleAttribute) return true;
-      const before = m.oldValue || "", after = parent.getAttribute("style") || "";
-      // 无字体声明的布局样式直接过滤；转义、注释和变量保留完整 CSS 解析。
-      if (!inlineCouldAffectTypography(before, index) && !inlineCouldAffectTypography(after, index)) return false;
       const oldStyle = document.createElement("span").style;
-      oldStyle.cssText = before;
+      oldStyle.cssText = m.oldValue || "";
       return JSON.stringify(typographyInline(oldStyle, index)) !== JSON.stringify(typographyInline(parent.style, index));
     }
     return name === "id" && settings.protectIcons;
@@ -904,8 +843,6 @@
     const parents = new Map();
     const autoRoots = new Set();
     const preserveActive = !(settings.customCSSOn && settings.customCSS.trim());
-    // 强制站点无需名单判断；原生连字、关闭图标保护且由 CSS 接管时无需原样式。
-    const directForce = forceSite && !preserveActive && !settings.protectIcons && settings.ligatureLevel === "native";
     let stylesChanged = false;
     let index;
     let mediaKey;
@@ -918,9 +855,7 @@
         let match = false;
         // 自定义 CSS 接管时不生成保护快照；由 DOM 已能确定受保护的元素无需采样。
         // 普通替换仍读取原字体，以保留已替换祖先下的代码和图标样式。
-        if (directForce) {
-          match = !state.protected;
-        } else if (preserveActive || !state.protected && !looksLikeIconElement(el, "")) {
+        if (preserveActive || !state.protected && !looksLikeIconElement(el, "")) {
           index ||= getTypographyIndex();
           mediaKey ??= index.media.map(query => matchMedia(query).matches ? "1" : "0").join("");
           const key = typographyKey(el, index, mediaKey, state.auto);
@@ -941,7 +876,7 @@
         }
         snapshots.push({
           el, match,
-          ligatures: match ? cs?.ligatures || "" : "",
+          ligatures: match ? cs.ligatures : "",
           css: preserveActive && !match ? cs.preserveCSS : ""
         });
         sampledElements.add(el);

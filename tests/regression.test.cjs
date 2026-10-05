@@ -190,8 +190,9 @@ after(async () => {
   if (server) await new Promise(resolve => server.close(resolve));
 });
 
-async function pageFor(html, stored = {}, options = false, language = "zh-CN") {
+async function pageFor(html, stored = {}, options = false, language = "zh-CN", initHook = null) {
   const page = await browser.newPage();
+  if (initHook) await page.addInitScript(initHook);
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.addInitScript(({ stored, language }) => {
@@ -443,6 +444,59 @@ test("设置页统一默认名单、保存空 CSS、失败保留旧内容", asyn
   assert.equal(await page.evaluate(() => SFS.assembleCustomCSS(__store)), "");
   assert.equal(await page.locator("#customCSS").inputValue(), "changed");
   assert.deepEqual(page.__errors, []);
+  await page.close();
+});
+
+test("批量站点规则加载保持配置，编辑和保存复用字段且避免逐条查询整份列表", async () => {
+  const siteRules = Array.from({ length: 240 }, (_, i) => ({ domain: "site" + i + ".example.com", action: "inherit", font: i % 2 ? "serif" : "" }));
+  const options = await pageFor("", { replacement: "serif", siteRules }, true, "zh-CN", () => {
+    window.__rowQueries = 0;
+    const query = Element.prototype.querySelectorAll;
+    Element.prototype.querySelectorAll = function (selector) {
+      if (this.id === "siteRules" && selector === ".site-rule-row") __rowQueries++;
+      return query.call(this, selector);
+    };
+  });
+  await options.waitForFunction(() => !document.getElementById("save").disabled);
+  assert.equal(await options.locator(".site-rule-row").count(), 240);
+  assert.ok(await options.evaluate(() => __rowQueries) < 10, "批量加载应避免随条目数增长的整份列表查询");
+  await options.locator(".rule-domain").first().fill("changed.example.com");
+  await options.locator(".rule-secondary summary").last().click();
+  await options.locator(".rule-font").last().fill("monospace");
+  await options.locator("#save").click();
+  await options.waitForFunction(() => document.getElementById("status").classList.contains("success"));
+  const saved = await options.evaluate(() => SFS.normalizeSettings(__store).siteRules);
+  assert.equal(saved.length, 240);
+  assert.equal(saved[0].domain, "changed.example.com");
+  assert.equal(saved[239].font, "monospace");
+  assert.equal(saved[17].domain, "site17.example.com");
+  await options.close();
+});
+
+test("屏外站点规则可聚焦和操作菜单，CSS 子界面返回后保持滚动位置", async () => {
+  const siteRules = Array.from({ length: 120 }, (_, i) => ({ domain: "site" + i + ".example.com", action: "inherit" }));
+  const page = await pageFor("", { siteRules }, true);
+  await page.waitForFunction(() => !document.getElementById("save").disabled);
+  const row = page.locator(".site-rule-row").last();
+  await row.locator(".rule-domain").focus();
+  await row.locator(".rule-domain").fill("last.example.com");
+  const action = row.locator(".rule-action");
+  await action.click();
+  await action.press("ArrowDown");
+  await action.press("Enter");
+  assert.equal(await action.evaluate(el => el.value), "force");
+  assert.ok(await page.evaluate(() => scrollY) > 5000, "应实际操作此前位于屏外的最后一条规则");
+  await row.locator(".rule-edit-css").click();
+  const before = await page.evaluate(() => rulesScrollPosition);
+  await page.locator("#useSiteCSS").click();
+  await page.locator("#siteCSSContent").fill("body { color: red; }");
+  await page.locator("#backToRules").click();
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const after = await page.evaluate(() => scrollY);
+  assert.ok(Math.abs(after - before) < 30, "滚动位置：" + before + " → " + after);
+  assert.equal(await row.locator(".rule-domain").inputValue(), "last.example.com");
+  await row.locator(".rule-edit-css").click();
+  assert.equal(await page.locator("#siteCSSContent").inputValue(), "body { color: red; }");
   await page.close();
 });
 

@@ -17,14 +17,14 @@ before(async () => {
   });
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
   origin = "http://127.0.0.1:" + server.address().port;
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, executablePath: chromium.executablePath() });
 });
 after(async () => {
   await browser?.close();
   if (server) await new Promise(resolve => server.close(resolve));
 });
 
-async function pageFor(html, settings = {}) {
+async function pageFor(html, settings = {}, initialize) {
   const page = await browser.newPage();
   await page.addInitScript(settings => {
     window.__styleReads = 0;
@@ -49,6 +49,7 @@ async function pageFor(html, settings = {}) {
       onChanged: { addListener(callback) { window.__storageChanged = callback; } }
     } };
   }, settings);
+  if (initialize) await page.addInitScript(initialize);
   const route = "/case-" + fixtures.size;
   fixtures.set(route, '<!doctype html><html><head><style>.target { font-family: Arial; } .design { font-family: CustomFont; }</style></head><body>' + html + '<script src="/shared.js"></script><script src="/content.js"></script></body></html>');
   await page.goto(origin + route);
@@ -57,6 +58,155 @@ async function pageFor(html, settings = {}) {
   await page.evaluate(() => { __styleReads = __sheetDisables = 0; });
   return page;
 }
+
+test("属性运算符、引号内容和转义标点保留字体缓存及真实依赖", async t => {
+  for (const customCSSOn of [false, true]) {
+    const css = '<style>.token[data-font~="normal"]{font-family:Arial}.token[data-font~="design"]{font-family:CustomFont}.quoted[data-label=".phantom #ghost :hover [class] [style] + ~"]{font-family:Arial}.font\\:hover\\+wide{font-family:Arial}</style>';
+    const page = await pageFor(css + '<main id="shell"><p class="target">Primer</p></main>', { customCSSOn }, () => {
+      window.__spanCreates = 0;
+      const create = document.createElement;
+      document.createElement = function (name, ...args) { if (name === "span") __spanCreates++; return Reflect.apply(create, this, [name, ...args]); };
+    });
+    await page.evaluate(() => {
+      __styleReads = __sheetDisables = 0;
+      document.getElementById("shell").insertAdjacentHTML("beforeend", '<p class="token" data-font="normal other">Token</p>'.repeat(200) + '<p class="quoted" data-label=".phantom #ghost :hover [class] [style] + ~">Quoted</p>'.repeat(200) + '<p class="font:hover+wide">Escaped</p>'.repeat(200));
+    });
+    await page.waitForFunction(() => document.querySelectorAll('#shell p[data-sfs-replaced="1"]').length === 601);
+    const metrics = await page.evaluate(() => ({ reads: __styleReads, sheetDisables: __sheetDisables }));
+    t.diagnostic(JSON.stringify({ customCSSOn, ...metrics }));
+    assert.ok(metrics.reads <= 6, "静态属性条件和转义标点应复用相同字体结果");
+    await page.evaluate(async () => {
+      __styleReads = __sheetDisables = 0;
+      for (let i = 0; i < 10; i++) {
+        const el = document.createElement("p"); el.className = "token"; el.setAttribute("data-font", "normal other"); el.textContent = "Menu";
+        document.getElementById("shell").appendChild(el);
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        if (!el.hasAttribute("data-sfs-replaced")) throw Error("新增菜单字体未替换");
+        el.remove();
+      }
+    });
+    assert.equal(await page.evaluate(() => __styleReads), 0);
+    assert.equal(await page.evaluate(() => __sheetDisables), 0);
+    await page.evaluate(async () => {
+      __styleReads = __sheetDisables = __spanCreates = 0;
+      const shell = document.getElementById("shell");
+      for (let i = 0; i < 4; i++) {
+        shell.className = "phantom layout-" + i; shell.id = i % 2 ? "shell" : "ghost"; shell.style.height = (40 + i) + "px";
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }
+    });
+    assert.equal(await page.evaluate(() => __styleReads), 0);
+    assert.equal(await page.evaluate(() => __sheetDisables), 0);
+    assert.equal(await page.evaluate(() => __spanCreates), 0);
+    await page.locator(".token").first().evaluate(el => el.setAttribute("data-font", "design other"));
+    await page.waitForFunction(() => !document.querySelector(".token").hasAttribute("data-sfs-replaced"));
+    await page.locator(".quoted").first().evaluate(el => el.setAttribute("data-label", "changed"));
+    await page.waitForFunction(() => !document.querySelector(".quoted").hasAttribute("data-sfs-replaced"));
+    await page.locator('[class="font:hover+wide"]').first().evaluate(el => el.className = "design");
+    await page.waitForFunction(() => document.querySelectorAll('#shell p[data-sfs-replaced="1"]').length === 598);
+    await page.close();
+  }
+});
+
+test("布局内联样式直接过滤，字体声明、注释、转义和变量变化仍重检", async t => {
+  const page = await pageFor('<style>:root{--actual-font:Arial}.variable{font-family:var(--actual-font)}</style><div id="shell"><p id="text" class="target">Text</p><p id="variable" class="variable">Variable</p></div>', {}, () => {
+    window.__spanCreates = 0;
+    const create = document.createElement;
+    document.createElement = function (name, ...args) { if (name === "span") __spanCreates++; return Reflect.apply(create, this, [name, ...args]); };
+  });
+  const metrics = await page.evaluate(async () => {
+    __spanCreates = __styleReads = __sheetDisables = 0;
+    for (let round = 0; round < 8; round++) {
+      for (let i = 0; i < 100; i++) {
+        const el = document.createElement("div"); el.style.cssText = "height:10px;left:0;opacity:0.8"; document.getElementById("shell").appendChild(el);
+        el.style.height = (round + 20) + "px";
+      }
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    }
+    return { spans: __spanCreates, reads: __styleReads, sheetDisables: __sheetDisables };
+  });
+  t.diagnostic(JSON.stringify(metrics));
+  assert.equal(metrics.spans, 0, "纯布局样式不应创建临时元素解析");
+  assert.equal(metrics.reads, 0);
+  for (const value of ['/* 字体 */ font-family:CustomFont', 'FONT-FAMILY:Arial', 'f\\6f nt-family:CustomFont', 'color:rgb(0,0,0)']) {
+    await page.locator("#text").evaluate((el, value) => el.setAttribute("style", value), value);
+    await page.waitForFunction(target => document.getElementById("text").hasAttribute("data-sfs-replaced") === target, !value.includes("CustomFont"));
+  }
+  await page.evaluate(() => document.documentElement.style.setProperty("--actual-font", "CustomFont"));
+  await page.waitForFunction(() => !document.getElementById("variable").hasAttribute("data-sfs-replaced"));
+  await page.evaluate(() => document.documentElement.style.removeProperty("--actual-font"));
+  await page.waitForFunction(() => document.getElementById("variable").hasAttribute("data-sfs-replaced"));
+  await page.close();
+});
+
+test("强制站点的原生连字和自定义 CSS 直接标记，切换保护与普通模式仍采样", async t => {
+  const css = fs.readFileSync(path.join(root, "apple-ui-mix.css"), "utf8");
+  const page = await pageFor('<style>@container(width>9000px){p{font-family:CustomFont}}</style><p class="target">Primer</p><main id="added"></main>',
+    { customCSS: css, ligatureLevel: "native", protectIcons: false, siteRules: [{ domain: "127.0.0.1", action: "force" }] });
+  await page.evaluate(() => {
+    __styleReads = __sheetDisables = 0;
+    document.getElementById("added").innerHTML = 'Parent' + '<p class="target">Text</p>'.repeat(400) + '<pre><span class="target">Code</span></pre><svg><text>SVG</text></svg><span id="family" style="font-family:Material Icons">Icon</span><span id="own" class="target icon">Icon</span>';
+  });
+  await page.waitForFunction(() => document.querySelectorAll('#added [data-sfs-replaced="1"]').length === 402 && document.getElementById("added").hasAttribute("data-sfs-replaced"));
+  const metrics = await page.evaluate(() => ({ reads: __styleReads, disables: __sheetDisables }));
+  t.diagnostic(JSON.stringify(metrics));
+  assert.equal(metrics.reads, 0);
+  assert.equal(metrics.disables, 0);
+  assert.equal(await page.locator('#added pre [data-sfs-replaced],#added svg [data-sfs-replaced]').count(), 0);
+  assert.equal(await page.evaluate(() => document.getElementById("sfs-custom-style").textContent), css);
+  await page.evaluate(() => { __settings.protectIcons = true; __storageChanged({ protectIcons: {} }, "sync"); });
+  await page.waitForFunction(() => !document.getElementById("family").hasAttribute("data-sfs-replaced") && !document.getElementById("own").hasAttribute("data-sfs-replaced"));
+  assert.ok(await page.evaluate(() => __styleReads) >= 400, "恢复图标家族保护后应读取原字体");
+  await page.evaluate(() => { __settings.protectIcons = false; __settings.ligatureLevel = "standard"; __storageChanged({ protectIcons: {}, ligatureLevel: {} }, "sync"); });
+  await page.waitForFunction(() => document.getElementById("family").hasAttribute("data-sfs-ligatures"));
+  await page.evaluate(() => { __settings.customCSS = ""; __settings.ligatureLevel = "native"; __storageChanged({ customCSS: {}, ligatureLevel: {} }, "sync"); });
+  await page.waitForFunction(() => document.querySelector("#added pre span").hasAttribute("data-sfs-preserve"));
+  assert.equal(await page.locator('#added pre [data-sfs-replaced],#added svg [data-sfs-replaced]').count(), 0);
+  await page.close();
+});
+
+test("简单转义及中文类名和 ID 精确索引，复合条件继续原生匹配", async t => {
+  const css = '<style>.\\31 23{font-family:Arial}.font\\:normal\\+wide{font-family:Arial}.中文{font-family:Arial}.\\66 oo{font-family:Arial}#id\\+with{font-family:Arial}#\\000031 a{font-family:Arial}</style>';
+  const page = await pageFor(css + '<p class="target">Primer</p><main id="indexed"></main>', {}, () => {
+    window.__fontMatches = 0;
+    const matches = Element.prototype.matches;
+    Element.prototype.matches = function (selector) { if (/^[.#]/.test(selector)) __fontMatches++; return matches.call(this, selector); };
+  });
+  await page.evaluate(() => {
+    __fontMatches = 0;
+    document.getElementById("indexed").innerHTML = ['class="123"', 'class="font:normal+wide"', 'class="中文"', 'class="foo"', 'id="id+with"', 'id="1a"'].map(attribute => ('<p ' + attribute + '>Text</p>').repeat(100)).join("");
+  });
+  await page.waitForFunction(() => document.querySelectorAll('#indexed p[data-sfs-replaced="1"]').length === 600);
+  const matches = await page.evaluate(() => __fontMatches);
+  t.diagnostic(JSON.stringify({ matches }));
+  assert.ok(matches <= 20, "单个转义名称不应逐元素匹配全部字体规则");
+  await page.evaluate(() => {
+    document.querySelectorAll('[class="123"]').forEach(el => { el.className = "design"; });
+    document.querySelectorAll('[id="id+with"]').forEach(el => { el.id = "renamed"; });
+  });
+  await page.waitForFunction(() => document.querySelectorAll('#indexed p[data-sfs-replaced="1"]').length === 400);
+  await page.evaluate(() => {
+    const sheet = document.createElement("style"); sheet.textContent = '.scope .font\\:normal\\+wide{font-family:CustomFont}'; document.head.appendChild(sheet);
+    document.getElementById("indexed").className = "scope";
+  });
+  await page.waitForFunction(() => document.querySelectorAll('#indexed p[data-sfs-replaced="1"]').length === 300);
+  await page.close();
+});
+
+test("转义属性名和函数内的真实选择器仍跟踪字体依赖", async () => {
+  const page = await pageFor('<style>[data\\2d font="design"],:is(.switch,[data-state="on"]) .target{font-family:CustomFont}</style><main id="shell"><p id="text" class="target">Text</p></main>');
+  await page.locator("#text").evaluate(el => el.setAttribute("data-font", "design"));
+  await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  await page.locator("#text").evaluate(el => el.removeAttribute("data-font"));
+  await page.waitForFunction(() => document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  for (const [attribute, value] of [["class", "switch"], ["data-state", "on"]]) {
+    await page.locator("#shell").evaluate((el, { attribute, value }) => el.setAttribute(attribute, value), { attribute, value });
+    await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
+    await page.locator("#shell").evaluate((el, attribute) => el.removeAttribute(attribute), attribute);
+    await page.waitForFunction(() => document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  }
+  await page.close();
+});
 
 test("流式回答的稳态文字更新不重复停用样式和采样，字体变更仍重新检查", async t => {
   const history = Array.from({ length: 2500 }, (_, i) => '<p class="target">History ' + i + '</p>').join("");
@@ -78,6 +228,60 @@ test("流式回答的稳态文字更新不重复停用样式和采样，字体�
   assert.equal(metrics.sheetDisables, 0);
   await page.evaluate(() => { document.getElementById("stream").className = "design"; });
   await page.waitForFunction(() => !document.getElementById("stream").hasAttribute("data-sfs-replaced"));
+  await page.close();
+});
+
+test("百万字符的同批更新和文本节点替换合并读取，字体变化仍重检", async t => {
+  for (const customCSSOn of [false, true]) {
+    const page = await pageFor('<p id="long" class="target">Start</p>', { customCSSOn }, () => {
+      window.__textReads = 0;
+      const descriptor = Object.getOwnPropertyDescriptor(Node.prototype, "nodeValue");
+      Object.defineProperty(Node.prototype, "nodeValue", { ...descriptor, get() {
+        if (this.parentElement?.id === "long") __textReads++;
+        return descriptor.get.call(this);
+      } });
+    });
+    const metrics = await page.evaluate(async () => {
+      const parent = document.getElementById("long"), tail = " ".repeat(1000000);
+      const values = ["文字 A" + tail, "文字 B" + tail];
+      __textReads = __styleReads = __sheetDisables = 0;
+      for (let round = 0; round < 4; round++) {
+        for (let i = 0; i < 200; i++) {
+          if (round % 2) parent.textContent = values[i % 2];
+          else parent.firstChild.data = values[i % 2];
+        }
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }
+      if (parent.textContent !== values[1]) throw Error("长文字内容发生变化");
+      return { textReads: __textReads, styleReads: __styleReads, sheetDisables: __sheetDisables };
+    });
+    assert.ok(metrics.textReads <= 8, "同批写入应按最终文本合并读取");
+    assert.equal(metrics.styleReads, 0);
+    assert.equal(metrics.sheetDisables, 0);
+    t.diagnostic(JSON.stringify({ customCSSOn, ...metrics }));
+    await page.evaluate(() => { document.getElementById("long").className = "design"; });
+    await page.waitForFunction(() => !document.getElementById("long").hasAttribute("data-sfs-replaced"));
+    await page.close();
+  }
+});
+
+test("文字批处理保留 Unicode 空白、首次文字、关系字体和自动方向的最终状态", async () => {
+  const page = await pageFor('<style>#holder:has(#text:empty) #sibling{font-family:CustomFont}.auto:dir(rtl){font-family:CustomFont}</style><div id="holder"><span id="text" class="target"></span><p id="sibling" class="target">Sibling</p></div><div id="auto" class="target auto" dir="auto">Latin</div>');
+  await page.waitForFunction(() => !document.getElementById("sibling").hasAttribute("data-sfs-replaced"));
+  const whitespace = "\t\n\r\f\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff";
+  await page.evaluate(whitespace => {
+    const text = document.getElementById("text"), auto = document.getElementById("auto");
+    for (let i = 0; i < 100; i++) { text.textContent = i % 2 ? whitespace : "Interim"; auto.firstChild.data = i % 2 ? "مرحبا" : "Latin"; }
+  }, whitespace);
+  await page.waitForFunction(() => document.getElementById("sibling").hasAttribute("data-sfs-replaced") && !document.getElementById("auto").hasAttribute("data-sfs-replaced"));
+  assert.equal(await page.locator('#text[data-sfs-replaced="1"]').count(), 0);
+  await page.evaluate(() => {
+    const text = document.getElementById("text"), auto = document.getElementById("auto");
+    for (let i = 0; i < 100; i++) { text.firstChild.data = i % 2 ? "\u200b" : " "; auto.textContent = i % 2 ? "Latin" : "مرحبا"; }
+  });
+  await page.waitForFunction(() => document.getElementById("text").hasAttribute("data-sfs-replaced") && document.getElementById("auto").hasAttribute("data-sfs-replaced"));
+  await page.evaluate(() => { const text = document.getElementById("text"); for (let i = 0; i < 100; i++) text.textContent = i % 2 ? "" : "Interim"; });
+  await page.waitForFunction(() => !document.getElementById("sibling").hasAttribute("data-sfs-replaced"));
   await page.close();
 });
 
@@ -184,6 +388,139 @@ test("新增节点复用祖先匹配结果，重挂节点仍判断继承字体",
   assert.ok(matches <= 80, "新增节点不应反复匹配未变化的祖先");
   await page.evaluate(() => document.getElementById("design").appendChild(document.getElementById("moved")));
   await page.waitForFunction(() => !document.getElementById("moved").hasAttribute("data-sfs-replaced"));
+  await page.close();
+});
+
+test("小分支字体变化和菜单移除保留其他分支的深层继承缓存", async t => {
+  const rules = Array.from({ length: 500 }, (_, i) => ':is(.unused-' + i + ',.other-' + i + '){font-family:CustomFont}').join("");
+  const page = await pageFor('<style>' + rules + '</style><main id="deep" class="target">' + '<div>'.repeat(100) + '<p>Primer</p>' + '</div>'.repeat(100) + '</main><section id="small" class="target"><span>Small</span></section>');
+  const metrics = await page.evaluate(async () => {
+    const original = Element.prototype.matches;
+    let matches = 0;
+    Element.prototype.matches = function(...args) { matches++; return Reflect.apply(original, this, args); };
+    try {
+      const small = document.getElementById("small");
+      const parent = document.querySelector("#deep p").parentElement;
+      for (let i = 0; i < 10; i++) {
+        small.style.fontFamily = i % 2 ? "CustomFont" : "Arial";
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        if (small.firstElementChild.hasAttribute("data-sfs-replaced") !== !(i % 2)) throw Error("小分支原字体判断错误");
+        const menu = document.createElement("p"); menu.textContent = "Menu"; parent.appendChild(menu);
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        if (!menu.hasAttribute("data-sfs-replaced")) throw Error("深层新增菜单未替换");
+        menu.remove();
+      }
+      return { matches, reads: __styleReads };
+    } finally { Element.prototype.matches = original; }
+  });
+  t.diagnostic(JSON.stringify(metrics));
+  assert.ok(metrics.matches < 20000, "小分支及叶子移除应保留 100 层主分支的缓存");
+  await page.close();
+});
+
+test("缓存子树在同批移除、增加包装和重挂后仍判断新的继承字体", async () => {
+  const page = await pageFor('<main class="target" id="live"><section id="branch"><span id="text">Text</span></section></main><main class="design" id="destination"><span>Design</span></main>');
+  await page.evaluate(() => {
+    const branch = document.getElementById("branch"), text = document.getElementById("text"); branch.remove();
+    const wrapper = document.createElement("div"); wrapper.className = "design"; wrapper.id = "wrapper";
+    wrapper.appendChild(text); branch.appendChild(wrapper); document.getElementById("live").appendChild(branch);
+  });
+  await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  await page.evaluate(() => { document.getElementById("wrapper").className = ""; });
+  await page.waitForFunction(() => document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  await page.evaluate(() => {
+    const branch = document.getElementById("branch"), wrapper = document.getElementById("wrapper"); branch.remove();
+    document.getElementById("destination").appendChild(branch); wrapper.replaceWith(document.getElementById("text"));
+  });
+  await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  await page.close();
+});
+
+test("深层区域的兄弟变更共享祖先去重路径，父子同时变化仍只扫描外层", async t => {
+  const html = '<main class="target">' + '<div>'.repeat(250) + '<div id="middle">' + '<div>'.repeat(250) + '<p>Primer</p>' + '<p class="design">Text</p>'.repeat(300) + '</div>'.repeat(250) + '</div>' + '</div>'.repeat(250) + '</main>';
+  const page = await pageFor(html, {}, () => {
+    window.__parentReads = window.__walks = 0;
+    const descriptor = Object.getOwnPropertyDescriptor(Node.prototype, "parentElement");
+    Object.defineProperty(Node.prototype, "parentElement", { ...descriptor, get() { __parentReads++; return descriptor.get.call(this); } });
+    const walk = document.createTreeWalker;
+    document.createTreeWalker = function (...args) { __walks++; return Reflect.apply(walk, this, args); };
+  });
+  await page.evaluate(() => { __parentReads = 0; document.querySelectorAll('p.design').forEach(el => { el.className = 'target'; }); });
+  await page.waitForFunction(() => document.querySelectorAll('p[data-sfs-replaced="1"]').length === 301);
+  const parentReads = await page.evaluate(() => __parentReads);
+  assert.ok(parentReads < 10000, "兄弟变更的共同祖先路径应只遍历一次");
+  await page.evaluate(() => {
+    __walks = 0; document.querySelectorAll('p.target').forEach(el => { el.className = 'design'; });
+    document.getElementById('middle').style.fontFamily = 'CustomFont';
+  });
+  await page.waitForFunction(() => !document.querySelector('p[data-sfs-replaced="1"]'));
+  const walks = await page.evaluate(() => __walks);
+  assert.ok(walks <= 2, "同批父子字体变化只需外层收集与有界缓存清理");
+  t.diagnostic(JSON.stringify({ parentReads, walks }));
+  await page.close();
+});
+
+test("页面配置相同的存储更新保留任务和采样，CSS 新代次正文变化仍生效", async t => {
+  for (const customCSSOn of [false, true]) {
+    const page = await pageFor('<div id="composer" class="target" contenteditable="true">Start</div><div>' + '<p class="target">Text</p>'.repeat(600) + '</div>', { customCSSOn });
+    const metrics = await page.evaluate(async () => {
+      __styleReads = __sheetDisables = 0;
+      for (let i = 0; i < 10; i++) {
+        __settings.siteRules = [{ domain: 'other.example.com', action: i % 2 ? 'force' : 'off' }];
+        __settings.customCSSChunks = { id: 'copy-' + i, count: 1 };
+        __settings['customCSS#copy-' + i + '/0'] = __settings.customCSS;
+        __storageChanged({ siteRules: {}, customCSSChunks: {} }, 'sync');
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }
+      return { reads: __styleReads, disables: __sheetDisables };
+    });
+    assert.deepEqual(metrics, { reads: 0, disables: 0 });
+    t.diagnostic(JSON.stringify({ customCSSOn, ...metrics }));
+    await page.evaluate(() => {
+      composer.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+      const el = document.createElement('p'); el.textContent = 'Deferred'; composer.appendChild(el);
+      __settings.siteRules = [{ domain: 'other.example.com', action: 'inherit' }]; __storageChanged({ siteRules: {} }, 'sync');
+    });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal(await page.locator('#composer p[data-sfs-replaced="1"]').count(), 0);
+    await page.evaluate(() => composer.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true })));
+    await page.waitForFunction(() => document.querySelector('#composer p[data-sfs-replaced="1"]'));
+    await page.evaluate(() => {
+      __settings['customCSS#copy-9/0'] = '[data-sfs-replaced="1"]{color:rgb(1,2,3)!important}';
+      __storageChanged({ 'customCSS#copy-9/0': {} }, 'sync');
+    });
+    if (customCSSOn) await page.waitForFunction(() => getComputedStyle(composer).color === 'rgb(1, 2, 3)');
+    await page.evaluate(() => {
+      __settings.targets = ['CustomFont']; __storageChanged({ targets: {} }, 'sync');
+    });
+    await page.waitForFunction(() => !document.querySelector('p[data-sfs-replaced="1"]'));
+    await page.close();
+  }
+});
+
+test("同批兄弟共享保护和自动方向查询，移动及自身图标条件仍逐元素判断", async t => {
+  const page = await pageFor('<div id="auto" class="target" dir="AUTO">Latin</div><pre id="code" class="target">Code</pre>', {}, () => {
+    window.__ancestorQueries = window.__directionChecks = 0;
+    const closest = Element.prototype.closest, matches = Element.prototype.matches;
+    Element.prototype.closest = function (selector) {
+      if (["code, pre, kbd, samp", "svg, img, canvas", '[dir="auto"]'].includes(selector)) __ancestorQueries++;
+      return closest.call(this, selector);
+    };
+    Element.prototype.matches = function (selector) { if (selector === ':dir(rtl)') __directionChecks++; return matches.call(this, selector); };
+  });
+  await page.evaluate(() => {
+    __ancestorQueries = __directionChecks = 0;
+    document.getElementById('auto').insertAdjacentHTML('beforeend', '<p class="target">Text</p>'.repeat(300) + '<span class="target icon">Icon</span>');
+  });
+  await page.waitForFunction(() => document.querySelectorAll('#auto p[data-sfs-replaced="1"]').length === 300);
+  const metrics = await page.evaluate(() => ({ ancestors: __ancestorQueries, directions: __directionChecks }));
+  assert.ok(metrics.ancestors < 20 && metrics.directions < 10, "同批兄弟应共享祖先与实际方向查询");
+  assert.equal(await page.locator('#auto .icon[data-sfs-replaced="1"]').count(), 0);
+  t.diagnostic(JSON.stringify(metrics));
+  await page.evaluate(() => { document.querySelectorAll('#auto p').forEach(el => document.getElementById('code').appendChild(el)); });
+  await page.waitForFunction(() => !document.querySelector('#code [data-sfs-replaced="1"]'));
+  await page.evaluate(() => { __settings.protectCode = false; __settings.protectIcons = false; __storageChanged({ protectCode: {}, protectIcons: {} }, 'sync'); });
+  await page.waitForFunction(() => document.querySelectorAll('#code p[data-sfs-replaced="1"]').length === 300 && document.querySelector('#auto .icon[data-sfs-replaced="1"]'));
   await page.close();
 });
 
@@ -350,6 +687,40 @@ test("禁用配置会取消播放期间尚未执行的检查，旧任务不恢�
   });
   await page.waitForTimeout(650);
   assert.equal(await page.locator("[data-sfs-replaced], #sfs-custom-style, #sfs-style").count(), 0);
+  await page.close();
+});
+
+test("播放分片中移除大型子树会跳过旧节点，新文字及时处理且重挂后仍重检", async t => {
+  const page = await pageFor('<p class="target">Primer</p><video id="video" muted></video><main id="outdated"></main><main id="current" class="design"></main>');
+  await page.evaluate(async () => {
+    const video = document.getElementById("video"), canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 32;
+    const stream = canvas.captureStream(30);
+    window.__videoStream = stream;
+    window.__videoTimer = setInterval(() => canvas.getContext("2d").fillRect(0, 0, 32, 32), 30);
+    video.srcObject = stream;
+    await video.play();
+    document.getElementById("outdated").innerHTML = '<p class="target">Outdated</p>'.repeat(5000);
+  });
+  await page.waitForFunction(() => document.querySelector('#outdated [data-sfs-replaced="1"]'));
+  const markedBefore = await page.locator('#outdated [data-sfs-replaced="1"]').count();
+  assert.ok(markedBefore < 5000, "移除发生在播放期间的分片尚未处理完时");
+  await page.evaluate(() => {
+    window.__detached = document.getElementById("outdated");
+    __detached.remove();
+    const node = document.createElement("p"); node.id = "fresh"; node.className = "target"; node.textContent = "Fresh";
+    document.getElementById("current").appendChild(node);
+  });
+  await page.waitForFunction(() => document.querySelector('#fresh[data-sfs-replaced="1"]'), null, { timeout: 1500 });
+  assert.equal(await page.evaluate(() => __detached.querySelectorAll('[data-sfs-replaced="1"]').length), markedBefore);
+  t.diagnostic("5000 个旧节点移除后，播放期间的新文字在 1500 ms 内完成检查");
+  await page.evaluate(() => {
+    document.getElementById("video").pause(); clearInterval(__videoTimer); __videoStream.getTracks().forEach(track => track.stop());
+    __detached.className = "design";
+    for (const el of __detached.children) el.className = "";
+    document.getElementById("current").appendChild(__detached);
+  });
+  await page.waitForFunction(() => !document.querySelector('#outdated [data-sfs-replaced="1"]'));
   await page.close();
 });
 
@@ -708,6 +1079,288 @@ test("混合伪元素列表保留真正的字体规则，选择器中的逗号�
   await page.locator("#change").evaluate(el => { el.classList.remove("switch"); });
   await page.waitForFunction(() => document.getElementById("change").hasAttribute("data-sfs-replaced"));
   await page.close();
+});
+
+test("首次整页扫描包含空输入框、按钮和可编辑区域", async () => {
+  for (const customCSSOn of [false, true]) {
+    const page = await pageFor('<input class="target"><textarea class="target"></textarea><button class="target"></button><select class="target"></select><div class="target" contenteditable="true"></div>', { customCSSOn });
+    assert.equal(await page.locator('[data-sfs-replaced="1"]').count(), 5);
+    assert.ok(await page.locator("input").evaluate(el => getComputedStyle(el).fontFamily.includes("serif")));
+    await page.close();
+  }
+});
+
+test("大量字体规则按候选查找，保持标签、ID、转义及复合规则判断", async t => {
+  const rules = Array.from({ length: 800 }, (_, i) => '.font-' + i + '{font-family:' + (i % 2 ? 'CustomFont' : 'Arial') + '}').join("");
+  const page = await pageFor('<style>' + rules + ' article{font-family:CustomFont} #specific{font-family:CustomFont} .holder > .row{font-family:CustomFont}</style><p class="target">Primer</p><main id="rules"></main>');
+  const result = await page.evaluate(async () => {
+    let matches = 0;
+    const original = Element.prototype.matches;
+    Element.prototype.matches = function (...args) { matches++; return Reflect.apply(original, this, args); };
+    document.getElementById("rules").innerHTML = Array.from({ length: 1600 }, (_, i) => '<p class="font-' + i % 800 + '">Text</p>').join("") + '<article>Tag</article><p id="specific">ID</p><div class="holder"><p class="row">Child</p></div>';
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    Element.prototype.matches = original;
+    return { matches, replaced: document.querySelectorAll('#rules [data-sfs-replaced="1"]').length };
+  });
+  t.diagnostic(JSON.stringify(result));
+  assert.equal(result.replaced, 800);
+  assert.ok(result.matches < 10000, "候选匹配应省去 1600 × 800 次完整选择器查询");
+  assert.equal(await page.locator("article").getAttribute("data-sfs-replaced"), null);
+  await page.close();
+});
+
+test("祖先及列表字体规则筛选候选，保留属性、函数与多分支匹配", async t => {
+  const rules = Array.from({ length: 800 }, (_, i) => '#rules > .font-' + i + '[data-row],.alternate .alias-' + i + '{font-family:' + (i % 2 ? 'CustomFont' : 'Arial') + '}').join("");
+  const page = await pageFor('<style>' + rules + '</style><p class="target">Primer</p><main id="rules"></main><main class="alternate" id="alternate"></main>');
+  const result = await page.evaluate(async () => {
+    const original = Element.prototype.matches;
+    let matches = 0;
+    Element.prototype.matches = function(...args) { matches++; return Reflect.apply(original, this, args); };
+    try {
+      document.getElementById("rules").innerHTML = Array.from({ length: 1600 }, (_, i) => '<p class="font-' + i % 800 + '" data-row>Text</p>').join("");
+      document.getElementById("alternate").innerHTML = '<p class="alias-2">Alternate</p><p class="font-3 alias-3" data-row>Both branches</p>';
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      return { matches, replaced: document.querySelectorAll('#rules [data-sfs-replaced="1"]').length };
+    } finally { Element.prototype.matches = original; }
+  });
+  t.diagnostic(JSON.stringify(result));
+  assert.equal(result.replaced, 800);
+  assert.ok(result.matches < 5000, "祖先及列表规则也应避免逐元素匹配全部 800 条规则");
+  assert.equal(await page.locator('#alternate [data-sfs-replaced="1"]').count(), 1);
+  await page.locator("#rules").evaluate(el => { el.id = "other"; });
+  await page.waitForFunction(() => !document.querySelector('#other [data-sfs-replaced="1"]'));
+  await page.close();
+
+  const syntax = await pageFor('<style>#scope > .quoted[data-value="a,b > .other"]{font-family:CustomFont}:is(.fallback,.unused){font-family:CustomFont}.target:is(.functional,.unused){font-family:CustomFont}:not(.excluded,.unused).negative{font-family:CustomFont}.中文 .label{font-family:CustomFont}</style>' +
+    '<p class="target">Primer</p><main id="scope"><p class="target quoted" data-value="a,b > .other">Quoted</p></main><p class="target fallback">Fallback</p><p class="target functional">Function</p><p class="target negative">Negation</p><div class="中文"><p class="target label">Unicode</p></div>');
+  assert.equal(await syntax.locator('[data-sfs-replaced="1"]').count(), 1);
+  await syntax.locator("#scope p").evaluate(el => { el.setAttribute("data-value", "different"); });
+  await syntax.waitForFunction(() => document.querySelector('#scope p[data-sfs-replaced="1"]'));
+  await syntax.close();
+});
+
+test("通用标签和类名之后选择较稀有的条件，函数和属性内部条件保留原义", async t => {
+  const rules = Array.from({ length: 800 }, (_, i) => 'p.common.font-' + i + ',.common.alias-' + i + '[data-row]{font-family:' + (i % 2 ? 'CustomFont' : 'Arial') + '}').join("");
+  const page = await pageFor('<style>' + rules + ' .common#specific{font-family:CustomFont} p.common:is(.a,.b){font-family:CustomFont} p.common[data-value=".inside #fake"]{font-family:CustomFont} :where(.never).outside{font-family:CustomFont}</style><p class="target">Primer</p><main id="rules"></main>');
+  const result = await page.evaluate(async () => {
+    const original = Element.prototype.matches;
+    let matches = 0;
+    Element.prototype.matches = function(...args) { matches++; return Reflect.apply(original, this, args); };
+    try {
+      document.getElementById("rules").innerHTML = Array.from({ length: 1600 }, (_, i) => i % 2
+        ? '<span class="common alias-' + i % 800 + '" data-row>Alias</span>' : '<p class="common font-' + i % 800 + '">Font</p>').join("") +
+        '<p class="target common" id="specific">ID</p><p class="target common b" id="function">Function</p><p class="target common" data-value=".inside #fake" id="attribute">Attribute</p><p class="target outside" id="outside">Native</p>';
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      return { matches, replaced: document.querySelectorAll('#rules [data-sfs-replaced="1"]').length };
+    } finally { Element.prototype.matches = original; }
+  });
+  t.diagnostic(JSON.stringify(result));
+  assert.equal(result.replaced, 801);
+  assert.ok(result.matches < 6000, "通用标签和类名不应使全部 800 条规则成为候选");
+  assert.equal(await page.locator('#specific[data-sfs-replaced], #function[data-sfs-replaced], #attribute[data-sfs-replaced]').count(), 0);
+  await page.locator("#function").evaluate(el => { el.classList.replace("b", "c"); });
+  await page.waitForFunction(() => document.getElementById("function").hasAttribute("data-sfs-replaced"));
+  await page.close();
+});
+
+test("相同原字体共享连字结果，完整采样仍逐元素判断保护及设置重载", async t => {
+  const features = Array.from({ length: 40 }, (_, i) => '"' + (i < 20 ? 'ss' : 'cv') + String(i % 20 + 1).padStart(2, '0') + '" 1').join(',');
+  const page = await pageFor('<style>#holder{container-type:inline-size}@container(width>9000px){.features{font-family:CustomFont}}.features{font-family:Arial;font-feature-settings:' + features + '}</style><p class="target">Primer</p><main id="holder"></main>',
+    { customCSSOn: false }, () => {
+      let shared;
+      window.__fontResults = 0;
+      Object.defineProperty(globalThis, "SFS", { configurable: true, get() { return shared; }, set(value) {
+        const original = value.ligatureDeclarations;
+        value.ligatureDeclarations = function(...args) { __fontResults++; return Reflect.apply(original, this, args); };
+        shared = value;
+      } });
+    });
+  await page.evaluate(() => {
+    __styleReads = __fontResults = 0;
+    document.getElementById("holder").innerHTML = '<p class="features">Text</p>'.repeat(400) + '<code class="features">Code</code><span class="features icon">Icon</span>';
+  });
+  await page.waitForFunction(() => document.querySelectorAll('#holder [data-sfs-replaced="1"]').length === 400);
+  const metrics = await page.evaluate(() => ({ reads: __styleReads, derived: __fontResults }));
+  t.diagnostic(JSON.stringify(metrics));
+  assert.equal(metrics.reads, 402, "容器条件下继续保留每个元素的原样式采样");
+  assert.equal(metrics.derived, 1, "相同结果只生成一次完整连字声明");
+  assert.equal(await page.locator("code[data-sfs-replaced], .icon[data-sfs-replaced]").count(), 0);
+  await page.evaluate(() => { __settings.ligatureLevel = "extended"; __storageChanged({ ligatureLevel: {} }, "sync"); });
+  await page.waitForFunction(() => {
+    const features = Object.fromEntries([...getComputedStyle(document.querySelector(".features")).fontFeatureSettings.matchAll(/"(.{4})"(?:\s+(\d+))?/g)]
+      .map(match => [match[1], Number(match[2] ?? 1)]));
+    return features.dlig === 1 && features.cv20 === 1;
+  });
+  await page.close();
+});
+
+test("批量新增 4000 段文字共享一次收集，新增菜单叶子不创建遍历器", async t => {
+  const page = await pageFor('<p class="target">Start</p><main id="added"></main>');
+  await page.evaluate(() => {
+    window.__walks = 0;
+    const original = document.createTreeWalker;
+    document.createTreeWalker = function (...args) { __walks++; return Reflect.apply(original, this, args); };
+    document.getElementById("added").innerHTML = '<p class="target">Text</p>'.repeat(4000);
+  });
+  await page.waitForFunction(() => document.querySelectorAll('#added [data-sfs-replaced="1"]').length === 4000);
+  assert.equal(await page.evaluate(() => __walks), 1);
+  await page.evaluate(() => {
+    __walks = 0; const menu = document.createElement("div"); menu.id = "menu"; menu.className = "target"; menu.textContent = "Menu"; document.body.appendChild(menu);
+  });
+  await page.waitForFunction(() => document.getElementById("menu").hasAttribute("data-sfs-replaced"));
+  assert.equal(await page.evaluate(() => __walks), 0);
+  t.diagnostic("4000 段新增文字：1 次遍历；菜单叶子：0 次遍历");
+  await page.close();
+});
+
+test("自定义字体属性和控件 type 变化更新字体判断，无关 data 属性不采样", async () => {
+  const page = await pageFor('<style>[data-font="design"],input[type="password"]{font-family:CustomFont}</style><p id="text" class="target">Text</p><input id="input" class="target">');
+  await page.locator("#text").evaluate(el => el.setAttribute("data-layout", "new"));
+  await page.waitForTimeout(80);
+  assert.equal(await page.evaluate(() => __styleReads), 0);
+  await page.locator("#text").evaluate(el => el.setAttribute("data-font", "design"));
+  await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  await page.locator("#input").evaluate(el => { el.type = "password"; });
+  await page.waitForFunction(() => !document.getElementById("input").hasAttribute("data-sfs-replaced"));
+  await page.locator("#text").evaluate(el => el.removeAttribute("data-font"));
+  await page.waitForFunction(() => document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  await page.close();
+});
+
+test("字体媒体条件变化重检，只有布局声明的媒体条件不补扫", async () => {
+  const page = await pageFor('<style>@media(max-width:800px){.target{font-family:CustomFont}}@media(max-width:1100px){p{color:red}}</style><p class="target" id="text">Text</p>');
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await page.waitForTimeout(80);
+  assert.equal(await page.evaluate(() => __styleReads), 0);
+  await page.setViewportSize({ width: 700, height: 800 });
+  await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.waitForFunction(() => document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  await page.evaluate(() => { __settings.enabled = false; __storageChanged({ enabled: {} }, "sync"); });
+  await page.waitForFunction(() => !document.getElementById("sfs-style"));
+  await page.setViewportSize({ width: 700, height: 800 });
+  await page.waitForTimeout(80);
+  assert.equal(await page.locator('[data-sfs-replaced="1"]').count(), 0);
+  await page.close();
+});
+
+test("关系选择器的新增、移除与兄弟属性变化重新检查已有文字", async () => {
+  const page = await pageFor('<style>#holder:has(.alternate) .target,.switch + .target,.target:first-child{font-family:CustomFont}</style><div id="holder"><span id="toggle"></span><p id="text" class="target">Text</p></div>');
+  await page.locator("#holder").evaluate(el => { const child = document.createElement("b"); child.className = "alternate"; child.id = "alternate"; el.appendChild(child); });
+  await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  await page.locator("#alternate").evaluate(el => el.remove());
+  await page.waitForFunction(() => document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  await page.locator("#toggle").evaluate(el => { el.className = "switch"; });
+  await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  await page.locator("#toggle").evaluate(el => el.remove());
+  await page.waitForTimeout(80);
+  assert.equal(await page.locator("#text").getAttribute("data-sfs-replaced"), null);
+  await page.close();
+});
+
+test("视口变化后的容器字体条件重检，禁用时取消补扫", async () => {
+  const page = await pageFor('<style>#host{container-type:inline-size;width:80vw}@container(width<700px){.target{font-family:CustomFont}}</style><main id="host"><p id="text" class="target">Text</p></main>');
+  await page.setViewportSize({ width: 700, height: 800 });
+  await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.waitForFunction(() => document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  await page.setViewportSize({ width: 700, height: 800 });
+  await page.evaluate(() => { __settings.enabled = false; __storageChanged({ enabled: {} }, "sync"); });
+  await page.waitForTimeout(200);
+  assert.equal(await page.locator('[data-sfs-replaced="1"]').count(), 0);
+  await page.close();
+});
+
+test("怪异模式保留类名和 ID 的浏览器匹配语义", async () => {
+  const page = await browser.newPage();
+  await page.addInitScript(() => {
+    window.chrome = { storage: { sync: { get: async () => ({ targets: ["Arial"], replacement: "serif", customCSSOn: false }) }, onChanged: { addListener() {} } } };
+  });
+  const route = "/quirks-" + fixtures.size;
+  fixtures.set(route, '<html><head><style>.TARGET{font-family:Arial}#SPECIAL{font-family:Arial}</style></head><body><p id="first" class="target">Class</p><p id="special">ID</p><p id="native">Native</p><script src="/shared.js"></script><script src="/content.js"></script></body></html>');
+  await page.goto(origin + route);
+  assert.equal(await page.evaluate(() => document.compatMode), "BackCompat");
+  await page.waitForFunction(() => document.querySelectorAll('[data-sfs-replaced="1"]').length === 2);
+  await page.close();
+});
+
+test("关系字体规则下已有非空文字更新仍复用采样", async () => {
+  const page = await pageFor('<style>.row:nth-child(2){font-family:CustomFont}</style><main><p class="target">Start</p><p class="target">Design</p><p id="text" class="target">Text</p></main>');
+  await page.evaluate(async () => {
+    __styleReads = __sheetDisables = 0;
+    for (let i = 0; i < 10; i++) { document.getElementById("text").textContent += " word"; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); }
+  });
+  assert.equal(await page.evaluate(() => __styleReads), 0);
+  await page.close();
+});
+
+test("深层继承和超过缓存容量的字体来源仍保持移动与重检正确", async () => {
+  const page = await pageFor('<p class="target">Primer</p><main id="deep" class="target"></main><main id="sources"></main><main id="design" class="design"></main>', { ligatureLevel: "native" });
+  await page.evaluate(() => {
+    let parent = document.getElementById("deep");
+    for (let i = 0; i < 250; i++) { const node = document.createElement("div"); node.textContent = "Depth"; parent.appendChild(node); parent = node; }
+    document.getElementById("sources").innerHTML = Array.from({ length: 4200 }, (_, i) => '<p class="target" style="font-feature-settings:&quot;ss01&quot; ' + i + '">Text</p>').join("");
+  });
+  await page.waitForFunction(() => document.querySelectorAll('#sources [data-sfs-replaced="1"]').length === 4200);
+  assert.equal(await page.locator('#deep [data-sfs-replaced="1"]').count(), 250);
+  await page.evaluate(() => { const first = document.getElementById("deep").firstElementChild; document.getElementById("design").appendChild(first); });
+  await page.waitForFunction(() => !document.querySelector('#design [data-sfs-replaced="1"]'));
+  await page.locator("#sources p").first().evaluate(el => { el.className = "design"; });
+  await page.waitForFunction(() => !document.querySelector("#sources p").hasAttribute("data-sfs-replaced"));
+  await page.close();
+});
+
+test("多层与循环字体变量依赖完成分析，布局变量继续过滤", async () => {
+  const page = await pageFor('<style>:root{--a:var(--b);--b:var(--c);--c:Arial;--loop1:var(--loop2);--loop2:var(--loop1)}.variable{font-family:var(--a)}.loop{font-family:var(--loop1,Arial)}</style><p id="text" class="variable">Variable</p><p class="loop">Cycle</p>');
+  await page.evaluate(() => document.documentElement.style.setProperty("--layout", "10px"));
+  await page.waitForTimeout(80);
+  assert.equal(await page.evaluate(() => __styleReads), 0);
+  await page.evaluate(() => document.documentElement.style.setProperty("--c", "CustomFont"));
+  await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  assert.equal(await page.locator('.loop[data-sfs-replaced="1"]').count(), 1);
+  await page.close();
+});
+
+test("真实 MV3 完成 40 张跨域 CSS 读取，子框架和延后字体规则仍生效", async t => {
+  let requests = 0;
+  const remote = http.createServer((request, response) => {
+    requests++;
+    setTimeout(() => { response.setHeader("Content-Type", "text/css"); response.end('.remote-' + request.url.match(/\d+/)[0] + '{font-family:CustomFont}'); }, 20);
+  });
+  await new Promise(resolve => remote.listen(0, "127.0.0.1", resolve));
+  let context;
+  try {
+    context = await chromium.launchPersistentContext("", { headless: true, executablePath: chromium.executablePath(),
+      args: ["--disable-extensions-except=" + root, "--load-extension=" + root] });
+    const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker");
+    await worker.evaluate(() => chrome.storage.sync.set({ enabled: false, targets: ["Arial"], replacement: "serif", customCSSOn: false }));
+    fixtures.set("/child-frame", '<!doctype html><style>.target{font-family:Arial}</style><p class="target" id="child">Child</p><input class="target" placeholder="Empty">');
+    fixtures.set("/many-cross", '<!doctype html><head><style>.target{font-family:Arial}</style>' + Array.from({ length: 40 }, (_, i) => '<link rel="stylesheet" href="http://127.0.0.1:' + remote.address().port + '/sheet-' + i + '.css">').join("") + '</head><body><main id="shell"><p class="target" id="text">Main</p></main><iframe src="/child-frame"></iframe></body>');
+    const page = await context.newPage();
+    const cdp = await context.newCDPSession(page), worlds = [];
+    cdp.on("Runtime.executionContextCreated", event => worlds.push(event.context));
+    await cdp.send("Runtime.enable");
+    await page.goto(origin + "/many-cross");
+    assert.equal(requests, 40);
+    await worker.evaluate(() => chrome.storage.sync.set({ enabled: true }));
+    await page.waitForFunction(() => document.getElementById("text").hasAttribute("data-sfs-replaced"));
+    const frame = page.frames().find(frame => frame.url().endsWith("/child-frame"));
+    await frame.waitForFunction(() => document.getElementById("child").hasAttribute("data-sfs-replaced"));
+    assert.equal(await frame.locator('input[data-sfs-replaced="1"]').count(), 1);
+    const deadline = Date.now() + 5000;
+    while (requests < 80 && Date.now() < deadline) await page.waitForTimeout(25);
+    assert.equal(requests, 80, "每张 CSS 都应完成后台读取");
+    await page.waitForTimeout(300);
+    const world = worlds.find(world => world.origin.startsWith("chrome-extension://") && world.auxData?.isDefault === false && world.auxData?.frameId === worlds.find(world => world.auxData?.isDefault)?.auxData?.frameId);
+    assert.ok(world);
+    await cdp.send("Runtime.evaluate", { contextId: world.id, expression: 'window.__reads=0; const original=window.getComputedStyle; window.getComputedStyle=function(...args){__reads++;return Reflect.apply(original,this,args)}' });
+    await page.evaluate(async () => { for (let i = 0; i < 8; i++) { document.getElementById("shell").className = "layout-" + i; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); } });
+    const result = await cdp.send("Runtime.evaluate", { contextId: world.id, expression: "__reads", returnByValue: true });
+    assert.equal(result.result.value, 0);
+    await frame.evaluate(() => { const style = document.createElement("style"); style.textContent = '.target{font-family:CustomFont}'; document.head.appendChild(style); });
+    await frame.waitForFunction(() => !document.getElementById("child").hasAttribute("data-sfs-replaced"));
+    t.diagnostic("40 张 CSS 完整读取；主页面无关交互 0 次采样；子框架动态字体规则完成重检");
+  } finally { await context?.close(); await new Promise(resolve => remote.close(resolve)); }
 });
 
 test("真实 MV3 读取跨域 CSS 后，交互优化生效且字体变化仍重检", async t => {

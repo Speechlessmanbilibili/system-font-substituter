@@ -1,0 +1,60 @@
+/* =========================================================
+   Apple UI Mix 字体模板
+   =========================================================
+
+   按 Unicode 范围分配本机字体：西文使用 SF Pro Text，汉字使用苹方 UI SC。
+   中西文共有标点、弯引号和带圈数字使用苹方 UI SC；私用区使用 SF Pro Text。
+   西文段按 SF Pro Text 静态套件配置，使用 Text 光学尺寸；汉字段支持变量字重。
+   模板未覆盖的字符或字体缺失时，按下方字体链依次回退。
+   所有字体均从本机读取，使用前需安装相应字体。
+   ========================================================= */
+
+/* 西文与私用区：使用 SF Pro Text 静态套件，避免光学尺寸自动切换至 Display。
+   同一字体族声明 100～900 的字重范围，由字体匹配机制选择对应字重。 */
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("SF Pro Text");
+  font-weight: 100 900;
+  unicode-range: U+0020-00B6,U+00B8-024F,U+0250-02AF,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2070-209F,U+20A0-20BF,U+E000-F8FF;
+}
+
+/* 汉字与中文标点：使用苹方 UI SC 变量字体，支持 100～900 的字重范围。
+   中西文共有标点与弯引号划入本段，以保持中文排版中的字形一致。 */
+
+@font-face {
+  font-family: "Apple UI Mix";
+  src: local("PingFang UI SC");
+  font-weight: 100 900;
+  unicode-range: U+00B7,U+2010-2016,U+2018-2019,U+201C-201D,U+2020-2027,U+203B,U+2103,U+2160-217F,U+2460-24FF,U+2208,U+2229-222A,U+2266-2267,U+226E-226F,U+22EF,U+2E80-2FFF,U+3000-303F,U+3300-33FF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF,U+FF00-FFEF;
+}
+
+
+/* =========================================================
+   全局字体链与排版规则
+   ========================================================= */
+
+html,
+body,
+[data-sfs] [data-sfs-replaced="1"],
+[data-sfs] [data-sfs-replaced="1"]::placeholder {
+  font-family:
+    "Apple UI Mix",
+
+    /* 模板范围之外的字符按本机字体依次回退，不参与 Unicode 范围分配。 */
+    "SF Pro Text",
+    "SF Arabic",
+    "SF Hebrew",
+    "SF Armenian",
+    "SF Georgian",
+    "PingFang UI SC",
+    "PingFang UI HK",
+    "PingFang UI TC",
+    "PingFang UI MO",
+
+    /* 前述字体缺失或缺字时，回退至微软雅黑。 */
+    "Microsoft YaHei" !important;
+
+  font-variation-settings: normal !important;
+  text-autospace: normal !important;
+}

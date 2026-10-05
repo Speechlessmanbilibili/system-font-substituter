@@ -1,0 +1,187 @@
+{
+  "baseline": "v2.1.5",
+  "browser": "151.0.7922.34",
+  "repeats": 3,
+  "samples": {
+    "100": {
+      "before": [
+        {
+          "load": {
+            "rowQueries": 102,
+            "longestTaskMs": 138,
+            "taskMs": 204.41,
+            "styleMs": 14.966
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 420.6259999999999,
+            "scriptMs": 5.9670000000000005
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 102,
+            "longestTaskMs": 0,
+            "taskMs": 176.15,
+            "styleMs": 19.697
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 511.25399999999996,
+            "scriptMs": 5.390000000000001
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 102,
+            "longestTaskMs": 0,
+            "taskMs": 176.29,
+            "styleMs": 19.614
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 416.566,
+            "scriptMs": 5.294000000000001
+          }
+        }
+      ],
+      "after": [
+        {
+          "load": {
+            "rowQueries": 2,
+            "longestTaskMs": 0,
+            "taskMs": 196.97799999999998,
+            "styleMs": 20.168
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 493.27599999999995,
+            "scriptMs": 5.0360000000000005
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 2,
+            "longestTaskMs": 0,
+            "taskMs": 179.93099999999998,
+            "styleMs": 19.5
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 523.174,
+            "scriptMs": 4.748
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 2,
+            "longestTaskMs": 0,
+            "taskMs": 174.593,
+            "styleMs": 19.541
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 488.65500000000003,
+            "scriptMs": 4.614
+          }
+        }
+      ]
+    },
+    "400": {
+      "before": [
+        {
+          "load": {
+            "rowQueries": 402,
+            "longestTaskMs": 74,
+            "taskMs": 367.585,
+            "styleMs": 37.373000000000005
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 892.2330000000001,
+            "scriptMs": 14.505
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 402,
+            "longestTaskMs": 77,
+            "taskMs": 378.61,
+            "styleMs": 38.343
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 1084.604,
+            "scriptMs": 14.663
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 402,
+            "longestTaskMs": 84,
+            "taskMs": 372.835,
+            "styleMs": 36.953
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 917.3359999999999,
+            "scriptMs": 13.691
+          }
+        }
+      ],
+      "after": [
+        {
+          "load": {
+            "rowQueries": 2,
+            "longestTaskMs": 70,
+            "taskMs": 435.759,
+            "styleMs": 47.472
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 1004.793,
+            "scriptMs": 10.298000000000002
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 2,
+            "longestTaskMs": 51,
+            "taskMs": 340.617,
+            "styleMs": 36.583999999999996
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 985.5699999999999,
+            "scriptMs": 12.104999999999997
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 2,
+            "longestTaskMs": 52,
+            "taskMs": 337.453,
+            "styleMs": 36.263999999999996
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 952.7,
+            "scriptMs": 11.297999999999998
+          }
+        }
+      ]
+    }
+  }
+}

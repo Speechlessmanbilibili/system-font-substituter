@@ -42,7 +42,6 @@
   let scanning = false;
   let scanEpoch = 0;
   let loadEpoch = 0;
-  let appliedConfiguration = null;
   let cssGeneration = null;
   let siteCSSGenerations = [];
   let sampledElements = new WeakSet();
@@ -64,14 +63,11 @@
   const contextIds = new Map();
   let nextContextId = 1;
   const CONTEXT_LIMIT = 4096;
-  const CONTEXT_INVALIDATION_LIMIT = 128;
   const fontSamples = new Map();
   const fontResults = new Map();
   const FONT_SAMPLE_LIMIT = 1024;
-  const NONSPACE_RE = /\S/;
   // 字号、字重等仍由浏览器正常排版；只有影响判断或原样式快照的声明参与索引。
   const FONT_PROPERTY_RE = /^(?:font|font-family|font-feature-settings|font-variant|font-variant-ligatures|text-autospace|direction|unicode-bidi|all)$/;
-  const FONT_INLINE_RE = /(?:^|;)\s*(?:font|font-family|font-feature-settings|font-variant|font-variant-ligatures|text-autospace|direction|unicode-bidi|all)\s*:/i;
   const externalSheetRules = new WeakMap();
   const externalSheetPending = new WeakSet();
   const mediaListeners = [];
@@ -317,9 +313,9 @@
     }).join(",");
   }
 
-  // 收集最后一个复合选择器中的必要条件，保留函数和属性内部的原义。
+  // 最后一个复合选择器中的首个类名、ID 或标签是命中的必要条件。
   // 函数与属性内部的分隔符不参与切分；转义、命名空间等继续完整匹配。
-  function selectorAnchors(selector) {
+  function selectorAnchor(selector) {
     if (/\\|[^\x00-\x7f]|\/\*/.test(selector)) return null;
     let start = 0, depth = 0, quote = null;
     for (let i = 0; i < selector.length; i++) {
@@ -330,81 +326,7 @@
       else if (char === ")" || char === "]") depth--;
       else if (!depth && /[\s>+~]/.test(char)) start = i + 1;
     }
-    const compound = selector.slice(start).trim();
-    const anchors = [];
-    depth = 0;
-    quote = null;
-    for (let i = 0; i < compound.length; i++) {
-      const char = compound[i];
-      if (quote) { if (char === quote) quote = null; continue; }
-      if (char === '"' || char === "'") { quote = char; continue; }
-      if (char === "(" || char === "[") { depth++; continue; }
-      if (char === ")" || char === "]") { depth--; continue; }
-      if (depth) continue;
-      if (char === "|") return null;
-      if (i === 0 || char === "." || char === "#") {
-        const match = compound.slice(i).match(/^([.#]?)([a-zA-Z_][\w-]*)(?=[.#\[:]|$)/);
-        if (match) {
-          anchors.push({ kind: match[1], name: match[1] ? match[2] : match[2].toUpperCase() });
-          i += match[0].length - 1;
-        }
-      }
-    }
-    return anchors.length ? anchors : null;
-  }
-
-  function decodeIdentifier(value) {
-    return value.replace(/\\([0-9a-fA-F]{1,6})\s?|\\(.)/g, (_, hex, char) => {
-      const code = parseInt(hex, 16);
-      return hex ? String.fromCodePoint(code > 0 && code <= 0x10ffff ? code : 0xfffd) : char;
-    });
-  }
-
-  // 属性值和字符串中的标点不表示关系或状态；转义标点也保留标识符原义。
-  // 函数内部的选择器继续分析，属性名单独记录，供观察器跟踪真实依赖。
-  function selectorDependencies(selector) {
-    const identifier = /^(?:\\[0-9a-fA-F]{1,6}\s?|\\[^\r\n\f]|[\w\u0080-\uffff-])+/;
-    const classes = new Set(), attributes = new Set();
-    let syntax = "", id = false;
-    for (let i = 0; i < selector.length; i++) {
-      const char = selector[i];
-      if (char === "\\") {
-        const escape = selector.slice(i).match(/^\\(?:[0-9a-fA-F]{1,6}\s?|[^\r\n\f])/);
-        if (!escape) { syntax += "_"; continue; }
-        const decoded = decodeIdentifier(escape[0]);
-        syntax += /^[\w-]$/.test(decoded) ? decoded : "_";
-        i += escape[0].length - 1;
-        continue;
-      }
-      if (char === "[" || char === '"' || char === "'") {
-        if (char === "[") {
-          let start = i + 1;
-          while (/\s/.test(selector[start] || "") && start < selector.length) start++;
-          let name = selector.slice(start).match(identifier)?.[0] || "";
-          start += name.length;
-          if (selector[start] === "*" && !name) start++;
-          if (selector[start] === "|" && selector[start + 1] !== "=") name = selector.slice(start + 1).match(identifier)?.[0] || "";
-          if (name) attributes.add(decodeIdentifier(name).toLowerCase());
-        }
-        let quote = char === "[" ? null : char;
-        for (i++; i < selector.length; i++) {
-          const next = selector[i];
-          if (next === "\\") { i++; continue; }
-          if (quote) {
-            if (next === quote) { quote = null; if (char !== "[") break; }
-          } else if (next === '"' || next === "'") quote = next;
-          else if (next === "]" && char === "[") break;
-        }
-        syntax += " ";
-        continue;
-      }
-      if (char === ".") {
-        const name = selector.slice(i + 1).match(identifier)?.[0];
-        if (name) classes.add(decodeIdentifier(name));
-      } else if (char === "#") id = true;
-      syntax += char;
-    }
-    return { syntax, classes, attributes, id };
+    return selector.slice(start).trim().match(/^([.#]?)([a-zA-Z_][\w-]*)(?=[.#\[:]|$)/);
   }
 
   function getTypographyIndex() {
@@ -413,8 +335,6 @@
       classRules: new Map(), idRules: new Map(), tagRules: new Map(), generalRules: [], exactRules: new Set(),
       unknown: false, cacheable: true, relational: false, classAttribute: false, styleAttribute: false };
     const declarations = [];
-    const anchoredRules = [];
-    const anchorFrequency = new Map();
     const keyframeStyles = [];
     const variableReferences = value => [...value.matchAll(/var\(\s*(--[\w-]+)/g)].map(match => match[1]);
     const visit = (rules, ancestors = [], unsafe = false, media = []) => {
@@ -460,55 +380,43 @@
       }
     }
     if (keyframeStyles.some(style => [...style].some(name => index.variables.has(name)))) index.unknown = true;
+    const identifier = /\.((?:\\[0-9a-fA-F]{1,6}\s?|\\[^\r\n\f]|[\w\u0080-\uffff-])+)/g;
     for (const { rule, selector: elementSelector, selectors, unsafe, media } of declarations) {
       const names = [...rule.style].filter(name => FONT_PROPERTY_RE.test(name) || index.variables.has(name));
       if (!names.length) continue;
       index.media.push(...media);
       if (unsafe) index.unknown = true;
       const selector = selectors.join(" ");
-      const dependencies = selectorDependencies(selector);
-      const syntax = dependencies.syntax;
       const id = index.rules.push(elementSelector) - 1;
       // 列表中每个分支都有必要条件时，按这些条件查找候选，再由浏览器判断。
       const simple = elementSelector.trim().match(/^([.#]?)([a-zA-Z_][\w-]*)$/);
-      // 单个类名或 ID 解码后可精确索引；复合转义选择器继续完整匹配。
-      const literal = elementSelector.trim().match(/^([.#])((?:\\[0-9a-fA-F]{1,6}\s?|\\[^\r\n\f]|[\w\u0080-\uffff-])+)$/);
-      const branches = literal ? [[{ kind: literal[1], name: decodeIdentifier(literal[2]) }]]
-        : selectorList(elementSelector.trim()).map(part => selectorAnchors(part.trim()));
-      if (branches.every(Boolean) && document.compatMode !== "BackCompat") {
-        anchoredRules.push({ id, branches });
-        for (const branch of branches) {
-          for (const key of new Set(branch.map(anchor => anchor.kind + anchor.name))) {
-            anchorFrequency.set(key, (anchorFrequency.get(key) || 0) + 1);
-          }
+      const anchors = selectorList(elementSelector.trim()).map(part => selectorAnchor(part.trim()));
+      if (anchors.every(Boolean) && document.compatMode !== "BackCompat") {
+        for (const anchor of anchors) {
+          const map = anchor[1] === "." ? index.classRules : anchor[1] === "#" ? index.idRules : index.tagRules;
+          const name = anchor[1] ? anchor[2] : anchor[2].toUpperCase();
+          if (!map.has(name)) map.set(name, []);
+          map.get(name).push(id);
         }
-        if (literal) index.exactRules.add(id);
+        if (simple && simple[1]) index.exactRules.add(id);
       } else index.generalRules.push(id);
-      if (selectors.length > 1 || /:(?:hover|focus|active|visited|has|nth-|first-|last-|only-|empty|dir|lang|target|checked|disabled|enabled|valid|invalid|read-|placeholder|open)|[+~]|data-sfs-/i.test(syntax) || [...dependencies.attributes].some(name => name.startsWith("data-sfs-"))) index.cacheable = false;
-      if (selectors.length > 1 || /:(?:has|nth-|first-|last-|only-|empty)|[+~]/i.test(syntax)) index.relational = true;
-      if (/:(?:disabled|enabled)/i.test(syntax)) index.attributes.add("disabled");
-      if (/:(?:link|visited)/i.test(syntax)) index.attributes.add("href");
+      if (selectors.length > 1 || /:(?:hover|focus|active|visited|has|nth-|first-|last-|only-|empty|dir|lang|target|checked|disabled|enabled|valid|invalid|read-|placeholder|open)|[+~]|data-sfs-/i.test(selector)) index.cacheable = false;
+      if (selectors.length > 1 || /:(?:has|nth-|first-|last-|only-|empty)|[+~]/i.test(selector)) index.relational = true;
+      if (/:(?:disabled|enabled)/i.test(selector)) index.attributes.add("disabled");
+      if (/:(?:link|visited)/i.test(selector)) index.attributes.add("href");
       if (names.some(name => /\b(?:attr|env)\(/.test(rule.style.getPropertyValue(name)))) index.cacheable = false;
-      dependencies.classes.forEach(name => index.classes.add(name));
-      dependencies.attributes.forEach(name => index.attributes.add(name));
-      if (dependencies.id) index.attributes.add("id");
+      for (const match of selector.matchAll(identifier)) {
+        index.classes.add(match[1].replace(/\\([0-9a-fA-F]{1,6})\s?|\\(.)/g, (_, hex, char) => {
+          const value = parseInt(hex, 16);
+          return hex ? String.fromCodePoint(value > 0 && value <= 0x10ffff ? value : 0xfffd) : char;
+        }));
+      }
+      for (const match of selector.matchAll(/\[\s*([\w-]+)/g)) index.attributes.add(match[1].toLowerCase());
+      if (selector.includes("#")) index.attributes.add("id");
       if (index.attributes.has("class")) index.classAttribute = true;
       if (index.attributes.has("style")) index.styleAttribute = true;
       if (!simple || document.compatMode === "BackCompat") {
         try { document.documentElement.matches(elementSelector); } catch { index.unknown = true; }
-      }
-    }
-    // 优先使用在字体规则中较少出现的条件，省去通用标签和类名的大量候选。
-    const priority = kind => kind === "#" ? 0 : kind === "." ? 1 : 2;
-    for (const { id, branches } of anchoredRules) {
-      for (const branch of branches) {
-        const anchor = branch.reduce((best, next) => {
-          const a = anchorFrequency.get(best.kind + best.name), b = anchorFrequency.get(next.kind + next.name);
-          return b < a || b === a && priority(next.kind) < priority(best.kind) ? next : best;
-        });
-        const map = anchor.kind === "." ? index.classRules : anchor.kind === "#" ? index.idRules : index.tagRules;
-        if (!map.has(anchor.name)) map.set(anchor.name, []);
-        map.get(anchor.name).push(id);
       }
     }
     typographyIndex = index;
@@ -528,33 +436,6 @@
       .sort().map(name => [name, style.getPropertyValue(name), style.getPropertyPriority(name)]);
   }
 
-  function inlineCouldAffectTypography(value, index) {
-    return FONT_INLINE_RE.test(value) || /\\|\/\*/.test(value) || index.variables.size && value.includes("--");
-  }
-
-  // 小分支变化只清除该分支的继承路径；大分支直接重建整页缓存，限制清理开销。
-  function forgetTypographyBranch(root) {
-    if (!typographyContexts.has(root)) return;
-    if (root === document.documentElement || root === document.body || root.childElementCount > CONTEXT_INVALIDATION_LIMIT) {
-      typographyContexts = new WeakMap();
-      return;
-    }
-    typographyContexts.delete(root);
-    if (!root.firstElementChild) return;
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
-      // 已缓存的后代在采样时也会缓存其祖先；缺少缓存的分支可整体跳过。
-      acceptNode(node) { return typographyContexts.has(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT; }
-    });
-    let count = 0, node;
-    while ((node = walker.nextNode())) {
-      typographyContexts.delete(node);
-      if (++count >= CONTEXT_INVALIDATION_LIMIT) {
-        typographyContexts = new WeakMap();
-        break;
-      }
-    }
-  }
-
   function attributeAffectsTypography(m, parent) {
     const index = getTypographyIndex();
     if (index.unknown) return true;
@@ -569,11 +450,8 @@
     }
     if (name === "style") {
       if (index.styleAttribute) return true;
-      const before = m.oldValue || "", after = parent.getAttribute("style") || "";
-      // 无字体声明的布局样式直接过滤；转义、注释和变量保留完整 CSS 解析。
-      if (!inlineCouldAffectTypography(before, index) && !inlineCouldAffectTypography(after, index)) return false;
       const oldStyle = document.createElement("span").style;
-      oldStyle.cssText = before;
+      oldStyle.cssText = m.oldValue || "";
       return JSON.stringify(typographyInline(oldStyle, index)) !== JSON.stringify(typographyInline(parent.style, index));
     }
     return name === "id" && settings.protectIcons;
@@ -581,8 +459,8 @@
 
   // 相同字体规则、内联字体声明及继承路径复用原样式快照；不改写用户 CSS。
   // 跨域不可读样式、复杂状态选择器和自动文字方向区域使用完整采样。
-  function typographyKey(el, index, mediaKey, auto) {
-    if (index.unknown || !index.cacheable || auto) return null;
+  function typographyKey(el, index, mediaKey) {
+    if (index.unknown || !index.cacheable || el.closest('[dir="auto"]')) return null;
     const path = [];
     let ancestor = el;
     while (ancestor && !typographyContexts.has(ancestor)) {
@@ -674,24 +552,27 @@
       || el.getAttribute("aria-hidden") === "true" && /icon|symbol|glyph/.test(signature);
   }
 
-  function elementState(el, parents) {
-    const parent = el.parentElement;
-    let inherited = parents.get(parent);
-    if (!inherited) {
-      // 仅在本批内复用共同父级的祖先查询，下一批重新读取结构与方向。
-      inherited = {
-        code: settings.protectCode && !!parent?.closest("code, pre, kbd, samp"),
-        graphics: !!parent?.closest("svg, img, canvas"),
-        auto: parent?.closest('[dir="auto"]') || null
-      };
-      parents.set(parent, inherited);
-    }
+  function isProtected(el, computedFamily) {
+    if (!(el instanceof Element)) return true;
+
     const tag = el.tagName.toUpperCase();
-    return {
-      protected: inherited.graphics || ["SVG", "PATH", "USE", "IMG", "CANVAS"].includes(tag)
-        || settings.protectCode && (inherited.code || ["CODE", "PRE", "KBD", "SAMP"].includes(tag)),
-      auto: el.hasAttribute("dir") && el.matches('[dir="auto"]') ? el : inherited.auto
-    };
+    if (tag === "SVG" || tag === "PATH" || tag === "USE" || tag === "IMG" || tag === "CANVAS") {
+      return true;
+    }
+
+    if (settings.protectCode && (tag === "CODE" || tag === "PRE" || tag === "KBD" || tag === "SAMP")) {
+      return true;
+    }
+
+    if (settings.protectCode && el.closest("code, pre, kbd, samp")) {
+      return true;
+    }
+
+    if (el.closest("svg, img, canvas") || looksLikeIconElement(el, computedFamily)) {
+      return true;
+    }
+
+    return false;
   }
 
   function ensureRootMark() {
@@ -834,11 +715,6 @@
     return result;
   }
 
-  // 只判断是否含有非空白字符，不截取长文本或扫描已有文字之后的大段空白。
-  function hasText(node) {
-    return NONSPACE_RE.test(node.nodeValue || "");
-  }
-
   function collectTextElements(root) {
     const out = new Set();
     const walkerRoot = root === document ? document.documentElement : root;
@@ -850,7 +726,7 @@
       if (!walkerRoot.firstElementChild) {
         if (!["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE"].includes(walkerRoot.tagName)) {
           for (const node of walkerRoot.childNodes) {
-            if (node.nodeType === Node.TEXT_NODE && hasText(node)) {
+            if (node.nodeType === Node.TEXT_NODE && node.nodeValue?.trim()) {
               nonemptyTextNodes.add(node);
               out.add(walkerRoot);
             }
@@ -866,6 +742,10 @@
       NodeFilter.SHOW_TEXT,
       {
         acceptNode(node) {
+          if (!node.nodeValue || !node.nodeValue.trim()) {
+            return NodeFilter.FILTER_REJECT;
+          }
+
           const parent = node.parentElement;
           if (!parent) return NodeFilter.FILTER_REJECT;
 
@@ -878,8 +758,6 @@
           ) {
             return NodeFilter.FILTER_REJECT;
           }
-
-          if (!hasText(node)) return NodeFilter.FILTER_REJECT;
 
           nonemptyTextNodes.add(node);
           return NodeFilter.FILTER_ACCEPT;
@@ -901,11 +779,7 @@
     const sheets = [STYLE_ID, CUSTOM_STYLE_ID].map(id => document.getElementById(id)?.sheet).filter(Boolean);
     const disabled = sheets.map(sheet => sheet.disabled);
     const snapshots = [];
-    const parents = new Map();
-    const autoRoots = new Set();
     const preserveActive = !(settings.customCSSOn && settings.customCSS.trim());
-    // 强制站点无需名单判断；原生连字、关闭图标保护且由 CSS 接管时无需原样式。
-    const directForce = forceSite && !preserveActive && !settings.protectIcons && settings.ligatureLevel === "native";
     let stylesChanged = false;
     let index;
     let mediaKey;
@@ -913,17 +787,14 @@
     try {
       for (const el of nodes) {
         if (!el.isConnected) continue;
-        const state = elementState(el, parents);
         let cs = null;
         let match = false;
         // 自定义 CSS 接管时不生成保护快照；由 DOM 已能确定受保护的元素无需采样。
         // 普通替换仍读取原字体，以保留已替换祖先下的代码和图标样式。
-        if (directForce) {
-          match = !state.protected;
-        } else if (preserveActive || !state.protected && !looksLikeIconElement(el, "")) {
+        if (preserveActive || !isProtected(el, "")) {
           index ||= getTypographyIndex();
           mediaKey ??= index.media.map(query => matchMedia(query).matches ? "1" : "0").join("");
-          const key = typographyKey(el, index, mediaKey, state.auto);
+          const key = typographyKey(el, index, mediaKey);
           cs = key === null ? null : fontSamples.get(key);
           if (!cs) {
             if (!sampling) {
@@ -937,20 +808,20 @@
               fontSamples.set(key, cs);
             }
           }
-          match = cs.target && !state.protected && !looksLikeIconElement(el, cs.fontFamily);
+          match = cs.target && !isProtected(el, cs.fontFamily);
         }
         snapshots.push({
           el, match,
-          ligatures: match ? cs?.ligatures || "" : "",
+          ligatures: match ? cs.ligatures : "",
           css: preserveActive && !match ? cs.preserveCSS : ""
         });
         sampledElements.add(el);
-        if (state.auto) autoRoots.add(state.auto);
+        const auto = el.closest('[dir="auto"]');
+        if (auto) autoDirections.set(auto, auto.matches(":dir(rtl)"));
       }
     } finally {
       if (sampling) sheets.forEach((sheet, i) => { sheet.disabled = disabled[i]; });
     }
-    for (const auto of autoRoots) autoDirections.set(auto, auto.matches(":dir(rtl)"));
 
     for (const { el, match, ligatures } of snapshots) {
       setMarker(el, MARK, match ? "1" : null);
@@ -1066,7 +937,7 @@
       if (!parent.isConnected) continue;
       for (const m of attributes.values()) {
         if (m.oldValue !== parent.getAttribute(m.attributeName) && attributeAffectsTypography(m, parent)) {
-          forgetTypographyBranch(parent);
+          typographyContexts = new WeakMap();
           pending.add(typographyIndex?.relational ? document.documentElement : parent);
           break;
         }
@@ -1083,25 +954,16 @@
 
     // 祖先去重：若节点位于另一个待处理节点内部，扫外层一次即可覆盖。
     const work = [];
-    const ancestorCoverage = new Map();
     for (const node of pending) {
       let p = node.parentElement;
-      const path = [];
       let redundant = false;
       while (p) {
         if (pending.has(p)) {
           redundant = true;
           break;
         }
-        if (ancestorCoverage.has(p)) {
-          redundant = ancestorCoverage.get(p);
-          break;
-        }
-        path.push(p);
         p = p.parentElement;
       }
-      // 同批兄弟节点复用共同祖先的覆盖结果，深层区域无需逐节点走到根部。
-      for (const ancestor of path) ancestorCoverage.set(ancestor, redundant);
       if (!redundant) work.push(node);
     }
     pending.clear();
@@ -1162,14 +1024,7 @@
   function startObserver() {
     if (observer) observer.disconnect();
     observer = new MutationObserver(mutations => {
-      // 同批多次写入只判断最终文字；节点移动、字体属性和资源变化仍逐条处理。
-      const characterTargets = new Set();
-      const textParents = new Set();
       for (const m of mutations) {
-        if (m.type === "characterData") {
-          if (characterTargets.has(m.target)) continue;
-          characterTargets.add(m.target);
-        }
         const parent = m.target instanceof Element ? m.target : m.target.parentElement;
         if (!parent || parent.closest(`#${STYLE_ID}, #${CUSTOM_STYLE_ID}`)) continue;
         if (m.type === "attributes" && m.oldValue === parent.getAttribute(m.attributeName)) continue;
@@ -1187,7 +1042,7 @@
         } else if (parent.matches("style, link[rel='stylesheet']")) {
           queueStylesheetScan();
         } else if (m.type === "characterData") {
-          const populated = hasText(m.target);
+          const populated = !!m.target.nodeValue?.trim();
           const remainedPopulated = populated && nonemptyTextNodes.has(m.target);
           if (populated) nonemptyTextNodes.add(m.target);
           else nonemptyTextNodes.delete(m.target);
@@ -1202,18 +1057,13 @@
           // 元素选择器匹配。新元素、首次文字和实际方向变化仍走完整检查。
           const changed = [...m.addedNodes, ...m.removedNodes].filter(node => node instanceof Element || node.nodeType === Node.TEXT_NODE);
           if (!changed.length) continue;
-          const textOnly = changed.every(node => node.nodeType === Node.TEXT_NODE);
-          if (textOnly) {
-            if (textParents.has(parent)) continue;
-            textParents.add(parent);
-          }
           // 注释不参与字体判断；新节点不影响可缓存选择器的已有祖先匹配。
           // 移动或移除曾参与缓存的元素时，重建继承路径，避免复用旧父级字体。
-          for (const node of changed) if (node instanceof Element) forgetTypographyBranch(node);
+          if (changed.some(node => node instanceof Element && typographyContexts.has(node))) typographyContexts = new WeakMap();
           const directionRoot = textRecheckRoot(parent);
-          if (sampledElements.has(parent) && textOnly
+          if (sampledElements.has(parent) && changed.length && changed.every(node => node.nodeType === Node.TEXT_NODE)
               && !directionRoot) {
-            const textNodes = [...parent.childNodes].filter(node => node.nodeType === Node.TEXT_NODE && hasText(node));
+            const textNodes = [...parent.childNodes].filter(node => node.nodeType === Node.TEXT_NODE && node.nodeValue?.trim());
             const previouslyPopulated = [...m.removedNodes, ...textNodes].some(node => nonemptyTextNodes.has(node));
             if (textNodes.length && previouslyPopulated) {
               textNodes.forEach(node => nonemptyTextNodes.add(node));
@@ -1253,6 +1103,8 @@
       return;
     }
     if (epoch !== loadEpoch) return;
+    if (observer) observer.disconnect();
+    cancelScans();
     settings = normalizeSettings(stored);
     cssGeneration = stored[META_KEY]?.id || null;
     siteCSSGenerations = Array.isArray(stored.siteRules) ? stored.siteRules.map(rule => rule?.customCSSChunks?.id).filter(Boolean) : [];
@@ -1264,18 +1116,6 @@
     siteOverrides = site.overrides;
     applySiteOverrides();
     if (site.customCSS !== null) settings.customCSS = site.customCSS;
-    // 比较当前页面实际生效的配置；其他站点规则及相同 CSS 的新分块不重扫。
-    // 分块引用已在上方更新，后续正文变化仍按当前代次加载。
-    const configuration = [settings.enabled, siteOff, forceSite,
-      forceSite && siteFont ? siteFont : settings.replacement,
-      settings.protectCode, settings.protectIcons, settings.ligatureLevel, settings.autoSpacing,
-      settings.customCSSOn, settings.customCSSOn ? settings.customCSS : "",
-      forceSite ? "" : JSON.stringify([...targetSet].sort())];
-    const unchanged = appliedConfiguration?.every((value, i) => value === configuration[i]);
-    appliedConfiguration = configuration;
-    if (unchanged) return;
-    if (observer) observer.disconnect();
-    cancelScans();
     cssDetected = false;
     if (siteOff || !settings.enabled) {
       sleepForSite();
@@ -1289,9 +1129,8 @@
     startObserver();
     scanSubtree(document);
     if (document.fonts?.status === "loading") {
-      const fontEpoch = scanEpoch;
       document.fonts.ready.then(() => {
-        if (fontEpoch === scanEpoch && settings.enabled && !siteOff && document.fonts.size) queue(document.documentElement);
+        if (epoch === loadEpoch && settings.enabled && !siteOff && document.fonts.size) queue(document.documentElement);
       }).catch(() => {});
     }
   }

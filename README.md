@@ -89,11 +89,16 @@
 npm ci
 npx playwright install chromium
 npm test
-node scripts/profile-performance.cjs v2.1.2
+node scripts/profile-performance.cjs v2.1.5 --repeats=3
+node scripts/profile-settings.cjs v2.1.5 --repeats=3
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-release.ps1
 ```
 
 打包脚本生成 `dist/system-font-substituter-v<VERSION>.zip` 和 `dist/apple-ui-mix.css`，并将版本 ZIP 同步至 Windows 定义的下载目录。ZIP 根目录直接包含 manifest，不包含测试和开发依赖。
+
+性能工具分别测量内容脚本与设置页。内容脚本使用 38 类独立模拟场景，比较无扩展基线、指定 Git 版本与工作区，覆盖首次加载、百万字符长文本、大型和深层 DOM、大量字体规则、祖先与列表规则、通用条件前缀、静态属性及转义条件、静态条件下的反复菜单、内联布局更新、强制站点原生连字模式、OpenType 特性、变量依赖、小分支缓存、深层兄弟变更、批量节点、保护区域、复杂字体条件、空白与关系字体、自动方向、组词与失焦、媒体条件、交互、播放中的节点移除、站点动作与保护/连字切换、配置重载及实际配置未变化的存储更新。普通替换和完整 Apple UI Mix 模式各重复测量，并交替执行版本顺序。组词场景使用合成事件，输入和拖选场景使用测试浏览器的键盘与鼠标操作。
+
+[性能报告归档](docs/performance/README.md)长期保存各轮完整样本、汇总和比较基线；新测量默认写入 `docs/performance/v<VERSION>/`，按 UTC 时间戳保留独立报告。记录采样、选择器 API 调用、DOM 遍历、标记写入、主线程任务、样式重算、布局、长任务、帧间隔及堆内存。可用 `--cases=cold-rules,insert-wide`、`--modes=ordinary` 和 `--output=docs/performance/v2.1.6/comparison` 缩小测量范围或指定输出；`--counts=off` 关闭高频选择器/遍历计数钩子，用于复核耗时。`--baseline-dir=docs/performance/v2.1.6/round2-before` 可读取该目录中的 `content.js`、`shared.js` 与 `apple-ui-mix.css`，比较尚未提交的优化前后代码。设置页工具比较 100/400 条规则的加载、编辑与 CSS 分块保存，存储使用测试替身。浏览器耗时包含模拟页面及测量钩子开销，内存采样受垃圾回收影响；这些数值描述本地测试场景。
 
 当前扫描覆盖普通 DOM；Shadow DOM 内部节点和不产生 DOM 变动的 CSSOM 写入不在观察范围内。同步存储受总容量及单项配额限制；保存过程中旧块与新块短暂共存，超出配额时保存失败并保留原配置。
 

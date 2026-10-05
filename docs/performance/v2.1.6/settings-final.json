@@ -1,0 +1,202 @@
+{
+  "baseline": "v2.1.5",
+  "browser": "151.0.7922.34",
+  "measuredAt": "2026-10-05T11:38:48.703Z",
+  "repeats": 3,
+  "sourceHashes": {
+    "before": {
+      "options.html": "aba067d477256414ee8e74405a2531571fa18c5ec7b7d20d6ba798de4c7c4e6d",
+      "options.css": "5853ee46e2843e6f4124e42f37b8357bc3239661802690e4178df4946099e910",
+      "options.js": "d65d8f5448506eefdc88924d69aa23c0684c0bd8ff464e5da783c83872e608a7",
+      "shared.js": "e879c7f0ba7d0396d14dfbc0c18b5fdaf5b5c5e7ec39b700f22a38d9a80d86f5"
+    },
+    "after": {
+      "options.html": "e26fc5c74578bbaa9db5add0b4f96c1f39d2ed7f0d8d0877ca31f1b60dab2dc1",
+      "options.css": "4d3b0c801441f3b037f3b722809654a2b42b395f3e16fb3c5b04946ca83ffb96",
+      "options.js": "707752895b04e1b55f7b3d9b185990565ace421a9454e0e684d5e33ea7df1919",
+      "shared.js": "e879c7f0ba7d0396d14dfbc0c18b5fdaf5b5c5e7ec39b700f22a38d9a80d86f5"
+    }
+  },
+  "samples": {
+    "100": {
+      "before": [
+        {
+          "load": {
+            "rowQueries": 102,
+            "longestTaskMs": 120,
+            "taskMs": 164.937,
+            "styleMs": 13.796
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 396.23900000000003,
+            "scriptMs": 5.0489999999999995
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 102,
+            "longestTaskMs": 0,
+            "taskMs": 172.236,
+            "styleMs": 18.814999999999998
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 550.372,
+            "scriptMs": 5.037999999999999
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 102,
+            "longestTaskMs": 0,
+            "taskMs": 171.83200000000002,
+            "styleMs": 18.958
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 480.828,
+            "scriptMs": 4.944000000000001
+          }
+        }
+      ],
+      "after": [
+        {
+          "load": {
+            "rowQueries": 2,
+            "longestTaskMs": 0,
+            "taskMs": 149.735,
+            "styleMs": 15.512
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 350.328,
+            "scriptMs": 4.692
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 2,
+            "longestTaskMs": 0,
+            "taskMs": 137.929,
+            "styleMs": 12.096
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 293.853,
+            "scriptMs": 4.602
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 2,
+            "longestTaskMs": 0,
+            "taskMs": 138.742,
+            "styleMs": 12.527999999999999
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 294.927,
+            "scriptMs": 4.823
+          }
+        }
+      ]
+    },
+    "400": {
+      "before": [
+        {
+          "load": {
+            "rowQueries": 402,
+            "longestTaskMs": 79,
+            "taskMs": 373.219,
+            "styleMs": 37.482
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 936.8270000000001,
+            "scriptMs": 14.165000000000001
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 402,
+            "longestTaskMs": 74,
+            "taskMs": 356.606,
+            "styleMs": 36.392
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 943.0699999999999,
+            "scriptMs": 14.298000000000002
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 402,
+            "longestTaskMs": 76,
+            "taskMs": 364.464,
+            "styleMs": 37.409
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 0,
+            "taskMs": 885.234,
+            "scriptMs": 13.332000000000003
+          }
+        }
+      ],
+      "after": [
+        {
+          "load": {
+            "rowQueries": 2,
+            "longestTaskMs": 57,
+            "taskMs": 194.525,
+            "styleMs": 14.343
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 55,
+            "taskMs": 313.38899999999995,
+            "scriptMs": 9.906
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 2,
+            "longestTaskMs": 54,
+            "taskMs": 193.018,
+            "styleMs": 14.781
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 58,
+            "taskMs": 432.558,
+            "scriptMs": 10.961999999999998
+          }
+        },
+        {
+          "load": {
+            "rowQueries": 2,
+            "longestTaskMs": 51,
+            "taskMs": 186.038,
+            "styleMs": 14.585
+          },
+          "editSave": {
+            "rowQueries": 5,
+            "longestTaskMs": 59,
+            "taskMs": 325.31999999999994,
+            "scriptMs": 10.571
+          }
+        }
+      ]
+    }
+  }
+}

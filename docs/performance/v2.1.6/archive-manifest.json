@@ -1,0 +1,339 @@
+{
+  "version": "2.1.6",
+  "archivedAt": "2026-10-05T17:38:55.837Z",
+  "sourceDirectory": "performance-results/",
+  "fileCount": 55,
+  "totalBytes": 7325457,
+  "files": [
+    {
+      "path": "baseline.json",
+      "source": "performance-results/baseline.json",
+      "bytes": 276250,
+      "sha256": "e6f495e2b77078570f4fdb4adc5ff7123efaa4d6d75ee3ba6f187a4cba907bd7"
+    },
+    {
+      "path": "baseline.md",
+      "source": "performance-results/baseline.md",
+      "bytes": 7774,
+      "sha256": "5459b12dbaf1352de9979a6439ef153f5c394a53aba6def0a4447212ba95aa5d"
+    },
+    {
+      "path": "control-order.json",
+      "source": "performance-results/control-order.json",
+      "bytes": 14911,
+      "sha256": "22cdd5d968977563ecf60386dbd68899db898ba45d81375f58e5500f02f5e776"
+    },
+    {
+      "path": "control-order.md",
+      "source": "performance-results/control-order.md",
+      "bytes": 915,
+      "sha256": "ede4d1d15b94c3ed73681fb8ee3e1d18dbeea286e1bb2d5ecdf80a9b830be599"
+    },
+    {
+      "path": "final.json",
+      "source": "performance-results/final.json",
+      "bytes": 564553,
+      "sha256": "dfd127f44eb95bc2dfc35f768bf8d98aee139a08d9c93ffba6f554a4caecd271"
+    },
+    {
+      "path": "final.md",
+      "source": "performance-results/final.md",
+      "bytes": 10310,
+      "sha256": "7b5d49a028a75d657bcfa94b2e0599144111391b7825484468c0077b9e68d4fd"
+    },
+    {
+      "path": "full.json",
+      "source": "performance-results/full.json",
+      "bytes": 536446,
+      "sha256": "e7eb7d11511ce9474a837b6dcf4825bdca860f61650cb7bd2c2ade9b3014517b"
+    },
+    {
+      "path": "full.md",
+      "source": "performance-results/full.md",
+      "bytes": 9805,
+      "sha256": "284488c583b0f2ab16fb29659c13e6f13eab468b7dbf98c70a615ccad58d212a"
+    },
+    {
+      "path": "initial-injection.json",
+      "source": "performance-results/initial-injection.json",
+      "bytes": 85049,
+      "sha256": "e6bda49ed70058026340323f9fbaa8b79b7b5f97d134a5e67f2dde69bbcfa218"
+    },
+    {
+      "path": "initial-injection.md",
+      "source": "performance-results/initial-injection.md",
+      "bytes": 2188,
+      "sha256": "b42f25c807a525c16986a6636429fc5a7cd087ea069f6f3c46922f00f567621e"
+    },
+    {
+      "path": "pass1.json",
+      "source": "performance-results/pass1.json",
+      "bytes": 65182,
+      "sha256": "b46327f2f12ee394f68e16fd8ad0d856d91523c9f8634179af03d4783b793aed"
+    },
+    {
+      "path": "pass1.md",
+      "source": "performance-results/pass1.md",
+      "bytes": 2232,
+      "sha256": "d42f8f171265e460b653be5d0d775ff4d1ad8e1d6d5b07fb7bdb771fe645d6e8"
+    },
+    {
+      "path": "pass2.json",
+      "source": "performance-results/pass2.json",
+      "bytes": 113708,
+      "sha256": "1ef24f635edf0b820b2f6208c52d1f791bbe3925eec42c2d479f8689c2a9230b"
+    },
+    {
+      "path": "pass2.md",
+      "source": "performance-results/pass2.md",
+      "bytes": 3534,
+      "sha256": "b809ea7a99fadaf36797ab9fcf00a1aa4a45700a7ce738707174993c2ff5322f"
+    },
+    {
+      "path": "pass3.json",
+      "source": "performance-results/pass3.json",
+      "bytes": 32540,
+      "sha256": "3cb7d4e444173ee3a82133cb41c8ef5a229086cd6f4179df42477aaf74aa55f3"
+    },
+    {
+      "path": "pass3.md",
+      "source": "performance-results/pass3.md",
+      "bytes": 1312,
+      "sha256": "d163518788c022c37c7936951a5428452787e15e45771c5fc2541e536e000197"
+    },
+    {
+      "path": "round2-before/apple-ui-mix.css",
+      "source": "performance-results/round2-before/apple-ui-mix.css",
+      "bytes": 2412,
+      "sha256": "f320e9752476a3ba0385c4b4c6f837bd08967ff6a85a6996770fa14918fe5ac4"
+    },
+    {
+      "path": "round2-before/content.js",
+      "source": "performance-results/round2-before/content.js",
+      "bytes": 47073,
+      "sha256": "6f1e456295e39f945ac48adc45ddd451ce24b46029295de06eaa473ac15fc851"
+    },
+    {
+      "path": "round2-before/shared.js",
+      "source": "performance-results/round2-before/shared.js",
+      "bytes": 13558,
+      "sha256": "e879c7f0ba7d0396d14dfbc0c18b5fdaf5b5c5e7ec39b700f22a38d9a80d86f5"
+    },
+    {
+      "path": "round2-final-counts.json",
+      "source": "performance-results/round2-final-counts.json",
+      "bytes": 438026,
+      "sha256": "9f737e490ecde63c246e7104248f9c1bd66cc4f34cabd10ccb287a31a37dd4ff"
+    },
+    {
+      "path": "round2-final-counts.md",
+      "source": "performance-results/round2-final-counts.md",
+      "bytes": 11938,
+      "sha256": "425f7dc3898d41b875255a648aa5b0bae4be331e030a4abea73c12c639e0302a"
+    },
+    {
+      "path": "round2-final-timing.json",
+      "source": "performance-results/round2-final-timing.json",
+      "bytes": 281674,
+      "sha256": "86705dc7d2b51256188aeeed3850ece652a185a549b15419848f0966f22dc5f2"
+    },
+    {
+      "path": "round2-final-timing.md",
+      "source": "performance-results/round2-final-timing.md",
+      "bytes": 5553,
+      "sha256": "82bf19da3590de3291d674a25b06bd1fb25b0faff4eeff7cb233c146755d9dfa"
+    },
+    {
+      "path": "round2-full.json",
+      "source": "performance-results/round2-full.json",
+      "bytes": 650061,
+      "sha256": "6ae16b1d85e185c190c5c4bf3b59b61689009aed9791d6840ef6af5141922574"
+    },
+    {
+      "path": "round2-full.md",
+      "source": "performance-results/round2-full.md",
+      "bytes": 11922,
+      "sha256": "0e71fc8696eb746710d42758af72e3c0a812f3985ace40be3205df05cefe3644"
+    },
+    {
+      "path": "round2-summary.md",
+      "source": "performance-results/round2-summary.md",
+      "bytes": 4626,
+      "sha256": "2445fb7fbc767b7054214e3ef6ace2820e20dd3b3d06c285d9c4944a13ea1a0e"
+    },
+    {
+      "path": "round2-timing.json",
+      "source": "performance-results/round2-timing.json",
+      "bytes": 112907,
+      "sha256": "e9268e72bb50ac35ce9aeff682112c967c71ab5f82493804d638deeaf7c2fa20"
+    },
+    {
+      "path": "round2-timing.md",
+      "source": "performance-results/round2-timing.md",
+      "bytes": 2783,
+      "sha256": "a06e1c16ef38a77ba8128306796354b357b4e41a5e6664df0751338dde92ef4f"
+    },
+    {
+      "path": "round3-before/apple-ui-mix.css",
+      "source": "performance-results/round3-before/apple-ui-mix.css",
+      "bytes": 2412,
+      "sha256": "f320e9752476a3ba0385c4b4c6f837bd08967ff6a85a6996770fa14918fe5ac4"
+    },
+    {
+      "path": "round3-before/content.js",
+      "source": "performance-results/round3-before/content.js",
+      "bytes": 49385,
+      "sha256": "8aa10eb8d44230483b27549d63551b9909b9ad01dc04b9b4005c46f8f7fd406c"
+    },
+    {
+      "path": "round3-before/shared.js",
+      "source": "performance-results/round3-before/shared.js",
+      "bytes": 13558,
+      "sha256": "e879c7f0ba7d0396d14dfbc0c18b5fdaf5b5c5e7ec39b700f22a38d9a80d86f5"
+    },
+    {
+      "path": "round3-final-counts.json",
+      "source": "performance-results/round3-final-counts.json",
+      "bytes": 647286,
+      "sha256": "d960434611d9958e8c2f327d4c9943be6ebaa1fafa01130e326d3539b16cf17d"
+    },
+    {
+      "path": "round3-final-counts.md",
+      "source": "performance-results/round3-final-counts.md",
+      "bytes": 17540,
+      "sha256": "7bfc37d613d6307a7dd6447ee3cf803275d09e78dcfd5c843617bde701ff4173"
+    },
+    {
+      "path": "round3-final-timing.json",
+      "source": "performance-results/round3-final-timing.json",
+      "bytes": 957900,
+      "sha256": "9ee7568468a2819e32d01d1190c80cf52af85835338cdb0648e24c9e45723787"
+    },
+    {
+      "path": "round3-final-timing.md",
+      "source": "performance-results/round3-final-timing.md",
+      "bytes": 16718,
+      "sha256": "9a22270dfa3c7ea93ece92dda16a1a4be44b25b11fcd7d61ceb91862e0541ca4"
+    },
+    {
+      "path": "round3-new-states.json",
+      "source": "performance-results/round3-new-states.json",
+      "bytes": 134030,
+      "sha256": "78847a6e5bff02896c90ac2f183c5a5b3eb3eaf1b78663a7cb396d3546078343"
+    },
+    {
+      "path": "round3-new-states.md",
+      "source": "performance-results/round3-new-states.md",
+      "bytes": 4254,
+      "sha256": "8741720621b96ce08cd5fa8f2e01656ca80fdd8dfc8beb342503460d4a5767e7"
+    },
+    {
+      "path": "round3-summary.md",
+      "source": "performance-results/round3-summary.md",
+      "bytes": 7227,
+      "sha256": "6bdf4aaf2dc864449c1c4f70a9584b13393ce4c213859baf9ec089366a380164"
+    },
+    {
+      "path": "round4-before/apple-ui-mix.css",
+      "source": "performance-results/round4-before/apple-ui-mix.css",
+      "bytes": 2412,
+      "sha256": "f320e9752476a3ba0385c4b4c6f837bd08967ff6a85a6996770fa14918fe5ac4"
+    },
+    {
+      "path": "round4-before/content.js",
+      "source": "performance-results/round4-before/content.js",
+      "bytes": 54204,
+      "sha256": "1bc5706de17215d65dda36974ffeac6cf05d2f63d352f0de2a66936eab557f0a"
+    },
+    {
+      "path": "round4-before/shared.js",
+      "source": "performance-results/round4-before/shared.js",
+      "bytes": 13558,
+      "sha256": "e879c7f0ba7d0396d14dfbc0c18b5fdaf5b5c5e7ec39b700f22a38d9a80d86f5"
+    },
+    {
+      "path": "round4-cold-followup.json",
+      "source": "performance-results/round4-cold-followup.json",
+      "bytes": 19549,
+      "sha256": "2d335a40bd52716c56194eaf8bf2a79f7d07a8cf8f3a9e41a0be301937e8b8e2"
+    },
+    {
+      "path": "round4-cold-followup.md",
+      "source": "performance-results/round4-cold-followup.md",
+      "bytes": 1063,
+      "sha256": "bc4e7a4c8d62052887b14a4e2613c351ce332ca70dac1c0063dadceee75d363f"
+    },
+    {
+      "path": "round4-final-counts.json",
+      "source": "performance-results/round4-final-counts.json",
+      "bytes": 723259,
+      "sha256": "29b35c3868bafff9c983f396900666406b0e83e1e105600df720b755cbcc002b"
+    },
+    {
+      "path": "round4-final-counts.md",
+      "source": "performance-results/round4-final-counts.md",
+      "bytes": 19614,
+      "sha256": "fe8e05a01ff207b1baea7e002568f220df4a2ad4abc333db8dd05e781754e7ae"
+    },
+    {
+      "path": "round4-final-timing.json",
+      "source": "performance-results/round4-final-timing.json",
+      "bytes": 1070831,
+      "sha256": "f051212612ea798a7821b088d28666f7d2863cae74cec8a319691aa7fede5c85"
+    },
+    {
+      "path": "round4-final-timing.md",
+      "source": "performance-results/round4-final-timing.md",
+      "bytes": 18767,
+      "sha256": "d61c9cab19aabc7495b7ebdc7ec2bfd571a7f17612cb6942025dd761e03906ac"
+    },
+    {
+      "path": "round4-menu-counts.json",
+      "source": "performance-results/round4-menu-counts.json",
+      "bytes": 20083,
+      "sha256": "5fe80b45c6ab0701ebb2837e2d28439f85be6f3fff24e2b3e2fa103c448f1b6c"
+    },
+    {
+      "path": "round4-menu-counts.md",
+      "source": "performance-results/round4-menu-counts.md",
+      "bytes": 1342,
+      "sha256": "bef7efcf650a169459c78a0f8dcfe05ef557e6817474c11e35a3831126e46731"
+    },
+    {
+      "path": "round4-summary.md",
+      "source": "performance-results/round4-summary.md",
+      "bytes": 5496,
+      "sha256": "c64952e167c321b420a18b4ceddfb17a73f0e9428d89e0a04e94b61d07ecd16a"
+    },
+    {
+      "path": "settings-final.json",
+      "source": "performance-results/settings-final.json",
+      "bytes": 5260,
+      "sha256": "d58b36d649f97fa66666f4c917321bad7ab54954596f5cd305284077138e45e0"
+    },
+    {
+      "path": "settings.json",
+      "source": "performance-results/settings.json",
+      "bytes": 4477,
+      "sha256": "bf3113d9a061e780b86cfa9a42ba5bbde519b442f5ad89503e9cb025dfaa41cc"
+    },
+    {
+      "path": "summary.md",
+      "source": "performance-results/summary.md",
+      "bytes": 4426,
+      "sha256": "9ebe69024ac2c1f8fa23ac1fc43e1c0c52118d008d3a394f20d310de8e8989c7"
+    },
+    {
+      "path": "timing.json",
+      "source": "performance-results/timing.json",
+      "bytes": 197568,
+      "sha256": "d9073eaadb5cfcd948c5d6f031a3ac6ef2c5fff70e23d7b914d7be632ba5f0f6"
+    },
+    {
+      "path": "timing.md",
+      "source": "performance-results/timing.md",
+      "bytes": 3996,
+      "sha256": "96d81978e3558c76dfb95c574725b66e4a59558c77005237807e8c200966b8f4"
+    }
+  ]
+}

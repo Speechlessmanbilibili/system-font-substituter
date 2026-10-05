@@ -639,14 +639,15 @@ function overrideField(key) {
 }
 
 function readSiteRule(row) {
+  const fields = row.ruleFields;
   const rule = {
-    domain: row.querySelector(".rule-domain").value,
-    font: row.querySelector(".rule-font").value,
-    action: row.querySelector(".rule-action").value,
+    domain: fields.domain.value,
+    font: fields.font.value,
+    action: fields.action.value,
     customCSSMode: row.siteCSS.mode,
     customCSS: row.siteCSS.css
   };
-  for (const select of row.querySelectorAll(".rule-override")) rule[select.dataset.key] = select.value;
+  for (const select of fields.overrides) rule[select.dataset.key] = select.value;
   return normalizeSiteRule(rule);
 }
 
@@ -682,7 +683,7 @@ function refreshSiteRules() {
   $("siteRules").querySelectorAll(".site-rule-row").forEach(refreshSiteRule);
 }
 
-function addSiteRuleRow(rule = {}, focus = false) {
+function addSiteRuleRow(rule = {}, focus = false, parent = $("siteRules")) {
   const normalized = normalizeSiteRule({ action: "inherit", ...rule });
   const row = document.createElement("div");
   row.className = "site-rule-row";
@@ -722,6 +723,8 @@ function addSiteRuleRow(rule = {}, focus = false) {
       </div>
     </details>
   `;
+  row.ruleFields = { domain: row.querySelector(".rule-domain"), font: row.querySelector(".rule-font"),
+    action: row.querySelector(".rule-action"), overrides: [...row.querySelectorAll(".rule-override")] };
   initCustomSelect(row.querySelector(".rule-action"), [
     { value: "inherit", label: t("siteActionInherit") },
     { value: "force", label: t("siteActionForce") },
@@ -734,9 +737,9 @@ function addSiteRuleRow(rule = {}, focus = false) {
   for (const select of row.querySelectorAll(".rule-override")) {
     select.value = normalized[select.dataset.key];
   }
-  $("siteRules").appendChild(row);
+  parent.appendChild(row);
   refreshSiteRule(row);
-  updateEmptyRulesState();
+  if (parent === $("siteRules")) updateEmptyRulesState();
   if (focus) row.querySelector(".rule-domain").focus();
   return row;
 }
@@ -747,7 +750,10 @@ function renderSiteRules(rules) {
   deletedRule = null;
   $("siteRuleUndo").hidden = true;
   $("siteRules").innerHTML = "";
-  for (const rule of rules) addSiteRuleRow(rule);
+  // 在文档片段中完成规则初始化，再一次挂入页面。
+  const fragment = document.createDocumentFragment();
+  for (const rule of rules) addSiteRuleRow(rule, false, fragment);
+  $("siteRules").appendChild(fragment);
   updateEmptyRulesState();
 }
 

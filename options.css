@@ -750,6 +750,9 @@ h2 {
 }
 
 .site-rule-row {
+  /* 屏外规则延后排版，并记住已显示卡片的实际高度。 */
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 230px;
   padding: 18px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);

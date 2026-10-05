@@ -1,0 +1,3198 @@
+{
+  "baseline": "v2.1.5",
+  "revision": "cf8c001a23beead853a3189f3068ff254513cd05",
+  "measuredAt": "2026-10-05T11:24:20.770Z",
+  "browser": "151.0.7922.34",
+  "platform": "win32",
+  "repeats": 3,
+  "scenarios": [
+    {
+      "id": "cold-wide",
+      "label": "首次加载 6000 段文字及空控件"
+    },
+    {
+      "id": "cold-rules",
+      "label": "800 条字体规则和 1600 个元素"
+    },
+    {
+      "id": "insert-wide",
+      "label": "批量插入 4000 个元素"
+    }
+  ],
+  "results": {
+    "ordinary/cold-wide": {
+      "disabled": {
+        "summary": {
+          "styleReads": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "sheetDisables": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "treeWalks": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "walkedNodes": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "selectorMatches": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "markerWrites": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "longTasks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "longestTaskMs": {
+            "median": 54,
+            "min": 51,
+            "max": 55
+          },
+          "frameP95Ms": {
+            "median": 4.3,
+            "min": 4.3,
+            "max": 7.6
+          },
+          "longestFrameMs": {
+            "median": 54.2,
+            "min": 54.1,
+            "max": 87.4
+          },
+          "completionMs": {
+            "median": 9.3,
+            "min": 8.9,
+            "max": 18
+          },
+          "domNodes": {
+            "median": 12322,
+            "min": 12322,
+            "max": 12322
+          },
+          "eventListeners": {
+            "median": 34,
+            "min": 34,
+            "max": 34
+          },
+          "heapUsedKiB": {
+            "median": 2288.8,
+            "min": 2285.54,
+            "max": 2289.04
+          },
+          "styleRecalculations": {
+            "median": 2,
+            "min": 2,
+            "max": 2
+          },
+          "styleMs": {
+            "median": 13.44,
+            "min": 6.81,
+            "max": 14.35
+          },
+          "layoutMs": {
+            "median": 36.13,
+            "min": 35.6,
+            "max": 41.46
+          },
+          "scriptMs": {
+            "median": 6.39,
+            "min": 6.33,
+            "max": 6.5
+          },
+          "taskMs": {
+            "median": 86.74,
+            "min": 83.41,
+            "max": 88.16
+          },
+          "heapDeltaKiB": {
+            "median": 1630.71,
+            "min": 1627.45,
+            "max": 1630.95
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 1,
+            "longestTaskMs": 51,
+            "frameP95Ms": 7.599999999999994,
+            "longestFrameMs": 87.4,
+            "completionMs": 18,
+            "errors": [],
+            "domNodes": 12322,
+            "eventListeners": 34,
+            "heapUsedKiB": 2285.54296875,
+            "styleRecalculations": 2,
+            "styleMs": 6.805000000000001,
+            "layoutMs": 41.459,
+            "scriptMs": 6.393000000000001,
+            "taskMs": 88.16,
+            "heapDeltaKiB": 1627.44921875
+          },
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 1,
+            "longestTaskMs": 55,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 54.10000000000001,
+            "completionMs": 8.899999999441206,
+            "errors": [],
+            "domNodes": 12322,
+            "eventListeners": 34,
+            "heapUsedKiB": 2288.8046875,
+            "styleRecalculations": 2,
+            "styleMs": 14.347999999999999,
+            "layoutMs": 36.131,
+            "scriptMs": 6.495,
+            "taskMs": 86.741,
+            "heapDeltaKiB": 1630.7109375
+          },
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 1,
+            "longestTaskMs": 54,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 54.199999999999996,
+            "completionMs": 9.299999999813735,
+            "errors": [],
+            "domNodes": 12322,
+            "eventListeners": 34,
+            "heapUsedKiB": 2289.0390625,
+            "styleRecalculations": 2,
+            "styleMs": 13.435,
+            "layoutMs": 35.601,
+            "scriptMs": 6.3309999999999995,
+            "taskMs": 83.413,
+            "heapDeltaKiB": 1630.9453125
+          }
+        ]
+      },
+      "before": {
+        "summary": {
+          "styleReads": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "sheetDisables": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "treeWalks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "walkedNodes": {
+            "median": 6000,
+            "min": 6000,
+            "max": 6000
+          },
+          "selectorMatches": {
+            "median": 12014,
+            "min": 12013,
+            "max": 12014
+          },
+          "markerWrites": {
+            "median": 12000,
+            "min": 12000,
+            "max": 12000
+          },
+          "longTasks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "longestTaskMs": {
+            "median": 71,
+            "min": 52,
+            "max": 74
+          },
+          "frameP95Ms": {
+            "median": 8.4,
+            "min": 4.3,
+            "max": 20.9
+          },
+          "longestFrameMs": {
+            "median": 79.2,
+            "min": 54.1,
+            "max": 83.3
+          },
+          "completionMs": {
+            "median": 144.8,
+            "min": 142,
+            "max": 163.7
+          },
+          "domNodes": {
+            "median": 12317,
+            "min": 12317,
+            "max": 12327
+          },
+          "eventListeners": {
+            "median": 61,
+            "min": 61,
+            "max": 66
+          },
+          "heapUsedKiB": {
+            "median": 2731.3,
+            "min": 2729.83,
+            "max": 4811.46
+          },
+          "styleRecalculations": {
+            "median": 5,
+            "min": 5,
+            "max": 6
+          },
+          "styleMs": {
+            "median": 19.49,
+            "min": 13.3,
+            "max": 19.57
+          },
+          "layoutMs": {
+            "median": 60.65,
+            "min": 58.97,
+            "max": 68.48
+          },
+          "scriptMs": {
+            "median": 39.09,
+            "min": 38.2,
+            "max": 44.05
+          },
+          "taskMs": {
+            "median": 160.13,
+            "min": 159.67,
+            "max": 177.03
+          },
+          "heapDeltaKiB": {
+            "median": 2073.21,
+            "min": 2071.73,
+            "max": 4153.37
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 1,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 6000,
+            "selectorMatches": 12013,
+            "markerWrites": 12000,
+            "longTasks": 1,
+            "longestTaskMs": 52,
+            "frameP95Ms": 20.89999999999999,
+            "longestFrameMs": 54.1,
+            "completionMs": 163.69999999925494,
+            "errors": [],
+            "domNodes": 12327,
+            "eventListeners": 66,
+            "heapUsedKiB": 4811.46484375,
+            "styleRecalculations": 6,
+            "styleMs": 13.297,
+            "layoutMs": 68.481,
+            "scriptMs": 44.052,
+            "taskMs": 177.02900000000002,
+            "heapDeltaKiB": 4153.37109375
+          },
+          {
+            "styleReads": 1,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 6000,
+            "selectorMatches": 12014,
+            "markerWrites": 12000,
+            "longTasks": 1,
+            "longestTaskMs": 74,
+            "frameP95Ms": 8.400000000000006,
+            "longestFrameMs": 83.3,
+            "completionMs": 144.79999999981374,
+            "errors": [],
+            "domNodes": 12317,
+            "eventListeners": 61,
+            "heapUsedKiB": 2729.828125,
+            "styleRecalculations": 5,
+            "styleMs": 19.486,
+            "layoutMs": 60.648,
+            "scriptMs": 38.195,
+            "taskMs": 159.66599999999997,
+            "heapDeltaKiB": 2071.734375
+          },
+          {
+            "styleReads": 1,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 6000,
+            "selectorMatches": 12014,
+            "markerWrites": 12000,
+            "longTasks": 1,
+            "longestTaskMs": 71,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 79.2,
+            "completionMs": 142,
+            "errors": [],
+            "domNodes": 12317,
+            "eventListeners": 61,
+            "heapUsedKiB": 2731.3046875,
+            "styleRecalculations": 5,
+            "styleMs": 19.574,
+            "layoutMs": 58.97,
+            "scriptMs": 39.091,
+            "taskMs": 160.125,
+            "heapDeltaKiB": 2073.2109375
+          }
+        ]
+      },
+      "after": {
+        "summary": {
+          "styleReads": {
+            "median": 2,
+            "min": 2,
+            "max": 2
+          },
+          "sheetDisables": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "treeWalks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "walkedNodes": {
+            "median": 6000,
+            "min": 6000,
+            "max": 6000
+          },
+          "selectorMatches": {
+            "median": 7,
+            "min": 6,
+            "max": 7
+          },
+          "markerWrites": {
+            "median": 12200,
+            "min": 12200,
+            "max": 12200
+          },
+          "longTasks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "longestTaskMs": {
+            "median": 72,
+            "min": 57,
+            "max": 73
+          },
+          "frameP95Ms": {
+            "median": 8.4,
+            "min": 8.3,
+            "max": 20.9
+          },
+          "longestFrameMs": {
+            "median": 83.3,
+            "min": 58.3,
+            "max": 83.3
+          },
+          "completionMs": {
+            "median": 165.2,
+            "min": 161.2,
+            "max": 185.8
+          },
+          "domNodes": {
+            "median": 12317,
+            "min": 12317,
+            "max": 12327
+          },
+          "eventListeners": {
+            "median": 62,
+            "min": 62,
+            "max": 67
+          },
+          "heapUsedKiB": {
+            "median": 5163.74,
+            "min": 3037.65,
+            "max": 5400.5
+          },
+          "styleRecalculations": {
+            "median": 6,
+            "min": 6,
+            "max": 8
+          },
+          "styleMs": {
+            "median": 23.17,
+            "min": 22.46,
+            "max": 25.03
+          },
+          "layoutMs": {
+            "median": 59.63,
+            "min": 57.16,
+            "max": 64.13
+          },
+          "scriptMs": {
+            "median": 40.35,
+            "min": 39.86,
+            "max": 41.56
+          },
+          "taskMs": {
+            "median": 166.93,
+            "min": 162.19,
+            "max": 179.64
+          },
+          "heapDeltaKiB": {
+            "median": 4505.64,
+            "min": 2379.56,
+            "max": 4742.41
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 2,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 6000,
+            "selectorMatches": 6,
+            "markerWrites": 12200,
+            "longTasks": 1,
+            "longestTaskMs": 57,
+            "frameP95Ms": 20.900000000000006,
+            "longestFrameMs": 58.300000000000004,
+            "completionMs": 185.79999999981374,
+            "errors": [],
+            "domNodes": 12327,
+            "eventListeners": 67,
+            "heapUsedKiB": 5163.73828125,
+            "styleRecalculations": 8,
+            "styleMs": 25.029,
+            "layoutMs": 64.13199999999999,
+            "scriptMs": 41.56,
+            "taskMs": 179.639,
+            "heapDeltaKiB": 4505.64453125
+          },
+          {
+            "styleReads": 2,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 6000,
+            "selectorMatches": 7,
+            "markerWrites": 12200,
+            "longTasks": 1,
+            "longestTaskMs": 72,
+            "frameP95Ms": 8.400000000000006,
+            "longestFrameMs": 83.30000000000001,
+            "completionMs": 161.20000000018626,
+            "errors": [],
+            "domNodes": 12317,
+            "eventListeners": 62,
+            "heapUsedKiB": 3037.65234375,
+            "styleRecalculations": 6,
+            "styleMs": 22.455,
+            "layoutMs": 57.163,
+            "scriptMs": 39.856,
+            "taskMs": 162.187,
+            "heapDeltaKiB": 2379.55859375
+          },
+          {
+            "styleReads": 2,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 6000,
+            "selectorMatches": 7,
+            "markerWrites": 12200,
+            "longTasks": 1,
+            "longestTaskMs": 73,
+            "frameP95Ms": 8.299999999999983,
+            "longestFrameMs": 83.30000000000001,
+            "completionMs": 165.20000000018626,
+            "errors": [],
+            "domNodes": 12317,
+            "eventListeners": 62,
+            "heapUsedKiB": 5400.5,
+            "styleRecalculations": 6,
+            "styleMs": 23.171,
+            "layoutMs": 59.626,
+            "scriptMs": 40.348,
+            "taskMs": 166.929,
+            "heapDeltaKiB": 4742.40625
+          }
+        ]
+      }
+    },
+    "ordinary/cold-rules": {
+      "disabled": {
+        "summary": {
+          "styleReads": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "sheetDisables": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "treeWalks": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "walkedNodes": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "selectorMatches": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "markerWrites": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "longTasks": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "longestTaskMs": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "frameP95Ms": {
+            "median": 4.3,
+            "min": 4.2,
+            "max": 4.3
+          },
+          "longestFrameMs": {
+            "median": 24.9,
+            "min": 24.9,
+            "max": 25
+          },
+          "completionMs": {
+            "median": 8.5,
+            "min": 8.2,
+            "max": 12
+          },
+          "domNodes": {
+            "median": 3224,
+            "min": 3224,
+            "max": 3224
+          },
+          "eventListeners": {
+            "median": 30,
+            "min": 30,
+            "max": 30
+          },
+          "heapUsedKiB": {
+            "median": 2282,
+            "min": 2280.89,
+            "max": 2282.1
+          },
+          "styleRecalculations": {
+            "median": 2,
+            "min": 2,
+            "max": 2
+          },
+          "styleMs": {
+            "median": 1.22,
+            "min": 1.19,
+            "max": 1.31
+          },
+          "layoutMs": {
+            "median": 21.8,
+            "min": 21.68,
+            "max": 22.71
+          },
+          "scriptMs": {
+            "median": 6.75,
+            "min": 6.72,
+            "max": 6.82
+          },
+          "taskMs": {
+            "median": 49.39,
+            "min": 49.08,
+            "max": 49.62
+          },
+          "heapDeltaKiB": {
+            "median": 1623.91,
+            "min": 1622.8,
+            "max": 1624
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 25,
+            "completionMs": 12,
+            "errors": [],
+            "domNodes": 3224,
+            "eventListeners": 30,
+            "heapUsedKiB": 2280.890625,
+            "styleRecalculations": 2,
+            "styleMs": 1.309,
+            "layoutMs": 21.797,
+            "scriptMs": 6.751,
+            "taskMs": 49.387,
+            "heapDeltaKiB": 1622.796875
+          },
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.299999999999983,
+            "longestFrameMs": 24.9,
+            "completionMs": 8.200000000186265,
+            "errors": [],
+            "domNodes": 3224,
+            "eventListeners": 30,
+            "heapUsedKiB": 2282.09765625,
+            "styleRecalculations": 2,
+            "styleMs": 1.22,
+            "layoutMs": 22.711,
+            "scriptMs": 6.719,
+            "taskMs": 49.616,
+            "heapDeltaKiB": 1624.00390625
+          },
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.200000000000017,
+            "longestFrameMs": 24.9,
+            "completionMs": 8.5,
+            "errors": [],
+            "domNodes": 3224,
+            "eventListeners": 30,
+            "heapUsedKiB": 2282.00390625,
+            "styleRecalculations": 2,
+            "styleMs": 1.189,
+            "layoutMs": 21.680999999999997,
+            "scriptMs": 6.819000000000001,
+            "taskMs": 49.077000000000005,
+            "heapDeltaKiB": 1623.91015625
+          }
+        ]
+      },
+      "before": {
+        "summary": {
+          "styleReads": {
+            "median": 800,
+            "min": 800,
+            "max": 800
+          },
+          "sheetDisables": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "treeWalks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "walkedNodes": {
+            "median": 1600,
+            "min": 1600,
+            "max": 1600
+          },
+          "selectorMatches": {
+            "median": 1286415,
+            "min": 1286415,
+            "max": 1286415
+          },
+          "markerWrites": {
+            "median": 1600,
+            "min": 1600,
+            "max": 1600
+          },
+          "longTasks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "longestTaskMs": {
+            "median": 469,
+            "min": 457,
+            "max": 500
+          },
+          "frameP95Ms": {
+            "median": 4.3,
+            "min": 4.2,
+            "max": 4.3
+          },
+          "longestFrameMs": {
+            "median": 491.7,
+            "min": 479.3,
+            "max": 525
+          },
+          "completionMs": {
+            "median": 519.4,
+            "min": 502.3,
+            "max": 546.2
+          },
+          "domNodes": {
+            "median": 3216,
+            "min": 3215,
+            "max": 3216
+          },
+          "eventListeners": {
+            "median": 66,
+            "min": 64,
+            "max": 66
+          },
+          "heapUsedKiB": {
+            "median": 2921.8,
+            "min": 2157.86,
+            "max": 3111.71
+          },
+          "styleRecalculations": {
+            "median": 3,
+            "min": 3,
+            "max": 3
+          },
+          "styleMs": {
+            "median": 2.28,
+            "min": 2.28,
+            "max": 2.37
+          },
+          "layoutMs": {
+            "median": 21.77,
+            "min": 20.3,
+            "max": 22.1
+          },
+          "scriptMs": {
+            "median": 8.22,
+            "min": 7.76,
+            "max": 9.58
+          },
+          "taskMs": {
+            "median": 522.25,
+            "min": 509,
+            "max": 552.57
+          },
+          "heapDeltaKiB": {
+            "median": 2263.71,
+            "min": 1499.77,
+            "max": 2453.62
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 800,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 1600,
+            "selectorMatches": 1286415,
+            "markerWrites": 1600,
+            "longTasks": 1,
+            "longestTaskMs": 469,
+            "frameP95Ms": 4.2999999999999545,
+            "longestFrameMs": 491.7,
+            "completionMs": 519.4000000003725,
+            "errors": [],
+            "domNodes": 3215,
+            "eventListeners": 64,
+            "heapUsedKiB": 2157.859375,
+            "styleRecalculations": 3,
+            "styleMs": 2.283,
+            "layoutMs": 20.296000000000003,
+            "scriptMs": 9.575999999999999,
+            "taskMs": 522.246,
+            "heapDeltaKiB": 1499.765625
+          },
+          {
+            "styleReads": 800,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 1600,
+            "selectorMatches": 1286415,
+            "markerWrites": 1600,
+            "longTasks": 1,
+            "longestTaskMs": 457,
+            "frameP95Ms": 4.2000000000000455,
+            "longestFrameMs": 479.3,
+            "completionMs": 502.29999999981374,
+            "errors": [],
+            "domNodes": 3216,
+            "eventListeners": 66,
+            "heapUsedKiB": 2921.80078125,
+            "styleRecalculations": 3,
+            "styleMs": 2.276,
+            "layoutMs": 21.765,
+            "scriptMs": 7.755,
+            "taskMs": 509.004,
+            "heapDeltaKiB": 2263.70703125
+          },
+          {
+            "styleReads": 800,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 1600,
+            "selectorMatches": 1286415,
+            "markerWrites": 1600,
+            "longTasks": 1,
+            "longestTaskMs": 500,
+            "frameP95Ms": 4.300000000000068,
+            "longestFrameMs": 525,
+            "completionMs": 546.2000000001863,
+            "errors": [],
+            "domNodes": 3216,
+            "eventListeners": 66,
+            "heapUsedKiB": 3111.7109375,
+            "styleRecalculations": 3,
+            "styleMs": 2.368,
+            "layoutMs": 22.102,
+            "scriptMs": 8.218,
+            "taskMs": 552.569,
+            "heapDeltaKiB": 2453.6171875
+          }
+        ]
+      },
+      "after": {
+        "summary": {
+          "styleReads": {
+            "median": 800,
+            "min": 800,
+            "max": 800
+          },
+          "sheetDisables": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "treeWalks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "walkedNodes": {
+            "median": 1600,
+            "min": 1600,
+            "max": 1600
+          },
+          "selectorMatches": {
+            "median": 8,
+            "min": 8,
+            "max": 8
+          },
+          "markerWrites": {
+            "median": 1600,
+            "min": 1600,
+            "max": 1600
+          },
+          "longTasks": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "longestTaskMs": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "frameP95Ms": {
+            "median": 4.3,
+            "min": 4.3,
+            "max": 4.3
+          },
+          "longestFrameMs": {
+            "median": 45.8,
+            "min": 45.8,
+            "max": 45.9
+          },
+          "completionMs": {
+            "median": 69.3,
+            "min": 65.9,
+            "max": 70.4
+          },
+          "domNodes": {
+            "median": 3229,
+            "min": 3229,
+            "max": 3229
+          },
+          "eventListeners": {
+            "median": 67,
+            "min": 67,
+            "max": 67
+          },
+          "heapUsedKiB": {
+            "median": 3385.58,
+            "min": 3374.7,
+            "max": 3431.87
+          },
+          "styleRecalculations": {
+            "median": 3,
+            "min": 3,
+            "max": 3
+          },
+          "styleMs": {
+            "median": 2.49,
+            "min": 2.42,
+            "max": 2.67
+          },
+          "layoutMs": {
+            "median": 22.68,
+            "min": 22.02,
+            "max": 23.46
+          },
+          "scriptMs": {
+            "median": 8.24,
+            "min": 7.91,
+            "max": 8.5
+          },
+          "taskMs": {
+            "median": 69.08,
+            "min": 68.15,
+            "max": 73.97
+          },
+          "heapDeltaKiB": {
+            "median": 2727.49,
+            "min": 2716.61,
+            "max": 2773.77
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 800,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 1600,
+            "selectorMatches": 8,
+            "markerWrites": 1600,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 45.8,
+            "completionMs": 69.29999999981374,
+            "errors": [],
+            "domNodes": 3229,
+            "eventListeners": 67,
+            "heapUsedKiB": 3431.8671875,
+            "styleRecalculations": 3,
+            "styleMs": 2.666,
+            "layoutMs": 22.677,
+            "scriptMs": 7.911,
+            "taskMs": 69.08200000000001,
+            "heapDeltaKiB": 2773.7734375
+          },
+          {
+            "styleReads": 800,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 1600,
+            "selectorMatches": 8,
+            "markerWrites": 1600,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 45.9,
+            "completionMs": 65.8999999994412,
+            "errors": [],
+            "domNodes": 3229,
+            "eventListeners": 67,
+            "heapUsedKiB": 3374.69921875,
+            "styleRecalculations": 3,
+            "styleMs": 2.42,
+            "layoutMs": 23.461,
+            "scriptMs": 8.241,
+            "taskMs": 68.149,
+            "heapDeltaKiB": 2716.60546875
+          },
+          {
+            "styleReads": 800,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 1600,
+            "selectorMatches": 8,
+            "markerWrites": 1600,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.299999999999983,
+            "longestFrameMs": 45.8,
+            "completionMs": 70.40000000037253,
+            "errors": [],
+            "domNodes": 3229,
+            "eventListeners": 67,
+            "heapUsedKiB": 3385.58203125,
+            "styleRecalculations": 3,
+            "styleMs": 2.492,
+            "layoutMs": 22.020000000000003,
+            "scriptMs": 8.497,
+            "taskMs": 73.96600000000001,
+            "heapDeltaKiB": 2727.48828125
+          }
+        ]
+      }
+    },
+    "ordinary/insert-wide": {
+      "disabled": {
+        "summary": {
+          "styleReads": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "sheetDisables": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "treeWalks": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "walkedNodes": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "selectorMatches": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "markerWrites": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "longTasks": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "longestTaskMs": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "frameP95Ms": {
+            "median": 4.3,
+            "min": 4.3,
+            "max": 4.3
+          },
+          "longestFrameMs": {
+            "median": 25,
+            "min": 25,
+            "max": 29.2
+          },
+          "completionMs": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "domNodes": {
+            "median": 8011,
+            "min": 8011,
+            "max": 8011
+          },
+          "eventListeners": {
+            "median": 35,
+            "min": 35,
+            "max": 35
+          },
+          "heapUsedKiB": {
+            "median": 1726.41,
+            "min": 1726.07,
+            "max": 1726.56
+          },
+          "styleRecalculations": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "styleMs": {
+            "median": 2.59,
+            "min": 2.58,
+            "max": 2.75
+          },
+          "layoutMs": {
+            "median": 18.8,
+            "min": 18.73,
+            "max": 21.06
+          },
+          "scriptMs": {
+            "median": 1.98,
+            "min": 1.78,
+            "max": 2.05
+          },
+          "taskMs": {
+            "median": 43.17,
+            "min": 43.03,
+            "max": 45.93
+          },
+          "heapDeltaKiB": {
+            "median": -551.52,
+            "min": -551.82,
+            "max": -551.37
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 25,
+            "completionMs": 0,
+            "errors": [],
+            "domNodes": 8011,
+            "eventListeners": 35,
+            "heapUsedKiB": 1726.41015625,
+            "styleRecalculations": 1,
+            "styleMs": 2.593,
+            "layoutMs": 18.799999999999997,
+            "scriptMs": 2.0490000000000004,
+            "taskMs": 43.169000000000004,
+            "heapDeltaKiB": -551.515625
+          },
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000068,
+            "longestFrameMs": 29.19999999999999,
+            "completionMs": 0,
+            "errors": [],
+            "domNodes": 8011,
+            "eventListeners": 35,
+            "heapUsedKiB": 1726.07421875,
+            "styleRecalculations": 1,
+            "styleMs": 2.75,
+            "layoutMs": 21.055,
+            "scriptMs": 1.7819999999999998,
+            "taskMs": 45.934000000000005,
+            "heapDeltaKiB": -551.8203125
+          },
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 25,
+            "completionMs": 0,
+            "errors": [],
+            "domNodes": 8011,
+            "eventListeners": 35,
+            "heapUsedKiB": 1726.5625,
+            "styleRecalculations": 1,
+            "styleMs": 2.5810000000000004,
+            "layoutMs": 18.729999999999997,
+            "scriptMs": 1.98,
+            "taskMs": 43.033,
+            "heapDeltaKiB": -551.375
+          }
+        ]
+      },
+      "before": {
+        "summary": {
+          "styleReads": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "sheetDisables": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "treeWalks": {
+            "median": 4000,
+            "min": 4000,
+            "max": 4000
+          },
+          "walkedNodes": {
+            "median": 4000,
+            "min": 4000,
+            "max": 4000
+          },
+          "selectorMatches": {
+            "median": 16003,
+            "min": 16003,
+            "max": 16003
+          },
+          "markerWrites": {
+            "median": 8000,
+            "min": 8000,
+            "max": 8000
+          },
+          "longTasks": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "longestTaskMs": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "frameP95Ms": {
+            "median": 4.3,
+            "min": 4.3,
+            "max": 4.3
+          },
+          "longestFrameMs": {
+            "median": 37.4,
+            "min": 37.4,
+            "max": 41.6
+          },
+          "completionMs": {
+            "median": 80.2,
+            "min": 78.3,
+            "max": 81.7
+          },
+          "domNodes": {
+            "median": 8019,
+            "min": 8019,
+            "max": 8019
+          },
+          "eventListeners": {
+            "median": 71,
+            "min": 71,
+            "max": 71
+          },
+          "heapUsedKiB": {
+            "median": 4259.55,
+            "min": 4256.43,
+            "max": 4261.66
+          },
+          "styleRecalculations": {
+            "median": 4,
+            "min": 4,
+            "max": 4
+          },
+          "styleMs": {
+            "median": 7.03,
+            "min": 7,
+            "max": 7.06
+          },
+          "layoutMs": {
+            "median": 34.33,
+            "min": 33.26,
+            "max": 34.85
+          },
+          "scriptMs": {
+            "median": 33.91,
+            "min": 32.86,
+            "max": 34.49
+          },
+          "taskMs": {
+            "median": 95.21,
+            "min": 91.04,
+            "max": 95.54
+          },
+          "heapDeltaKiB": {
+            "median": 1777.53,
+            "min": 1774.41,
+            "max": 1779.56
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 1,
+            "sheetDisables": 1,
+            "treeWalks": 4000,
+            "walkedNodes": 4000,
+            "selectorMatches": 16003,
+            "markerWrites": 8000,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000068,
+            "longestFrameMs": 41.60000000000002,
+            "completionMs": 81.69999999925494,
+            "errors": [],
+            "domNodes": 8019,
+            "eventListeners": 71,
+            "heapUsedKiB": 4256.43359375,
+            "styleRecalculations": 4,
+            "styleMs": 7.058,
+            "layoutMs": 34.334,
+            "scriptMs": 34.491,
+            "taskMs": 95.542,
+            "heapDeltaKiB": 1774.41015625
+          },
+          {
+            "styleReads": 1,
+            "sheetDisables": 1,
+            "treeWalks": 4000,
+            "walkedNodes": 4000,
+            "selectorMatches": 16003,
+            "markerWrites": 8000,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000068,
+            "longestFrameMs": 37.39999999999998,
+            "completionMs": 78.30000000074506,
+            "errors": [],
+            "domNodes": 8019,
+            "eventListeners": 71,
+            "heapUsedKiB": 4261.6640625,
+            "styleRecalculations": 4,
+            "styleMs": 6.997000000000001,
+            "layoutMs": 33.263,
+            "scriptMs": 32.855999999999995,
+            "taskMs": 91.04400000000001,
+            "heapDeltaKiB": 1779.55859375
+          },
+          {
+            "styleReads": 1,
+            "sheetDisables": 1,
+            "treeWalks": 4000,
+            "walkedNodes": 4000,
+            "selectorMatches": 16003,
+            "markerWrites": 8000,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 37.400000000000034,
+            "completionMs": 80.20000000018626,
+            "errors": [],
+            "domNodes": 8019,
+            "eventListeners": 71,
+            "heapUsedKiB": 4259.5546875,
+            "styleRecalculations": 4,
+            "styleMs": 7.031,
+            "layoutMs": 34.845,
+            "scriptMs": 33.906000000000006,
+            "taskMs": 95.21300000000002,
+            "heapDeltaKiB": 1777.53125
+          }
+        ]
+      },
+      "after": {
+        "summary": {
+          "styleReads": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "sheetDisables": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "treeWalks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "walkedNodes": {
+            "median": 4000,
+            "min": 4000,
+            "max": 4000
+          },
+          "selectorMatches": {
+            "median": 3,
+            "min": 3,
+            "max": 3
+          },
+          "markerWrites": {
+            "median": 8000,
+            "min": 8000,
+            "max": 8000
+          },
+          "longTasks": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "longestTaskMs": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "frameP95Ms": {
+            "median": 4.3,
+            "min": 4.3,
+            "max": 4.3
+          },
+          "longestFrameMs": {
+            "median": 33.4,
+            "min": 33.3,
+            "max": 37.4
+          },
+          "completionMs": {
+            "median": 75.4,
+            "min": 74.7,
+            "max": 80.7
+          },
+          "domNodes": {
+            "median": 8019,
+            "min": 8019,
+            "max": 8019
+          },
+          "eventListeners": {
+            "median": 72,
+            "min": 72,
+            "max": 72
+          },
+          "heapUsedKiB": {
+            "median": 4324,
+            "min": 2887.46,
+            "max": 4461.85
+          },
+          "styleRecalculations": {
+            "median": 4,
+            "min": 4,
+            "max": 4
+          },
+          "styleMs": {
+            "median": 7.24,
+            "min": 7.01,
+            "max": 7.66
+          },
+          "layoutMs": {
+            "median": 35.19,
+            "min": 34.09,
+            "max": 36.32
+          },
+          "scriptMs": {
+            "median": 30.03,
+            "min": 28.98,
+            "max": 31.86
+          },
+          "taskMs": {
+            "median": 92.21,
+            "min": 89.96,
+            "max": 95.06
+          },
+          "heapDeltaKiB": {
+            "median": 1830.26,
+            "min": 393.88,
+            "max": 1968.23
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 1,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 4000,
+            "selectorMatches": 3,
+            "markerWrites": 8000,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000068,
+            "longestFrameMs": 37.39999999999998,
+            "completionMs": 80.69999999925494,
+            "errors": [],
+            "domNodes": 8019,
+            "eventListeners": 72,
+            "heapUsedKiB": 2887.46484375,
+            "styleRecalculations": 4,
+            "styleMs": 7.24,
+            "layoutMs": 36.323,
+            "scriptMs": 31.855,
+            "taskMs": 95.055,
+            "heapDeltaKiB": 393.875
+          },
+          {
+            "styleReads": 1,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 4000,
+            "selectorMatches": 3,
+            "markerWrites": 8000,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000068,
+            "longestFrameMs": 33.30000000000001,
+            "completionMs": 75.3999999994412,
+            "errors": [],
+            "domNodes": 8019,
+            "eventListeners": 72,
+            "heapUsedKiB": 4461.84765625,
+            "styleRecalculations": 4,
+            "styleMs": 7.007999999999999,
+            "layoutMs": 34.089999999999996,
+            "scriptMs": 30.028,
+            "taskMs": 89.956,
+            "heapDeltaKiB": 1968.234375
+          },
+          {
+            "styleReads": 1,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 4000,
+            "selectorMatches": 3,
+            "markerWrites": 8000,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000068,
+            "longestFrameMs": 33.39999999999998,
+            "completionMs": 74.70000000018626,
+            "errors": [],
+            "domNodes": 8019,
+            "eventListeners": 72,
+            "heapUsedKiB": 4324,
+            "styleRecalculations": 4,
+            "styleMs": 7.662,
+            "layoutMs": 35.191,
+            "scriptMs": 28.977000000000004,
+            "taskMs": 92.209,
+            "heapDeltaKiB": 1830.2578125
+          }
+        ]
+      }
+    },
+    "appleUIMix/cold-wide": {
+      "disabled": {
+        "summary": {
+          "styleReads": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "sheetDisables": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "treeWalks": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "walkedNodes": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "selectorMatches": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "markerWrites": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "longTasks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "longestTaskMs": {
+            "median": 55,
+            "min": 54,
+            "max": 55
+          },
+          "frameP95Ms": {
+            "median": 4.3,
+            "min": 4.3,
+            "max": 4.3
+          },
+          "longestFrameMs": {
+            "median": 58.3,
+            "min": 58.2,
+            "max": 58.4
+          },
+          "completionMs": {
+            "median": 9.5,
+            "min": 9.1,
+            "max": 19.8
+          },
+          "domNodes": {
+            "median": 12322,
+            "min": 12322,
+            "max": 12322
+          },
+          "eventListeners": {
+            "median": 34,
+            "min": 34,
+            "max": 34
+          },
+          "heapUsedKiB": {
+            "median": 2288.9,
+            "min": 2288.86,
+            "max": 2288.91
+          },
+          "styleRecalculations": {
+            "median": 2,
+            "min": 2,
+            "max": 2
+          },
+          "styleMs": {
+            "median": 13.48,
+            "min": 13.32,
+            "max": 14.16
+          },
+          "layoutMs": {
+            "median": 36.25,
+            "min": 36,
+            "max": 36.52
+          },
+          "scriptMs": {
+            "median": 6.35,
+            "min": 6.34,
+            "max": 6.73
+          },
+          "taskMs": {
+            "median": 86.39,
+            "min": 84.01,
+            "max": 87.25
+          },
+          "heapDeltaKiB": {
+            "median": 1630.8,
+            "min": 1630.77,
+            "max": 1630.82
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 1,
+            "longestTaskMs": 55,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 58.2,
+            "completionMs": 9.5,
+            "errors": [],
+            "domNodes": 12322,
+            "eventListeners": 34,
+            "heapUsedKiB": 2288.86328125,
+            "styleRecalculations": 2,
+            "styleMs": 13.482,
+            "layoutMs": 36.254000000000005,
+            "scriptMs": 6.728,
+            "taskMs": 87.253,
+            "heapDeltaKiB": 1630.76953125
+          },
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 1,
+            "longestTaskMs": 54,
+            "frameP95Ms": 4.299999999999997,
+            "longestFrameMs": 58.400000000000006,
+            "completionMs": 9.099999999627471,
+            "errors": [],
+            "domNodes": 12322,
+            "eventListeners": 34,
+            "heapUsedKiB": 2288.91015625,
+            "styleRecalculations": 2,
+            "styleMs": 13.318999999999999,
+            "layoutMs": 35.997,
+            "scriptMs": 6.337,
+            "taskMs": 84.012,
+            "heapDeltaKiB": 1630.81640625
+          },
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 1,
+            "longestTaskMs": 55,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 58.300000000000004,
+            "completionMs": 19.799999999813735,
+            "errors": [],
+            "domNodes": 12322,
+            "eventListeners": 34,
+            "heapUsedKiB": 2288.8984375,
+            "styleRecalculations": 2,
+            "styleMs": 14.164,
+            "layoutMs": 36.522,
+            "scriptMs": 6.35,
+            "taskMs": 86.393,
+            "heapDeltaKiB": 1630.8046875
+          }
+        ]
+      },
+      "before": {
+        "summary": {
+          "styleReads": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "sheetDisables": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "treeWalks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "walkedNodes": {
+            "median": 6000,
+            "min": 6000,
+            "max": 6000
+          },
+          "selectorMatches": {
+            "median": 12016,
+            "min": 12016,
+            "max": 12016
+          },
+          "markerWrites": {
+            "median": 12000,
+            "min": 12000,
+            "max": 12000
+          },
+          "longTasks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "longestTaskMs": {
+            "median": 315,
+            "min": 315,
+            "max": 338
+          },
+          "frameP95Ms": {
+            "median": 4.3,
+            "min": 4.3,
+            "max": 8.4
+          },
+          "longestFrameMs": {
+            "median": 329.2,
+            "min": 329.1,
+            "max": 350.1
+          },
+          "completionMs": {
+            "median": 393.5,
+            "min": 389.1,
+            "max": 411.6
+          },
+          "domNodes": {
+            "median": 12319,
+            "min": 12319,
+            "max": 12319
+          },
+          "eventListeners": {
+            "median": 61,
+            "min": 61,
+            "max": 61
+          },
+          "heapUsedKiB": {
+            "median": 2756.03,
+            "min": 2754.97,
+            "max": 2758.52
+          },
+          "styleRecalculations": {
+            "median": 5,
+            "min": 5,
+            "max": 5
+          },
+          "styleMs": {
+            "median": 187.39,
+            "min": 186.44,
+            "max": 206.73
+          },
+          "layoutMs": {
+            "median": 138.57,
+            "min": 137.75,
+            "max": 139.52
+          },
+          "scriptMs": {
+            "median": 41.22,
+            "min": 40.72,
+            "max": 44.65
+          },
+          "taskMs": {
+            "median": 411.42,
+            "min": 407.63,
+            "max": 426.32
+          },
+          "heapDeltaKiB": {
+            "median": 2097.93,
+            "min": 2096.88,
+            "max": 2100.42
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 1,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 6000,
+            "selectorMatches": 12016,
+            "markerWrites": 12000,
+            "longTasks": 1,
+            "longestTaskMs": 338,
+            "frameP95Ms": 4.300000000000068,
+            "longestFrameMs": 350.09999999999997,
+            "completionMs": 411.59999999962747,
+            "errors": [],
+            "domNodes": 12319,
+            "eventListeners": 61,
+            "heapUsedKiB": 2758.515625,
+            "styleRecalculations": 5,
+            "styleMs": 206.725,
+            "layoutMs": 137.747,
+            "scriptMs": 41.222,
+            "taskMs": 426.318,
+            "heapDeltaKiB": 2100.421875
+          },
+          {
+            "styleReads": 1,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 6000,
+            "selectorMatches": 12016,
+            "markerWrites": 12000,
+            "longTasks": 1,
+            "longestTaskMs": 315,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 329.09999999999997,
+            "completionMs": 389.09999999962747,
+            "errors": [],
+            "domNodes": 12319,
+            "eventListeners": 61,
+            "heapUsedKiB": 2754.96875,
+            "styleRecalculations": 5,
+            "styleMs": 186.441,
+            "layoutMs": 139.523,
+            "scriptMs": 40.717999999999996,
+            "taskMs": 407.63,
+            "heapDeltaKiB": 2096.875
+          },
+          {
+            "styleReads": 1,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 6000,
+            "selectorMatches": 12016,
+            "markerWrites": 12000,
+            "longTasks": 1,
+            "longestTaskMs": 315,
+            "frameP95Ms": 8.399999999999977,
+            "longestFrameMs": 329.2,
+            "completionMs": 393.5,
+            "errors": [],
+            "domNodes": 12319,
+            "eventListeners": 61,
+            "heapUsedKiB": 2756.02734375,
+            "styleRecalculations": 5,
+            "styleMs": 187.389,
+            "layoutMs": 138.572,
+            "scriptMs": 44.651999999999994,
+            "taskMs": 411.422,
+            "heapDeltaKiB": 2097.93359375
+          }
+        ]
+      },
+      "after": {
+        "summary": {
+          "styleReads": {
+            "median": 2,
+            "min": 2,
+            "max": 2
+          },
+          "sheetDisables": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "treeWalks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "walkedNodes": {
+            "median": 6000,
+            "min": 6000,
+            "max": 6000
+          },
+          "selectorMatches": {
+            "median": 9,
+            "min": 9,
+            "max": 9
+          },
+          "markerWrites": {
+            "median": 12200,
+            "min": 12200,
+            "max": 12200
+          },
+          "longTasks": {
+            "median": 2,
+            "min": 2,
+            "max": 2
+          },
+          "longestTaskMs": {
+            "median": 352,
+            "min": 352,
+            "max": 356
+          },
+          "frameP95Ms": {
+            "median": 24.9,
+            "min": 20.8,
+            "max": 25
+          },
+          "longestFrameMs": {
+            "median": 358.4,
+            "min": 358.4,
+            "max": 362.5
+          },
+          "completionMs": {
+            "median": 509.5,
+            "min": 508.9,
+            "max": 513.2
+          },
+          "domNodes": {
+            "median": 12319,
+            "min": 12319,
+            "max": 12319
+          },
+          "eventListeners": {
+            "median": 72,
+            "min": 72,
+            "max": 72
+          },
+          "heapUsedKiB": {
+            "median": 3200.46,
+            "min": 3173.45,
+            "max": 3242.06
+          },
+          "styleRecalculations": {
+            "median": 6,
+            "min": 6,
+            "max": 6
+          },
+          "styleMs": {
+            "median": 268.49,
+            "min": 266.02,
+            "max": 269.96
+          },
+          "layoutMs": {
+            "median": 153.88,
+            "min": 151.6,
+            "max": 156.62
+          },
+          "scriptMs": {
+            "median": 41.74,
+            "min": 40.63,
+            "max": 42.35
+          },
+          "taskMs": {
+            "median": 506.84,
+            "min": 506.28,
+            "max": 511.24
+          },
+          "heapDeltaKiB": {
+            "median": 2542.37,
+            "min": 2515.36,
+            "max": 2583.97
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 2,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 6000,
+            "selectorMatches": 9,
+            "markerWrites": 12200,
+            "longTasks": 2,
+            "longestTaskMs": 356,
+            "frameP95Ms": 25,
+            "longestFrameMs": 362.5,
+            "completionMs": 513.2000000001863,
+            "errors": [],
+            "domNodes": 12319,
+            "eventListeners": 72,
+            "heapUsedKiB": 3242.0625,
+            "styleRecalculations": 6,
+            "styleMs": 269.96,
+            "layoutMs": 156.618,
+            "scriptMs": 40.628,
+            "taskMs": 511.24199999999996,
+            "heapDeltaKiB": 2583.96875
+          },
+          {
+            "styleReads": 2,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 6000,
+            "selectorMatches": 9,
+            "markerWrites": 12200,
+            "longTasks": 2,
+            "longestTaskMs": 352,
+            "frameP95Ms": 20.799999999999997,
+            "longestFrameMs": 358.4,
+            "completionMs": 508.90000000037253,
+            "errors": [],
+            "domNodes": 12319,
+            "eventListeners": 72,
+            "heapUsedKiB": 3173.453125,
+            "styleRecalculations": 6,
+            "styleMs": 268.48699999999997,
+            "layoutMs": 151.598,
+            "scriptMs": 41.739,
+            "taskMs": 506.282,
+            "heapDeltaKiB": 2515.359375
+          },
+          {
+            "styleReads": 2,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 6000,
+            "selectorMatches": 9,
+            "markerWrites": 12200,
+            "longTasks": 2,
+            "longestTaskMs": 352,
+            "frameP95Ms": 24.900000000000006,
+            "longestFrameMs": 358.4,
+            "completionMs": 509.5,
+            "errors": [],
+            "domNodes": 12319,
+            "eventListeners": 72,
+            "heapUsedKiB": 3200.46484375,
+            "styleRecalculations": 6,
+            "styleMs": 266.021,
+            "layoutMs": 153.88,
+            "scriptMs": 42.347,
+            "taskMs": 506.84200000000004,
+            "heapDeltaKiB": 2542.37109375
+          }
+        ]
+      }
+    },
+    "appleUIMix/cold-rules": {
+      "disabled": {
+        "summary": {
+          "styleReads": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "sheetDisables": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "treeWalks": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "walkedNodes": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "selectorMatches": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "markerWrites": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "longTasks": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "longestTaskMs": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "frameP95Ms": {
+            "median": 4.3,
+            "min": 4.3,
+            "max": 4.3
+          },
+          "longestFrameMs": {
+            "median": 24.9,
+            "min": 24.9,
+            "max": 25
+          },
+          "completionMs": {
+            "median": 8,
+            "min": 7.8,
+            "max": 8.9
+          },
+          "domNodes": {
+            "median": 3224,
+            "min": 3224,
+            "max": 3224
+          },
+          "eventListeners": {
+            "median": 30,
+            "min": 30,
+            "max": 34
+          },
+          "heapUsedKiB": {
+            "median": 2282.2,
+            "min": 2280.93,
+            "max": 2284.03
+          },
+          "styleRecalculations": {
+            "median": 2,
+            "min": 2,
+            "max": 2
+          },
+          "styleMs": {
+            "median": 1.24,
+            "min": 1.2,
+            "max": 1.32
+          },
+          "layoutMs": {
+            "median": 20.96,
+            "min": 20.75,
+            "max": 23.28
+          },
+          "scriptMs": {
+            "median": 6.51,
+            "min": 6.22,
+            "max": 6.62
+          },
+          "taskMs": {
+            "median": 48.01,
+            "min": 45.81,
+            "max": 51.16
+          },
+          "heapDeltaKiB": {
+            "median": 1624.11,
+            "min": 1622.83,
+            "max": 1625.94
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 24.900000000000002,
+            "completionMs": 8.900000000372529,
+            "errors": [],
+            "domNodes": 3224,
+            "eventListeners": 34,
+            "heapUsedKiB": 2284.03125,
+            "styleRecalculations": 2,
+            "styleMs": 1.244,
+            "layoutMs": 23.276,
+            "scriptMs": 6.6160000000000005,
+            "taskMs": 51.160000000000004,
+            "heapDeltaKiB": 1625.9375
+          },
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.299999999999983,
+            "longestFrameMs": 24.900000000000002,
+            "completionMs": 8,
+            "errors": [],
+            "domNodes": 3224,
+            "eventListeners": 30,
+            "heapUsedKiB": 2280.92578125,
+            "styleRecalculations": 2,
+            "styleMs": 1.315,
+            "layoutMs": 20.962,
+            "scriptMs": 6.511,
+            "taskMs": 48.010999999999996,
+            "heapDeltaKiB": 1622.83203125
+          },
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 25,
+            "completionMs": 7.7999999998137355,
+            "errors": [],
+            "domNodes": 3224,
+            "eventListeners": 30,
+            "heapUsedKiB": 2282.203125,
+            "styleRecalculations": 2,
+            "styleMs": 1.203,
+            "layoutMs": 20.745,
+            "scriptMs": 6.216,
+            "taskMs": 45.809000000000005,
+            "heapDeltaKiB": 1624.109375
+          }
+        ]
+      },
+      "before": {
+        "summary": {
+          "styleReads": {
+            "median": 800,
+            "min": 800,
+            "max": 800
+          },
+          "sheetDisables": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "treeWalks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "walkedNodes": {
+            "median": 1600,
+            "min": 1600,
+            "max": 1600
+          },
+          "selectorMatches": {
+            "median": 1286417,
+            "min": 1286417,
+            "max": 1286417
+          },
+          "markerWrites": {
+            "median": 1600,
+            "min": 1600,
+            "max": 1600
+          },
+          "longTasks": {
+            "median": 2,
+            "min": 2,
+            "max": 2
+          },
+          "longestTaskMs": {
+            "median": 459,
+            "min": 454,
+            "max": 465
+          },
+          "frameP95Ms": {
+            "median": 4.3,
+            "min": 4.3,
+            "max": 4.3
+          },
+          "longestFrameMs": {
+            "median": 650.1,
+            "min": 645.8,
+            "max": 658.6
+          },
+          "completionMs": {
+            "median": 672.8,
+            "min": 667.4,
+            "max": 681.5
+          },
+          "domNodes": {
+            "median": 3218,
+            "min": 3217,
+            "max": 3218
+          },
+          "eventListeners": {
+            "median": 66,
+            "min": 64,
+            "max": 66
+          },
+          "heapUsedKiB": {
+            "median": 2799.56,
+            "min": 2159.17,
+            "max": 2925.93
+          },
+          "styleRecalculations": {
+            "median": 3,
+            "min": 3,
+            "max": 3
+          },
+          "styleMs": {
+            "median": 3.2,
+            "min": 3.15,
+            "max": 3.25
+          },
+          "layoutMs": {
+            "median": 189.41,
+            "min": 188.83,
+            "max": 190.5
+          },
+          "scriptMs": {
+            "median": 7.96,
+            "min": 7.59,
+            "max": 8.33
+          },
+          "taskMs": {
+            "median": 680.66,
+            "min": 670.77,
+            "max": 684.25
+          },
+          "heapDeltaKiB": {
+            "median": 2141.47,
+            "min": 1501.07,
+            "max": 2267.84
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 800,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 1600,
+            "selectorMatches": 1286417,
+            "markerWrites": 1600,
+            "longTasks": 2,
+            "longestTaskMs": 459,
+            "frameP95Ms": 4.2999999999999545,
+            "longestFrameMs": 650.1,
+            "completionMs": 672.8000000007451,
+            "errors": [],
+            "domNodes": 3217,
+            "eventListeners": 64,
+            "heapUsedKiB": 2159.16796875,
+            "styleRecalculations": 3,
+            "styleMs": 3.153,
+            "layoutMs": 188.82999999999998,
+            "scriptMs": 8.332,
+            "taskMs": 680.66,
+            "heapDeltaKiB": 1501.07421875
+          },
+          {
+            "styleReads": 800,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 1600,
+            "selectorMatches": 1286417,
+            "markerWrites": 1600,
+            "longTasks": 2,
+            "longestTaskMs": 454,
+            "frameP95Ms": 4.300000000000068,
+            "longestFrameMs": 645.8,
+            "completionMs": 667.4000000003725,
+            "errors": [],
+            "domNodes": 3218,
+            "eventListeners": 66,
+            "heapUsedKiB": 2925.93359375,
+            "styleRecalculations": 3,
+            "styleMs": 3.251,
+            "layoutMs": 189.413,
+            "scriptMs": 7.9590000000000005,
+            "taskMs": 670.768,
+            "heapDeltaKiB": 2267.83984375
+          },
+          {
+            "styleReads": 800,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 1600,
+            "selectorMatches": 1286417,
+            "markerWrites": 1600,
+            "longTasks": 2,
+            "longestTaskMs": 465,
+            "frameP95Ms": 4.300000000000068,
+            "longestFrameMs": 658.6,
+            "completionMs": 681.5,
+            "errors": [],
+            "domNodes": 3218,
+            "eventListeners": 66,
+            "heapUsedKiB": 2799.5625,
+            "styleRecalculations": 3,
+            "styleMs": 3.199,
+            "layoutMs": 190.49699999999999,
+            "scriptMs": 7.585,
+            "taskMs": 684.2510000000001,
+            "heapDeltaKiB": 2141.46875
+          }
+        ]
+      },
+      "after": {
+        "summary": {
+          "styleReads": {
+            "median": 800,
+            "min": 800,
+            "max": 800
+          },
+          "sheetDisables": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "treeWalks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "walkedNodes": {
+            "median": 1600,
+            "min": 1600,
+            "max": 1600
+          },
+          "selectorMatches": {
+            "median": 10,
+            "min": 10,
+            "max": 10
+          },
+          "markerWrites": {
+            "median": 1600,
+            "min": 1600,
+            "max": 1600
+          },
+          "longTasks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "longestTaskMs": {
+            "median": 190,
+            "min": 189,
+            "max": 196
+          },
+          "frameP95Ms": {
+            "median": 4.3,
+            "min": 4.3,
+            "max": 4.3
+          },
+          "longestFrameMs": {
+            "median": 208.5,
+            "min": 208.3,
+            "max": 212.4
+          },
+          "completionMs": {
+            "median": 236.2,
+            "min": 232.9,
+            "max": 241.4
+          },
+          "domNodes": {
+            "median": 3231,
+            "min": 3231,
+            "max": 3231
+          },
+          "eventListeners": {
+            "median": 67,
+            "min": 67,
+            "max": 67
+          },
+          "heapUsedKiB": {
+            "median": 3270.92,
+            "min": 3259.59,
+            "max": 3290.54
+          },
+          "styleRecalculations": {
+            "median": 3,
+            "min": 3,
+            "max": 3
+          },
+          "styleMs": {
+            "median": 3.2,
+            "min": 3.16,
+            "max": 3.2
+          },
+          "layoutMs": {
+            "median": 186.97,
+            "min": 186.24,
+            "max": 193.49
+          },
+          "scriptMs": {
+            "median": 8.2,
+            "min": 7.5,
+            "max": 8.2
+          },
+          "taskMs": {
+            "median": 233.49,
+            "min": 233,
+            "max": 237.67
+          },
+          "heapDeltaKiB": {
+            "median": 2612.83,
+            "min": 2601.5,
+            "max": 2632.45
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 800,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 1600,
+            "selectorMatches": 10,
+            "markerWrites": 1600,
+            "longTasks": 1,
+            "longestTaskMs": 189,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 208.29999999999998,
+            "completionMs": 232.8999999994412,
+            "errors": [],
+            "domNodes": 3231,
+            "eventListeners": 67,
+            "heapUsedKiB": 3259.59375,
+            "styleRecalculations": 3,
+            "styleMs": 3.157,
+            "layoutMs": 186.238,
+            "scriptMs": 8.203,
+            "taskMs": 233.49299999999997,
+            "heapDeltaKiB": 2601.5
+          },
+          {
+            "styleReads": 800,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 1600,
+            "selectorMatches": 10,
+            "markerWrites": 1600,
+            "longTasks": 1,
+            "longestTaskMs": 190,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 208.5,
+            "completionMs": 241.3999999994412,
+            "errors": [],
+            "domNodes": 3231,
+            "eventListeners": 67,
+            "heapUsedKiB": 3290.54296875,
+            "styleRecalculations": 3,
+            "styleMs": 3.202,
+            "layoutMs": 186.97,
+            "scriptMs": 8.201,
+            "taskMs": 233.00400000000002,
+            "heapDeltaKiB": 2632.44921875
+          },
+          {
+            "styleReads": 800,
+            "sheetDisables": 1,
+            "treeWalks": 1,
+            "walkedNodes": 1600,
+            "selectorMatches": 10,
+            "markerWrites": 1600,
+            "longTasks": 1,
+            "longestTaskMs": 196,
+            "frameP95Ms": 4.2999999999999545,
+            "longestFrameMs": 212.39999999999998,
+            "completionMs": 236.20000000018626,
+            "errors": [],
+            "domNodes": 3231,
+            "eventListeners": 67,
+            "heapUsedKiB": 3270.921875,
+            "styleRecalculations": 3,
+            "styleMs": 3.198,
+            "layoutMs": 193.49,
+            "scriptMs": 7.496,
+            "taskMs": 237.67,
+            "heapDeltaKiB": 2612.828125
+          }
+        ]
+      }
+    },
+    "appleUIMix/insert-wide": {
+      "disabled": {
+        "summary": {
+          "styleReads": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "sheetDisables": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "treeWalks": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "walkedNodes": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "selectorMatches": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "markerWrites": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "longTasks": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "longestTaskMs": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "frameP95Ms": {
+            "median": 4.3,
+            "min": 4.2,
+            "max": 4.3
+          },
+          "longestFrameMs": {
+            "median": 25,
+            "min": 25,
+            "max": 25
+          },
+          "completionMs": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "domNodes": {
+            "median": 8011,
+            "min": 8011,
+            "max": 8011
+          },
+          "eventListeners": {
+            "median": 35,
+            "min": 35,
+            "max": 35
+          },
+          "heapUsedKiB": {
+            "median": 1726.39,
+            "min": 1726.32,
+            "max": 1726.44
+          },
+          "styleRecalculations": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "styleMs": {
+            "median": 2.71,
+            "min": 2.58,
+            "max": 2.76
+          },
+          "layoutMs": {
+            "median": 19.9,
+            "min": 19.14,
+            "max": 20.44
+          },
+          "scriptMs": {
+            "median": 1.86,
+            "min": 1.78,
+            "max": 2.06
+          },
+          "taskMs": {
+            "median": 43.58,
+            "min": 43.45,
+            "max": 44.45
+          },
+          "heapDeltaKiB": {
+            "median": -551.55,
+            "min": -551.65,
+            "max": -551.54
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 25,
+            "completionMs": 0,
+            "errors": [],
+            "domNodes": 8011,
+            "eventListeners": 35,
+            "heapUsedKiB": 1726.32421875,
+            "styleRecalculations": 1,
+            "styleMs": 2.5820000000000003,
+            "layoutMs": 20.436,
+            "scriptMs": 1.8580000000000003,
+            "taskMs": 43.580000000000005,
+            "heapDeltaKiB": -551.6484375
+          },
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.300000000000011,
+            "longestFrameMs": 25,
+            "completionMs": 0,
+            "errors": [],
+            "domNodes": 8011,
+            "eventListeners": 35,
+            "heapUsedKiB": 1726.39453125,
+            "styleRecalculations": 1,
+            "styleMs": 2.711,
+            "layoutMs": 19.899,
+            "scriptMs": 2.057,
+            "taskMs": 44.446999999999996,
+            "heapDeltaKiB": -551.54296875
+          },
+          {
+            "styleReads": 0,
+            "sheetDisables": 0,
+            "treeWalks": 0,
+            "walkedNodes": 0,
+            "selectorMatches": 0,
+            "markerWrites": 0,
+            "longTasks": 0,
+            "longestTaskMs": 0,
+            "frameP95Ms": 4.2000000000000455,
+            "longestFrameMs": 25,
+            "completionMs": 0,
+            "errors": [],
+            "domNodes": 8011,
+            "eventListeners": 35,
+            "heapUsedKiB": 1726.44140625,
+            "styleRecalculations": 1,
+            "styleMs": 2.7649999999999997,
+            "layoutMs": 19.141,
+            "scriptMs": 1.7799999999999994,
+            "taskMs": 43.452,
+            "heapDeltaKiB": -551.5546875
+          }
+        ]
+      },
+      "before": {
+        "summary": {
+          "styleReads": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "sheetDisables": {
+            "median": 2,
+            "min": 2,
+            "max": 2
+          },
+          "treeWalks": {
+            "median": 4000,
+            "min": 4000,
+            "max": 4000
+          },
+          "walkedNodes": {
+            "median": 4000,
+            "min": 4000,
+            "max": 4000
+          },
+          "selectorMatches": {
+            "median": 16003,
+            "min": 16003,
+            "max": 16003
+          },
+          "markerWrites": {
+            "median": 8000,
+            "min": 8000,
+            "max": 8000
+          },
+          "longTasks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "longestTaskMs": {
+            "median": 109,
+            "min": 107,
+            "max": 113
+          },
+          "frameP95Ms": {
+            "median": 4.3,
+            "min": 4.3,
+            "max": 4.3
+          },
+          "longestFrameMs": {
+            "median": 108.3,
+            "min": 108.3,
+            "max": 112.6
+          },
+          "completionMs": {
+            "median": 168.9,
+            "min": 168.5,
+            "max": 171.5
+          },
+          "domNodes": {
+            "median": 8021,
+            "min": 8021,
+            "max": 8022
+          },
+          "eventListeners": {
+            "median": 71,
+            "min": 71,
+            "max": 71
+          },
+          "heapUsedKiB": {
+            "median": 4320.07,
+            "min": 4272.39,
+            "max": 4350.07
+          },
+          "styleRecalculations": {
+            "median": 4,
+            "min": 4,
+            "max": 4
+          },
+          "styleMs": {
+            "median": 85.8,
+            "min": 83.22,
+            "max": 87.83
+          },
+          "layoutMs": {
+            "median": 43.55,
+            "min": 43.19,
+            "max": 45
+          },
+          "scriptMs": {
+            "median": 36.41,
+            "min": 35.61,
+            "max": 39.18
+          },
+          "taskMs": {
+            "median": 185.63,
+            "min": 185.47,
+            "max": 188.76
+          },
+          "heapDeltaKiB": {
+            "median": 1824.63,
+            "min": 1776.82,
+            "max": 1854.62
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 1,
+            "sheetDisables": 2,
+            "treeWalks": 4000,
+            "walkedNodes": 4000,
+            "selectorMatches": 16003,
+            "markerWrites": 8000,
+            "longTasks": 1,
+            "longestTaskMs": 107,
+            "frameP95Ms": 4.2999999999999545,
+            "longestFrameMs": 108.30000000000007,
+            "completionMs": 168.90000000037253,
+            "errors": [],
+            "domNodes": 8022,
+            "eventListeners": 71,
+            "heapUsedKiB": 4272.39453125,
+            "styleRecalculations": 4,
+            "styleMs": 83.215,
+            "layoutMs": 43.55200000000001,
+            "scriptMs": 39.18299999999999,
+            "taskMs": 185.47100000000003,
+            "heapDeltaKiB": 1776.81640625
+          },
+          {
+            "styleReads": 1,
+            "sheetDisables": 2,
+            "treeWalks": 4000,
+            "walkedNodes": 4000,
+            "selectorMatches": 16003,
+            "markerWrites": 8000,
+            "longTasks": 1,
+            "longestTaskMs": 113,
+            "frameP95Ms": 4.2999999999999545,
+            "longestFrameMs": 112.59999999999991,
+            "completionMs": 171.5,
+            "errors": [],
+            "domNodes": 8021,
+            "eventListeners": 71,
+            "heapUsedKiB": 4320.07421875,
+            "styleRecalculations": 4,
+            "styleMs": 87.83399999999999,
+            "layoutMs": 44.995000000000005,
+            "scriptMs": 35.609,
+            "taskMs": 188.762,
+            "heapDeltaKiB": 1824.625
+          },
+          {
+            "styleReads": 1,
+            "sheetDisables": 2,
+            "treeWalks": 4000,
+            "walkedNodes": 4000,
+            "selectorMatches": 16003,
+            "markerWrites": 8000,
+            "longTasks": 1,
+            "longestTaskMs": 109,
+            "frameP95Ms": 4.300000000000068,
+            "longestFrameMs": 108.30000000000007,
+            "completionMs": 168.5,
+            "errors": [],
+            "domNodes": 8021,
+            "eventListeners": 71,
+            "heapUsedKiB": 4350.06640625,
+            "styleRecalculations": 4,
+            "styleMs": 85.80399999999999,
+            "layoutMs": 43.190000000000005,
+            "scriptMs": 36.41,
+            "taskMs": 185.627,
+            "heapDeltaKiB": 1854.6171875
+          }
+        ]
+      },
+      "after": {
+        "summary": {
+          "styleReads": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "sheetDisables": {
+            "median": 2,
+            "min": 2,
+            "max": 2
+          },
+          "treeWalks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "walkedNodes": {
+            "median": 4000,
+            "min": 4000,
+            "max": 4000
+          },
+          "selectorMatches": {
+            "median": 3,
+            "min": 3,
+            "max": 3
+          },
+          "markerWrites": {
+            "median": 8000,
+            "min": 8000,
+            "max": 8000
+          },
+          "longTasks": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "longestTaskMs": {
+            "median": 111,
+            "min": 109,
+            "max": 111
+          },
+          "frameP95Ms": {
+            "median": 4.3,
+            "min": 4.3,
+            "max": 4.4
+          },
+          "longestFrameMs": {
+            "median": 112.5,
+            "min": 108.4,
+            "max": 112.5
+          },
+          "completionMs": {
+            "median": 166.8,
+            "min": 162.1,
+            "max": 166.9
+          },
+          "domNodes": {
+            "median": 8021,
+            "min": 8021,
+            "max": 8021
+          },
+          "eventListeners": {
+            "median": 72,
+            "min": 72,
+            "max": 72
+          },
+          "heapUsedKiB": {
+            "median": 2944.48,
+            "min": 2943.25,
+            "max": 2961.74
+          },
+          "styleRecalculations": {
+            "median": 4,
+            "min": 4,
+            "max": 4
+          },
+          "styleMs": {
+            "median": 86.75,
+            "min": 85.51,
+            "max": 87.25
+          },
+          "layoutMs": {
+            "median": 44.47,
+            "min": 44.02,
+            "max": 44.9
+          },
+          "scriptMs": {
+            "median": 32.46,
+            "min": 30.11,
+            "max": 32.59
+          },
+          "taskMs": {
+            "median": 184.21,
+            "min": 178.95,
+            "max": 184.38
+          },
+          "heapDeltaKiB": {
+            "median": 436.46,
+            "min": 435.23,
+            "max": 453.64
+          }
+        },
+        "samples": [
+          {
+            "styleReads": 1,
+            "sheetDisables": 2,
+            "treeWalks": 1,
+            "walkedNodes": 4000,
+            "selectorMatches": 3,
+            "markerWrites": 8000,
+            "longTasks": 1,
+            "longestTaskMs": 109,
+            "frameP95Ms": 4.300000000000068,
+            "longestFrameMs": 108.39999999999998,
+            "completionMs": 162.09999999962747,
+            "errors": [],
+            "domNodes": 8021,
+            "eventListeners": 72,
+            "heapUsedKiB": 2961.7421875,
+            "styleRecalculations": 4,
+            "styleMs": 85.50600000000001,
+            "layoutMs": 44.018,
+            "scriptMs": 30.105,
+            "taskMs": 178.95299999999997,
+            "heapDeltaKiB": 453.64453125
+          },
+          {
+            "styleReads": 1,
+            "sheetDisables": 2,
+            "treeWalks": 1,
+            "walkedNodes": 4000,
+            "selectorMatches": 3,
+            "markerWrites": 8000,
+            "longTasks": 1,
+            "longestTaskMs": 111,
+            "frameP95Ms": 4.399999999999977,
+            "longestFrameMs": 112.5,
+            "completionMs": 166.90000000037253,
+            "errors": [],
+            "domNodes": 8021,
+            "eventListeners": 72,
+            "heapUsedKiB": 2944.48046875,
+            "styleRecalculations": 4,
+            "styleMs": 87.246,
+            "layoutMs": 44.903,
+            "scriptMs": 32.463,
+            "taskMs": 184.38299999999998,
+            "heapDeltaKiB": 436.46484375
+          },
+          {
+            "styleReads": 1,
+            "sheetDisables": 2,
+            "treeWalks": 1,
+            "walkedNodes": 4000,
+            "selectorMatches": 3,
+            "markerWrites": 8000,
+            "longTasks": 1,
+            "longestTaskMs": 111,
+            "frameP95Ms": 4.300000000000068,
+            "longestFrameMs": 112.5,
+            "completionMs": 166.79999999981374,
+            "errors": [],
+            "domNodes": 8021,
+            "eventListeners": 72,
+            "heapUsedKiB": 2943.25,
+            "styleRecalculations": 4,
+            "styleMs": 86.74699999999999,
+            "layoutMs": 44.47199999999999,
+            "scriptMs": 32.59,
+            "taskMs": 184.20500000000004,
+            "heapDeltaKiB": 435.23046875
+          }
+        ]
+      }
+    }
+  },
+  "sourceHashes": {
+    "before": {
+      "shared": "e879c7f0ba7d0396d14dfbc0c18b5fdaf5b5c5e7ec39b700f22a38d9a80d86f5",
+      "content": "ba1d3f1ce4e2d25a5a34cb8343db75918577361a8a78b8d5c20763e81e78b882",
+      "css": "f320e9752476a3ba0385c4b4c6f837bd08967ff6a85a6996770fa14918fe5ac4"
+    },
+    "after": {
+      "shared": "e879c7f0ba7d0396d14dfbc0c18b5fdaf5b5c5e7ec39b700f22a38d9a80d86f5",
+      "content": "d5619958d73cb4e53f89e9c2eab048b9e1d1b8ea1f398a1b464689b54efcc2ec",
+      "css": "8f21da2021294b92716040bd882cfc13271692cb9041432974f03e57b697bae4"
+    }
+  }
+}
