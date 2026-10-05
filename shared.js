@@ -54,12 +54,9 @@ body,
     "PingFang UI HK",
     "PingFang UI TC",
     "PingFang UI MO",
-    "Hiragino Sans",
-    "Apple SD Gothic Neo",
 
-    /* 前述字体缺失或缺字时，继续回退至微软雅黑与霞鹜新晰黑。 */
-    "Microsoft YaHei",
-    "霞鹜新晰黑 屏幕阅读版 补全" !important;
+    /* 前述字体缺失或缺字时，回退至微软雅黑。 */
+    "Microsoft YaHei" !important;
 
   font-variation-settings: normal !important;
   text-autospace: normal !important;

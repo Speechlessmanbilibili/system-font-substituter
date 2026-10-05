@@ -53,7 +53,7 @@
 
 ## 自定义 CSS
 
-设置页可向页面注入自定义 CSS，默认关闭，内置一套 Apple UI Mix 模板作为起点。模板的 `@font-face` 分段与 unicode-range 按本机字体源文件实测（fontTools）划定：西文命中 SF Pro Text，中文命中苹方 UI SC，中西文共有的标点符号交给苹方，PUA（E000-F8FF，含 Apple 标志）交给 SF Pro Text。模板以 SF Pro Text 静态套件提供西文，以苹方 UI SC 变量字体提供 CJK；其他文种经过 SF Arabic/SF Hebrew/SF Armenian/SF Georgian、苹方 UI HK/TC/MO、Hiragino Sans、Apple SD Gothic Neo，再回退至 Microsoft YaHei 与霞鹜新晰黑。注入跟随全局启用开关，也可在站点规则中按站点单独开启或关闭；内容留空则不注入。
+设置页可向页面注入自定义 CSS，默认关闭，内置一套 Apple UI Mix 模板作为起点。模板的 `@font-face` 分段与 unicode-range 按本机字体源文件实测（fontTools）划定：西文命中 SF Pro Text，中文命中苹方 UI SC，中西文共有的标点符号交给苹方，PUA（E000-F8FF，含 Apple 标志）交给 SF Pro Text。模板以 SF Pro Text 静态套件提供西文，以苹方 UI SC 变量字体提供 CJK；模板范围之外的字符按 SF Pro Text、SF Arabic/SF Hebrew/SF Armenian/SF Georgian、苹方 UI SC/HK/TC/MO 依次回退，最后使用 Microsoft YaHei。注入跟随全局启用开关，也可在站点规则中按站点单独开启或关闭；内容留空则不注入。
 
 自定义 CSS 开启且内容非空时接管替换：替换字体链自动失效，扩展照常检测并标记命中替换条件的元素（检测阶段仍遵循代码与图标保护规则），这些元素及其占位文字改用自定义 CSS 的字体栈渲染；连字程度与 Auto Spacing 仍按各自配置作用于标记元素。关闭自定义 CSS 或将内容留空时，普通替换链恢复。自定义 CSS 按用户填写的选择器生效，全局选择器也会影响未标记元素。
 
@@ -70,7 +70,12 @@
 - 默认保护 `code`、`pre`、`kbd`、`samp`。
 - 默认识别并保护常见图标字体。
 - 通过 DOM 新增节点、文本和相关属性变化重新判断字体，并在样式表加载后补查。
-- WebFont 加载完成后会重新检查页面。
+- 已有非空文字的流式更新复用字体判断，同一帧多个区域的变化合并采样；字体属性、语言及自动文字方向变化仍重新检查。
+- 自动文字方向未变化时复用已有判断。连续输入时将重检合并至停顿 180 ms 后，输入法组词期间暂停扫描；组词结束或失焦后恢复，避免逐键开关全页样式表。
+- 拖动文字选区时暂缓字体扫描，松开鼠标后合并重检；新增节点复用未变化的祖先匹配结果，注释节点变动不触发扫描。
+- 按网站字体声明筛选交互属性变化，跳过无关的高度、位置、颜色与布局变量；相同字体来源的新节点复用原样式快照，减少停用全页样式表。
+- 跨域样式表由扩展后台读取并在本地分析；读取失败或无法确定字体来源时继续使用完整采样。
+- 初次扫描时仍在加载的 WebFont 完成后会重新检查页面。
 - 浏览器受保护页面无法注入普通扩展。
 
 ## 更新记录
@@ -83,6 +88,7 @@
 npm ci
 npx playwright install chromium
 npm test
+node scripts/profile-performance.cjs v2.1.2
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-release.ps1
 ```
 

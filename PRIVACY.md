@@ -18,6 +18,8 @@ Extension settings are stored using Chromium's `chrome.storage.sync` API. Depend
 
 The extension does not contact a developer-operated server and does not load or execute remotely hosted code.
 
+To avoid unnecessary font scans during page interactions, the extension analyzes the page’s existing CSS font declarations locally. When the browser prevents direct access to a cross-origin stylesheet, the extension may request that stylesheet from its original URL without site credentials. Only CSS text is accepted, parsed in memory and used to determine whether font sampling is necessary. The retrieved text is not injected into the page or executed. These requests do not include page text, conversation content or extension settings. If a stylesheet cannot be read, the extension continues using full font sampling.
+
 ## Changes
 
 If the extension's data practices change, this policy will be updated before such changes are released.

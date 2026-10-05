@@ -10,6 +10,7 @@
   const STYLE_ID = "sfs-style";
   const CUSTOM_STYLE_ID = "sfs-custom-style";
   const SCAN_CHUNK = 2000;
+  const INPUT_QUIET_MS = 180;
 
   let settings = DEFAULTS;
   let targetSet = new Set();
@@ -39,17 +40,269 @@
   let loadEpoch = 0;
   let cssGeneration = null;
   let siteCSSGenerations = [];
+  let sampledElements = new WeakSet();
+  let nonemptyTextNodes = new WeakSet();
+  let autoDirections = new WeakMap();
+  const pendingAttributes = new Map();
+  const deferredFontWork = new Set();
+  let inputDeadline = 0;
+  let composing = false;
+  let selectionPointer = null;
+  let selecting = false;
+  let inputTimer = null;
+  let typographyIndex = null;
+  let typographyContexts = new WeakMap();
+  const fontSamples = new Map();
+  const FONT_SAMPLE_LIMIT = 1024;
+  // 字号、字重等仍由浏览器正常排版；只有影响判断或原样式快照的声明参与索引。
+  const FONT_PROPERTY_RE = /^(?:font|font-family|font-feature-settings|font-variant|font-variant-ligatures|text-autospace|direction|unicode-bidi|all)$/;
+  const externalSheetRules = new WeakMap();
+  const externalSheetPending = new WeakSet();
 
   function cancelScans() {
     scanEpoch++;
     scanQueue = [];
     queuedNodes.clear();
     pending.clear();
+    pendingAttributes.clear();
+    deferredFontWork.clear();
+    clearTimeout(inputTimer);
+    inputTimer = null;
     scanning = false;
     scheduled = false;
     styleNeedsReposition = false;
+    sampledElements = new WeakSet();
+    nonemptyTextNodes = new WeakSet();
+    autoDirections = new WeakMap();
+    invalidateTypography();
     clearTimeout(stylesheetTimer);
     stylesheetTimer = null;
+  }
+
+  function editingBusy() {
+    return composing || selecting || performance.now() < inputDeadline;
+  }
+
+  function releaseFontWork() {
+    clearTimeout(inputTimer);
+    inputTimer = null;
+    if (!deferredFontWork.size || composing || selecting) return;
+    const remaining = inputDeadline - performance.now();
+    if (remaining > 0) {
+      inputTimer = setTimeout(releaseFontWork, remaining);
+      return;
+    }
+    const work = [...deferredFontWork];
+    deferredFontWork.clear();
+    work.forEach(task => requestAnimationFrame(task));
+  }
+
+  // 连续输入、组词和鼠标拖选时暂缓扫描，结束后合并处理，避免反复开关全页样式。
+  function scheduleFontWork(task, epoch = scanEpoch) {
+    const run = () => {
+      if (epoch !== scanEpoch || !settings.enabled || siteOff) return;
+      if (editingBusy()) {
+        deferredFontWork.add(run);
+        releaseFontWork();
+      } else task();
+    };
+    requestAnimationFrame(run);
+  }
+
+  function trackEditing(event) {
+    const target = event.target;
+    if (!(target instanceof Element) || !(target.matches("input, textarea") || target.isContentEditable)) return;
+    if (event.type === "compositionstart") composing = true;
+    else if (event.type === "compositionend" || event.type === "focusout") composing = false;
+    inputDeadline = performance.now() + INPUT_QUIET_MS;
+    if (event.type === "input" && settings.enabled && !siteOff) {
+      const directionRoot = textRecheckRoot(target);
+      if (directionRoot) queue(directionRoot);
+    }
+    releaseFontWork();
+  }
+
+  for (const type of ["beforeinput", "input", "compositionstart", "compositionupdate", "compositionend", "focusout"]) {
+    document.addEventListener(type, trackEditing, true);
+  }
+
+  function finishSelection() {
+    selectionPointer = null;
+    if (selecting) inputDeadline = Math.max(inputDeadline, performance.now() + INPUT_QUIET_MS);
+    selecting = false;
+    releaseFontWork();
+  }
+
+  // 编辑框从按下鼠标开始暂停；普通网页文字由原生 selectstart 确认拖选。
+  // 只跟踪主指针左键，不取消事件，也不接管选区或指针捕获。
+  window.addEventListener("pointerdown", event => {
+    if (!event.isPrimary || event.button !== 0) return;
+    selectionPointer = event.pointerId;
+    const target = event.target;
+    selecting = target instanceof Element && (target.matches("input, textarea") || target.isContentEditable);
+    if (selecting) releaseFontWork();
+  }, { capture: true, passive: true });
+  document.addEventListener("selectstart", () => {
+    if (selectionPointer === null) return;
+    selecting = true;
+    releaseFontWork();
+  }, { capture: true, passive: true });
+  for (const type of ["pointerup", "pointercancel"]) {
+    window.addEventListener(type, event => {
+      if (event.pointerId === selectionPointer) finishSelection();
+    }, { capture: true, passive: true });
+  }
+  // 在窗口外松开后返回时，以 buttons 校正状态，防止扫描一直暂停。
+  window.addEventListener("pointermove", event => {
+    if (event.pointerId === selectionPointer && !(event.buttons & 1)) finishSelection();
+  }, { capture: true, passive: true });
+  window.addEventListener("blur", () => {
+    composing = false;
+    finishSelection();
+  });
+
+  // :dir() 读取 HTML 的实际文字方向，不受扩展 CSS 干扰，也不需要停用样式表。
+  function textRecheckRoot(parent) {
+    const auto = parent.closest('[dir="auto"]');
+    if (!auto) return null;
+    return autoDirections.get(auto) === auto.matches(":dir(rtl)") ? null : auto;
+  }
+
+  function invalidateTypography() {
+    typographyIndex = null;
+    typographyContexts = new WeakMap();
+    fontSamples.clear();
+  }
+
+  function readExternalSheet(sheet) {
+    if (!sheet.href || externalSheetPending.has(sheet) || !chrome.runtime?.sendMessage) return;
+    externalSheetPending.add(sheet);
+    const href = sheet.href;
+    chrome.runtime.sendMessage({ type: "sfs-read-stylesheet", url: href }).then(result => {
+      if (!result?.css || /@import\b/i.test(result.css) || sheet.href !== href || ![...document.styleSheets].includes(sheet)) return;
+      const parsed = new CSSStyleSheet();
+      parsed.replaceSync(result.css);
+      externalSheetRules.set(sheet, { href, rules: parsed.cssRules });
+      invalidateTypography();
+      if (settings.enabled && !siteOff) queue(document.documentElement);
+    }).catch(() => {});
+  }
+
+  // 只为可能改变字体的属性变化重检。高度、颜色、位置等交互样式由浏览器
+  // 正常处理，不必为它们停用整张扩展样式表。无法读取的样式表保留完整采样。
+  function getTypographyIndex() {
+    if (typographyIndex) return typographyIndex;
+    const index = { rules: [], classes: new Set(), attributes: new Set(), variables: new Set(), media: [],
+      unknown: false, cacheable: true, classAttribute: false, styleAttribute: false };
+    const declarations = [];
+    const keyframeStyles = [];
+    const variableReferences = value => [...value.matchAll(/var\(\s*(--[\w-]+)/g)].map(match => match[1]);
+    const visit = (rules, ancestors = [], unsafe = false) => {
+      for (const rule of rules) {
+        if (rule.styleSheet) {
+          try { visit(rule.styleSheet.cssRules, ancestors, unsafe); } catch { index.unknown = true; }
+        }
+        const selectors = rule.selectorText ? [...ancestors, rule.selectorText] : ancestors;
+        if (rule.style && rule.selectorText) declarations.push({ rule, selectors, unsafe });
+        if (rule.media) index.media.push(rule.media.mediaText);
+        const childUnsafe = unsafe || rule.constructor.name === "CSSContainerRule" || rule.constructor.name === "CSSScopeRule";
+        // 字体动画的中间值和嵌套选择器不能通过静态匹配确定，走原始采样路径。
+        if (rule.style && !rule.selectorText && rule.keyText && [...rule.style].some(name => FONT_PROPERTY_RE.test(name))) index.unknown = true;
+        if (rule.style && rule.keyText) keyframeStyles.push(rule.style);
+        if (rule.cssRules) visit(rule.cssRules, selectors, childUnsafe);
+      }
+    };
+    for (const sheet of document.styleSheets) {
+      if ([STYLE_ID, CUSTOM_STYLE_ID].includes(sheet.ownerNode?.id)) continue;
+      if (sheet.media?.mediaText) index.media.push(sheet.media.mediaText);
+      try { visit(sheet.cssRules); } catch {
+        const external = externalSheetRules.get(sheet);
+        if (external?.href === sheet.href) visit(external.rules);
+        else { index.unknown = true; readExternalSheet(sheet); }
+      }
+    }
+    // 字体可能间接依赖 CSS 变量；只跟踪这条依赖链，避免布局变量引发整页补扫。
+    for (const { rule } of declarations) {
+      for (const name of rule.style) {
+        if (FONT_PROPERTY_RE.test(name)) variableReferences(rule.style.getPropertyValue(name)).forEach(name => index.variables.add(name));
+      }
+    }
+    let previousSize;
+    do {
+      previousSize = index.variables.size;
+      for (const { rule } of declarations) {
+        for (const name of index.variables) variableReferences(rule.style.getPropertyValue(name)).forEach(name => index.variables.add(name));
+      }
+    } while (previousSize !== index.variables.size);
+    if (keyframeStyles.some(style => [...style].some(name => index.variables.has(name)))) index.unknown = true;
+    const identifier = /\.((?:\\[0-9a-fA-F]{1,6}\s?|\\[^\r\n\f]|[\w\u0080-\uffff-])+)/g;
+    for (const { rule, selectors, unsafe } of declarations) {
+      const names = [...rule.style].filter(name => FONT_PROPERTY_RE.test(name) || index.variables.has(name));
+      if (!names.length) continue;
+      if (unsafe) index.unknown = true;
+      const selector = selectors.join(" ");
+      index.rules.push(rule.selectorText);
+      if (selectors.length > 1 || /:(?:hover|focus|active|visited|has|nth-|first-|last-|only-|empty|dir|lang|target|checked|disabled|enabled|valid|invalid|read-|placeholder|open)|[+~]|data-sfs-/i.test(selector)) index.cacheable = false;
+      if (/:(?:disabled|enabled)/i.test(selector)) index.attributes.add("disabled");
+      if (/:(?:link|visited)/i.test(selector)) index.attributes.add("href");
+      if (names.some(name => /\b(?:attr|env)\(/.test(rule.style.getPropertyValue(name)))) index.cacheable = false;
+      for (const match of selector.matchAll(identifier)) {
+        index.classes.add(match[1].replace(/\\([0-9a-fA-F]{1,6})\s?|\\(.)/g, (_, hex, char) => {
+          const value = parseInt(hex, 16);
+          return hex ? String.fromCodePoint(value > 0 && value <= 0x10ffff ? value : 0xfffd) : char;
+        }));
+      }
+      for (const match of selector.matchAll(/\[\s*([\w-]+)/g)) index.attributes.add(match[1].toLowerCase());
+      if (selector.includes("#")) index.attributes.add("id");
+      if (index.attributes.has("class")) index.classAttribute = true;
+      if (index.attributes.has("style")) index.styleAttribute = true;
+      try { document.documentElement.matches(rule.selectorText); } catch { index.unknown = true; }
+    }
+    typographyIndex = index;
+    return index;
+  }
+
+  function typographyInline(style, index) {
+    return [...style].filter(name => FONT_PROPERTY_RE.test(name) || index.variables.has(name))
+      .sort().map(name => [name, style.getPropertyValue(name), style.getPropertyPriority(name)]);
+  }
+
+  function attributeAffectsTypography(m, parent) {
+    const index = getTypographyIndex();
+    if (index.unknown) return true;
+    const name = m.attributeName;
+    if (["dir", "lang", "contenteditable", "aria-hidden"].includes(name) || index.attributes.has(name) && name !== "class" && name !== "style") return true;
+    if (name === "class") {
+      if (index.classAttribute) return true;
+      const before = new Set((m.oldValue || "").split(/\s+/).filter(Boolean));
+      const after = new Set(parent.classList);
+      const changed = [...new Set([...before, ...after])].filter(name => before.has(name) !== after.has(name));
+      return changed.some(name => index.classes.has(name) || settings.protectIcons && ICON_CLASS_RE.test(name.toLowerCase()));
+    }
+    if (name === "style") {
+      if (index.styleAttribute) return true;
+      const oldStyle = document.createElement("span").style;
+      oldStyle.cssText = m.oldValue || "";
+      return JSON.stringify(typographyInline(oldStyle, index)) !== JSON.stringify(typographyInline(parent.style, index));
+    }
+    return name === "id" && settings.protectIcons;
+  }
+
+  // 相同字体规则、内联字体声明及继承路径复用原样式快照；不改写用户 CSS。
+  // 跨域不可读样式、复杂状态选择器和自动文字方向区域使用完整采样。
+  function typographyKey(el, index) {
+    if (index.unknown || !index.cacheable || el.closest('[dir="auto"]')) return null;
+    const context = node => {
+      if (!node) return "";
+      if (typographyContexts.has(node)) return typographyContexts.get(node);
+      const matches = [];
+      index.rules.forEach((selector, id) => { if (node.matches(selector)) matches.push(id); });
+      const key = context(node.parentElement) + "/" + JSON.stringify([node.tagName, node.getAttribute("type"),
+        node.getAttribute("dir"), node.getAttribute("lang"), matches, typographyInline(node.style, index)]);
+      typographyContexts.set(node, key);
+      return key;
+    };
+    return index.media.map(query => matchMedia(query).matches ? "1" : "0").join("") + context(el);
   }
 
   function normalizeFamily(name) {
@@ -270,11 +523,6 @@
     return targetSet.has(firstFamily(family));
   }
 
-  function applyReplacement(el) {
-    if (el instanceof Element) el.setAttribute(MARK, "1");
-  }
-
-
   function collectTextElements(root) {
     const out = new Set();
 
@@ -308,6 +556,7 @@
             return NodeFilter.FILTER_REJECT;
           }
 
+          nonemptyTextNodes.add(node);
           return NodeFilter.FILTER_ACCEPT;
         }
       }
@@ -327,54 +576,101 @@
     const sheets = [STYLE_ID, CUSTOM_STYLE_ID].map(id => document.getElementById(id)?.sheet).filter(Boolean);
     const disabled = sheets.map(sheet => sheet.disabled);
     const snapshots = [];
+    const preserveActive = !(settings.customCSSOn && settings.customCSS.trim());
+    let stylesChanged = false;
+    let index;
+    let sampling = false;
     try {
-      sheets.forEach(sheet => { sheet.disabled = true; });
       for (const el of nodes) {
         if (!el.isConnected) continue;
-        const cs = getComputedStyle(el);
+        let cs = null;
+        let match = false;
+        // 自定义 CSS 接管时不生成保护快照；由 DOM 已能确定受保护的元素无需采样。
+        // 普通替换仍读取原字体，以保留已替换祖先下的代码和图标样式。
+        if (preserveActive || !isProtected(el, "")) {
+          index ||= getTypographyIndex();
+          const key = typographyKey(el, index);
+          cs = key === null ? null : fontSamples.get(key);
+          if (!cs) {
+            if (!sampling) {
+              sheets.forEach(sheet => { sheet.disabled = true; });
+              sampling = true;
+            }
+            const original = getComputedStyle(el);
+            cs = { fontFamily: original.fontFamily, fontFeatureSettings: original.fontFeatureSettings,
+              fontVariantLigatures: original.fontVariantLigatures, textAutospace: original.getPropertyValue("text-autospace") || "normal" };
+            if (key !== null) {
+              if (fontSamples.size >= FONT_SAMPLE_LIMIT) fontSamples.delete(fontSamples.keys().next().value);
+              fontSamples.set(key, cs);
+            }
+          }
+          match = shouldReplace(el, cs.fontFamily);
+        }
         snapshots.push({
-          el, match: shouldReplace(el, cs.fontFamily),
-          ligatures: ligatureDeclarations(settings.ligatureLevel, cs.fontFeatureSettings, cs.fontVariantLigatures),
-          css: `font-family: ${cs.fontFamily} !important; font-variant-ligatures: ${cs.fontVariantLigatures} !important; font-feature-settings: ${cs.fontFeatureSettings} !important; text-autospace: ${cs.getPropertyValue("text-autospace") || "normal"} !important;`
+          el, match,
+          ligatures: match && settings.ligatureLevel !== "native"
+            ? ligatureDeclarations(settings.ligatureLevel, cs.fontFeatureSettings, cs.fontVariantLigatures) : "",
+          css: preserveActive && !match
+            ? `font-family: ${cs.fontFamily} !important; font-variant-ligatures: ${cs.fontVariantLigatures} !important; font-feature-settings: ${cs.fontFeatureSettings} !important; text-autospace: ${cs.textAutospace} !important;` : ""
         });
+        sampledElements.add(el);
+        const auto = el.closest('[dir="auto"]');
+        if (auto) autoDirections.set(auto, auto.matches(":dir(rtl)"));
       }
     } finally {
-      sheets.forEach((sheet, i) => { sheet.disabled = disabled[i]; });
+      if (sampling) sheets.forEach((sheet, i) => { sheet.disabled = disabled[i]; });
     }
 
     for (const { el, match, ligatures } of snapshots) {
-      if (match) {
-        if (!el.hasAttribute(MARK)) applyReplacement(el);
-      } else {
-        el.removeAttribute(MARK);
-      }
+      setMarker(el, MARK, match ? "1" : null);
       if (match && ligatures) {
-        if (!ligatureStyles.has(ligatures)) ligatureStyles.set(ligatures, ligatureStyles.size + 1);
-        el.setAttribute(LIGATURE_MARK, ligatureStyles.get(ligatures));
+        if (!ligatureStyles.has(ligatures)) {
+          ligatureStyles.set(ligatures, ligatureStyles.size + 1);
+          stylesChanged = true;
+        }
+        setMarker(el, LIGATURE_MARK, String(ligatureStyles.get(ligatures)));
       } else {
-        el.removeAttribute(LIGATURE_MARK);
+        setMarker(el, LIGATURE_MARK, null);
       }
-      el.removeAttribute(PRESERVE);
     }
     for (const { el, match, css } of snapshots) {
-      if (!match && el.parentElement?.closest(`[${MARK}="1"]`)) {
-        if (!preserved.has(css)) preserved.set(css, preserved.size + 1);
-        el.setAttribute(PRESERVE, preserved.get(css));
+      if (css && !match && el.parentElement?.closest(`[${MARK}="1"]`)) {
+        if (!preserved.has(css)) {
+          preserved.set(css, preserved.size + 1);
+          stylesChanged = true;
+        }
+        setMarker(el, PRESERVE, String(preserved.get(css)));
+      } else {
+        setMarker(el, PRESERVE, null);
       }
     }
     if (snapshots.some(item => item.match) && settings.customCSSOn && !cssDetected) {
       cssDetected = true;
       ensureCustomStyle();
     }
-    ensureStyle();
-    ensureStylePosition();
+    const styleMissing = !document.getElementById(STYLE_ID);
+    if (stylesChanged || styleMissing) ensureStyle();
+    if (styleMissing) ensureStylePosition();
+  }
+
+  // 保留未变化的标记，避免同值写入触发页面自身的观察器和样式失效。
+  function setMarker(el, name, value) {
+    if (value === null) {
+      if (el.hasAttribute(name)) el.removeAttribute(name);
+    } else if (el.getAttribute(name) !== value) {
+      el.setAttribute(name, value);
+    }
   }
 
   function scanSubtree(root) {
     if (!(root instanceof Element) && root !== document) return;
 
-    const nodes = collectTextElements(root);
-    if (nodes.size <= SCAN_CHUNK) {
+    scanNodes(collectTextElements(root));
+  }
+
+  function scanNodes(nodes) {
+    if (!nodes.size) return;
+    if (!scanning && nodes.size <= SCAN_CHUNK && !editingBusy()) {
       applyBatch(nodes);
       return;
     }
@@ -400,17 +696,30 @@
         const batch = scanQueue.splice(0, SCAN_CHUNK);
         batch.forEach(node => queuedNodes.delete(node));
         applyBatch(batch);
-        requestAnimationFrame(step);
+        scheduleFontWork(step, epoch);
       } else {
         scanning = false;
       }
     };
 
-    requestAnimationFrame(step);
+    scheduleFontWork(step, epoch);
   }
 
   function flushPending() {
     scheduled = false;
+
+    // 将同一属性的密集写入合并为最初值与最终值，索引分析也避开输入阶段。
+    for (const [parent, attributes] of pendingAttributes) {
+      if (!parent.isConnected) continue;
+      for (const m of attributes.values()) {
+        if (m.oldValue !== parent.getAttribute(m.attributeName) && attributeAffectsTypography(m, parent)) {
+          typographyContexts = new WeakMap();
+          pending.add(parent);
+          break;
+        }
+      }
+    }
+    pendingAttributes.clear();
 
     if (styleNeedsReposition) {
       styleNeedsReposition = false;
@@ -435,23 +744,30 @@
     }
     pending.clear();
 
+    // 同一帧的独立分支共享一次原始样式采样，避免逐分支开关全局样式表。
+    const nodes = new Set();
     for (const node of work) {
-      if (node.isConnected) scanSubtree(node);
+      if (node.isConnected) collectTextElements(node).forEach(el => nodes.add(el));
     }
+    scanNodes(nodes);
   }
 
   function queue(node) {
     if (!(node instanceof Element)) return;
     pending.add(node);
+    schedulePending();
+  }
+
+  function schedulePending() {
     if (!scheduled) {
       scheduled = true;
-      const epoch = scanEpoch;
-      requestAnimationFrame(() => { if (epoch === scanEpoch) flushPending(); });
+      scheduleFontWork(flushPending);
     }
   }
 
   // 合并密集的样式表变化；加载完成的 LINK 也会触发检查。
   function queueStylesheetScan() {
+    invalidateTypography();
     if (!settings.enabled || siteOff || stylesheetTimer !== null) return;
     const epoch = scanEpoch;
     stylesheetTimer = setTimeout(() => {
@@ -468,16 +784,47 @@
       for (const m of mutations) {
         const parent = m.target instanceof Element ? m.target : m.target.parentElement;
         if (!parent || parent.closest(`#${STYLE_ID}, #${CUSTOM_STYLE_ID}`)) continue;
-        if (m.type === "attributes" && parent.matches("style, link[rel='stylesheet']")) {
+        if (m.type === "attributes" && m.oldValue === parent.getAttribute(m.attributeName)) continue;
+        if (m.type === "attributes" && (parent.matches("style, link[rel='stylesheet']")
+            || parent.tagName === "LINK" && m.attributeName === "rel" && /(?:^|\s)stylesheet(?:\s|$)/i.test(m.oldValue || ""))) {
           queueStylesheetScan();
         } else if (m.type === "attributes") {
-          queue(parent);
+          if (!pendingAttributes.has(parent)) pendingAttributes.set(parent, new Map());
+          const attributes = pendingAttributes.get(parent);
+          if (!attributes.has(m.attributeName)) attributes.set(m.attributeName, { attributeName: m.attributeName, oldValue: m.oldValue });
+          schedulePending();
         } else if (parent.matches("style, link[rel='stylesheet']")) {
           queueStylesheetScan();
         } else if (m.type === "characterData") {
-          queue(parent);
+          const populated = !!m.target.nodeValue?.trim();
+          const remainedPopulated = populated && nonemptyTextNodes.has(m.target);
+          if (populated) nonemptyTextNodes.add(m.target);
+          else nonemptyTextNodes.delete(m.target);
+          // 流式回答只改变已有非空文本时，字体判断仍有效；属性、结构和样式表
+          // 变化分别走重检路径。自动方向只在实际方向改变时重检整个区域。
+          const directionRoot = textRecheckRoot(parent);
+          if (remainedPopulated && sampledElements.has(parent) && !directionRoot) continue;
+          queue(directionRoot || parent);
         } else {
-          for (const node of [...m.addedNodes, ...m.removedNodes]) {
+          // React 也可能通过替换文本节点更新内容；非空文本之间的替换不会改变
+          // 元素选择器匹配。新元素、首次文字和实际方向变化仍走完整检查。
+          const changed = [...m.addedNodes, ...m.removedNodes].filter(node => node instanceof Element || node.nodeType === Node.TEXT_NODE);
+          if (!changed.length) continue;
+          // 注释不参与字体判断；新节点不影响可缓存选择器的已有祖先匹配。
+          // 移动或移除曾参与缓存的元素时，重建继承路径，避免复用旧父级字体。
+          if (changed.some(node => node instanceof Element && typographyContexts.has(node))) typographyContexts = new WeakMap();
+          const directionRoot = textRecheckRoot(parent);
+          if (sampledElements.has(parent) && changed.length && changed.every(node => node.nodeType === Node.TEXT_NODE)
+              && !directionRoot) {
+            const textNodes = [...parent.childNodes].filter(node => node.nodeType === Node.TEXT_NODE && node.nodeValue?.trim());
+            const previouslyPopulated = [...m.removedNodes, ...textNodes].some(node => nonemptyTextNodes.has(node));
+            if (textNodes.length && previouslyPopulated) {
+              textNodes.forEach(node => nonemptyTextNodes.add(node));
+              continue;
+            }
+          }
+          if (directionRoot) queue(directionRoot);
+          for (const node of changed) {
             if (node instanceof Element && [STYLE_ID, CUSTOM_STYLE_ID].includes(node.id)) {
               if (!node.isConnected) queue(document.documentElement);
               continue;
@@ -492,8 +839,8 @@
       }
     });
     observer.observe(document.documentElement, {
-      subtree: true, childList: true, characterData: true, attributes: true,
-      attributeFilter: ["class", "style", "id", "contenteditable", "aria-hidden", "href", "media", "disabled"]
+      subtree: true, childList: true, characterData: true, attributes: true, attributeOldValue: true,
+      attributeFilter: ["class", "style", "id", "contenteditable", "aria-hidden", "href", "media", "disabled", "dir", "lang", "rel"]
     });
   }
 
@@ -531,7 +878,7 @@
     ensureCustomStyle();
     startObserver();
     scanSubtree(document);
-    if (document.fonts?.ready) {
+    if (document.fonts?.status === "loading") {
       document.fonts.ready.then(() => {
         if (epoch === loadEpoch && settings.enabled && !siteOff && document.fonts.size) queue(document.documentElement);
       }).catch(() => {});
