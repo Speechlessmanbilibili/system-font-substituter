@@ -59,6 +59,68 @@ async function pageFor(html, settings = {}, initialize) {
   return page;
 }
 
+test("document.open 后恢复组词、拖选、视频及样式加载调度，清理旧暂停状态", async t => {
+  const page = await pageFor('<p id="text" class="target">Before</p><div id="edit" contenteditable="true" class="target">Edit</div>', { customCSSOn: false, ligatureLevel: "native" });
+  try {
+    await page.evaluate(() => {
+      document.getElementById("edit").dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+      document.open();
+      document.write('<!doctype html><style>.target{font-family:Arial}.design{font-family:CustomFont}</style><p id="text" class="target">After</p><div id="edit" class="target" contenteditable="true">Edit</div><video id="video" muted></video><main id="new"></main>');
+      document.close();
+    });
+    await page.waitForFunction(() => document.getElementById("text")?.hasAttribute("data-sfs-replaced"), null, { timeout: 1500 });
+    await page.evaluate(() => {
+      __styleReads = __sheetDisables = 0;
+      document.getElementById("edit").dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+      document.getElementById("text").className = "design";
+    });
+    await page.waitForTimeout(250);
+    assert.equal(await page.locator("#text").getAttribute("data-sfs-replaced"), "1");
+    assert.equal(await page.evaluate(() => __styleReads), 0);
+    await page.locator("#edit").evaluate(el => el.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true })));
+    await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
+    await page.locator("#text").evaluate(el => el.className = "target");
+    await page.waitForFunction(() => document.getElementById("text").hasAttribute("data-sfs-replaced"));
+    await page.locator("#text").evaluate(el => {
+      __styleReads = __sheetDisables = 0;
+      el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, isPrimary: true, pointerId: 1, button: 0, buttons: 1 }));
+      el.dispatchEvent(new Event("selectstart", { bubbles: true }));
+      el.className = "design";
+    });
+    await page.waitForTimeout(250);
+    assert.equal(await page.locator("#text").getAttribute("data-sfs-replaced"), "1");
+    assert.equal(await page.evaluate(() => __styleReads), 0);
+    await page.locator("#text").evaluate(el => el.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, isPrimary: true, pointerId: 1, button: 0, buttons: 0 })));
+    await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
+    await page.evaluate(async () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 32;
+      window.__rewriteStream = canvas.captureStream(30);
+      window.__rewriteVideoTimer = setInterval(() => canvas.getContext("2d").fillRect(0, 0, 32, 32), 30);
+      const video = document.getElementById("video");
+      video.srcObject = __rewriteStream;
+      await video.play();
+      document.getElementById("new").innerHTML = '<p id="fresh" class="target">Fresh</p>';
+      await new Promise(resolve => setTimeout(resolve, 50));
+      if (document.getElementById("fresh").hasAttribute("data-sfs-replaced")) throw Error("播放状态未恢复空闲调度");
+      video.pause();
+      clearInterval(__rewriteVideoTimer);
+      __rewriteStream.getTracks().forEach(track => track.stop());
+    });
+    await page.waitForFunction(() => document.getElementById("fresh").hasAttribute("data-sfs-replaced"));
+    await page.route("**/rewrite-delayed.css", async route => {
+      await new Promise(resolve => setTimeout(resolve, 250));
+      await route.fulfill({ contentType: "text/css", body: ".target{font-family:CustomFont}" });
+    });
+    await page.evaluate(() => {
+      const link = document.createElement("link"); link.rel = "stylesheet"; link.href = "/rewrite-delayed.css";
+      document.head.appendChild(link);
+    });
+    await page.waitForFunction(() => !document.getElementById("fresh").hasAttribute("data-sfs-replaced"), null, { timeout: 1500 });
+    t.diagnostic("重写前未结束的组词已释放；重写后的组词、拖选、播放和异步样式加载均恢复调度");
+  } finally { await page.close(); }
+});
+
 test("属性运算符、引号内容和转义标点保留字体缓存及真实依赖", async t => {
   for (const customCSSOn of [false, true]) {
     const css = '<style>.token[data-font~="normal"]{font-family:Arial}.token[data-font~="design"]{font-family:CustomFont}.quoted[data-label=".phantom #ghost :hover [class] [style] + ~"]{font-family:Arial}.font\\:hover\\+wide{font-family:Arial}</style>';

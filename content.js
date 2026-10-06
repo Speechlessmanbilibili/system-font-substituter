@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const { DEFAULTS, normalizeSettings, siteState, ligatureDeclarations, CC_PREFIX, SITE_CC_PREFIX, META_KEY, OVERRIDE_KEYS: SITE_OVERRIDE_KEYS } = SFS;
+  const { DEFAULTS, normalizeSettings, siteState, sourceAddress, ligatureDeclarations, CC_PREFIX, SITE_CC_PREFIX, META_KEY, OVERRIDE_KEYS: SITE_OVERRIDE_KEYS } = SFS;
 
   const MARK = "data-sfs-replaced";
   const LIGATURE_MARK = "data-sfs-ligatures";
@@ -9,6 +9,8 @@
   const ROOT_MARK = "data-sfs";
   const STYLE_ID = "sfs-style";
   const CUSTOM_STYLE_ID = "sfs-custom-style";
+  const PUNCTUATION_FAMILY = "shared punctuation font";
+  const PUNCTUATION_CONFIG_EVENT = "shared-punctuation-font/v1/config";
   const SCAN_CHUNK = 2000;
   const INPUT_QUIET_MS = 180;
   const VIDEO_SCAN_INTERVAL_MS = 200;
@@ -67,6 +69,9 @@
   const CONTEXT_INVALIDATION_LIMIT = 128;
   const fontSamples = new Map();
   const fontResults = new Map();
+  let sharedPunctuationFont = null;
+  let sharedPunctuationRange = "";
+  let sharedFontCount = -1;
   const FONT_SAMPLE_LIMIT = 1024;
   const NONSPACE_RE = /\S/;
   // 字号、字重等仍由浏览器正常排版；只有影响判断或原样式快照的声明参与索引。
@@ -77,6 +82,19 @@
   const mediaListeners = [];
   const OBSERVER_ATTRIBUTES = ["class", "style", "id", "type", "contenteditable", "aria-hidden", "href", "media", "disabled", "dir", "lang", "rel"];
   let observedAttributes = "";
+  const pageEventListeners = [];
+
+  function listenPage(target, type, listener, options) {
+    pageEventListeners.push({ target, type, listener, options });
+    target.addEventListener(type, listener, options);
+  }
+
+  function restorePageEvents() {
+    for (const { target, type, listener, options } of pageEventListeners) {
+      target.removeEventListener(type, listener, options);
+      target.addEventListener(type, listener, options);
+    }
+  }
 
   function observeAttributes(index) {
     if (!observer) return;
@@ -111,6 +129,7 @@
     sampledElements = new WeakSet();
     nonemptyTextNodes = new WeakSet();
     autoDirections = new WeakMap();
+    sharedFontCount = -1;
     invalidateTypography();
     clearTimeout(stylesheetTimer);
     stylesheetTimer = null;
@@ -162,7 +181,7 @@
   // 由原生事件维护正在播放的视频，避免每次调度都查询整页 DOM。
   // 暂停、结束或移除最后一个视频后恢复普通调度。
   for (const type of ["playing", "loadeddata", "canplay", "pause", "ended", "emptied"]) {
-    document.addEventListener(type, event => {
+    listenPage(document, type, event => {
       if (!(event.target instanceof HTMLVideoElement)) return;
       trackVideo(event.target);
       videoPlaying();
@@ -211,7 +230,7 @@
   }
 
   for (const type of ["beforeinput", "input", "compositionstart", "compositionupdate", "compositionend", "focusout"]) {
-    document.addEventListener(type, trackEditing, true);
+    listenPage(document, type, trackEditing, true);
   }
 
   function finishSelection() {
@@ -223,28 +242,28 @@
 
   // 编辑框从按下鼠标开始暂停；普通网页文字由原生 selectstart 确认拖选。
   // 只跟踪主指针左键，不取消事件，也不接管选区或指针捕获。
-  window.addEventListener("pointerdown", event => {
+  listenPage(window, "pointerdown", event => {
     if (!event.isPrimary || event.button !== 0) return;
     selectionPointer = event.pointerId;
     const target = event.target;
     selecting = target instanceof Element && (target.matches("input, textarea") || target.isContentEditable);
     if (selecting) releaseFontWork();
   }, { capture: true, passive: true });
-  document.addEventListener("selectstart", () => {
+  listenPage(document, "selectstart", () => {
     if (selectionPointer === null) return;
     selecting = true;
     releaseFontWork();
   }, { capture: true, passive: true });
   for (const type of ["pointerup", "pointercancel"]) {
-    window.addEventListener(type, event => {
+    listenPage(window, type, event => {
       if (event.pointerId === selectionPointer) finishSelection();
     }, { capture: true, passive: true });
   }
   // 在窗口外松开后返回时，以 buttons 校正状态，防止扫描一直暂停。
-  window.addEventListener("pointermove", event => {
+  listenPage(window, "pointermove", event => {
     if (event.pointerId === selectionPointer && !(event.buttons & 1)) finishSelection();
   }, { capture: true, passive: true });
-  window.addEventListener("blur", () => {
+  listenPage(window, "blur", () => {
     composing = false;
     finishSelection();
   });
@@ -271,8 +290,8 @@
     if (!sheet.href || externalSheetPending.has(sheet) || !chrome.runtime?.sendMessage) return;
     externalSheetPending.add(sheet);
     const href = sheet.href;
-    chrome.runtime.sendMessage({ type: "sfs-read-stylesheet", url: href }).then(result => {
-      if (!result?.css || /@import\b/i.test(result.css) || sheet.href !== href || ![...document.styleSheets].includes(sheet)) return;
+    chrome.runtime.sendMessage({ type: "sfs-read-stylesheet", url: href, encoding: document.characterSet }).then(result => {
+      if (!result?.css || stylesheetHasImport(result.css) || sheet.href !== href || ![...document.styleSheets].includes(sheet)) return;
       const parsed = new CSSStyleSheet();
       parsed.replaceSync(result.css);
       externalSheetRules.set(sheet, { href, rules: parsed.cssRules });
@@ -283,7 +302,7 @@
   // 只为可能改变字体的属性变化重检。高度、颜色、位置等交互样式由浏览器
   // 正常处理，不必为它们停用整张扩展样式表。无法读取的样式表保留完整采样。
   function selectorList(selector) {
-    // 选择器列表中的逗号可能位于函数、属性或引号中，不能直接按逗号拆分。
+    // 按语法位置拆分选择器列表，保留函数、属性和引号内部的逗号。
     const selectors = [];
     let start = 0, depth = 0, quote = null;
     for (let i = 0; i < selector.length; i++) {
@@ -376,9 +395,39 @@
     return offset;
   }
 
-  // CSSOM 会保留 var() 参数的原始转义、大小写和注释；按标识符读取并解码。
-  // 字符串、注释及非 var 函数名称中的文字不建立依赖，嵌套回退继续遍历。
-  function variableReferences(value) {
+  function stylesheetHasImport(value) {
+    for (let i = 0; i < value.length;) {
+      const next = cssSpaceEnd(value, i);
+      if (next !== i) { i = next; continue; }
+      const char = value[i];
+      if (char === '"' || char === "'") {
+        for (i++; i < value.length; i++) {
+          if (value[i] === "\\") i++;
+          else if (value[i] === char) { i++; break; }
+        }
+        continue;
+      }
+      if (char === "@") {
+        const token = cssIdentifierAt(value, i + 1);
+        if (token?.name.toLowerCase() === "import") return true;
+        i = token?.end || i + 1;
+        continue;
+      }
+      const token = cssIdentifierAt(value, i);
+      if (token?.name.toLowerCase() === "url" && value[token.end] === "(") {
+        i = cssSpaceEnd(value, token.end + 1);
+        if (value[i] !== '"' && value[i] !== "'") {
+          while (i < value.length && value[i] !== ")") { if (value[i] === "\\") i++; i++; }
+          i++;
+        }
+      } else i = token?.end || i + 1;
+    }
+    return false;
+  }
+
+  // CSSOM 会保留函数参数的原始转义、大小写和注释；按标识符读取并解码。
+  // 字符串和注释中的文字不建立依赖，嵌套函数及回退继续遍历。
+  function cssFunctionReferences(value, functionName) {
     if (!value.includes("(")) return [];
     const names = new Set();
     for (let i = 0; i < value.length;) {
@@ -398,10 +447,14 @@
       const fn = token.name.toLowerCase();
       if (value[token.end] === "(") {
         const start = cssSpaceEnd(value, token.end + 1);
-        if (fn === "var") {
+        if (fn === functionName) {
           const reference = cssIdentifierAt(value, start);
           const end = reference ? cssSpaceEnd(value, reference.end) : start;
-          if (reference?.name.startsWith("--") && reference.name !== "--" && [",", ")"].includes(value[end])) names.add(reference.name);
+          if (functionName === "var") {
+            if (reference?.name.startsWith("--") && reference.name !== "--" && [",", ")"].includes(value[end])) names.add(reference.name);
+          } else if (reference && (end > reference.end || [",", ")"].includes(value[end]))) {
+            names.add(reference.name);
+          }
         } else if (fn === "url" && value[start] !== '"' && value[start] !== "'") {
           // 未加引号的 URL 是独立词法单元，内部文字不作为函数解析。
           i = start;
@@ -415,8 +468,18 @@
     return [...names];
   }
 
-  function inlineAddsVariableDependency(style, index) {
+  function variableReferences(value) {
+    return cssFunctionReferences(value, "var");
+  }
+
+  function attributeReferences(value) {
+    return cssFunctionReferences(value, "attr");
+  }
+
+  function inlineAddsTypographyDependency(style, index) {
     for (const name of style) {
+      if ((FONT_PROPERTY_RE.test(name) || index.variables.has(name))
+          && attributeReferences(style.getPropertyValue(name)).some(attribute => !index.valueAttributes.has(attribute))) return true;
       if (FONT_PROPERTY_RE.test(name)) {
         if (variableReferences(style.getPropertyValue(name)).some(reference => !index.variables.has(reference))) return true;
       } else if (index.variables.has(name)) {
@@ -475,7 +538,7 @@
 
   function getTypographyIndex() {
     if (typographyIndex) return typographyIndex;
-    const index = { rules: [], classes: new Set(), attributes: new Set(), variables: new Set(), media: [],
+    const index = { rules: [], classes: new Set(), attributes: new Set(), valueAttributes: new Set(), variables: new Set(), media: [],
       classRules: new Map(), idRules: new Map(), tagRules: new Map(), generalRules: [], exactRules: new Set(),
       unknown: false, cacheable: true, relational: false, classAttribute: false, styleAttribute: false };
     const declarations = [];
@@ -492,7 +555,7 @@
         const selectors = selector ? [...ancestors, selector] : ancestors;
         if (rule.style && selector) declarations.push({ rule, selector, selectors, unsafe, media: queries });
         const childUnsafe = unsafe || rule.constructor.name === "CSSContainerRule" || rule.constructor.name === "CSSScopeRule";
-        // 字体动画的中间值和嵌套选择器不能通过静态匹配确定，走原始采样路径。
+        // 字体动画的中间值和嵌套选择器通过原始采样获取实际样式。
         if (rule.style && !rule.selectorText && rule.keyText && [...rule.style].some(name => FONT_PROPERTY_RE.test(name))) index.unknown = true;
         if (rule.style && rule.keyText) keyframeStyles.push(rule.style);
         if (rule.cssRules) visit(rule.cssRules, selectors, childUnsafe, queries);
@@ -524,6 +587,20 @@
     for (let i = 0; i < variables.length; i++) {
       for (const name of variableDependencies.get(variables[i]) || []) {
         if (!index.variables.has(name)) { index.variables.add(name); variables.push(name); }
+      }
+    }
+    // 字体及其变量可通过 attr() 读取元素属性；仅观察实际字体依赖的属性。
+    for (const style of variableStyles) {
+      for (const name of style) {
+        if (!FONT_PROPERTY_RE.test(name) && !index.variables.has(name)) continue;
+        const attributes = attributeReferences(style.getPropertyValue(name));
+        attributes.forEach(attribute => {
+          // HTML 属性名不区分大小写，SVG/XML 属性名保留原义。
+          index.attributes.add(attribute);
+          index.attributes.add(attribute.toLowerCase());
+          index.valueAttributes.add(attribute);
+        });
+        if (attributes.length) index.cacheable = false;
       }
     }
     if (keyframeStyles.some(style => [...style].some(name => index.variables.has(name)))) index.unknown = true;
@@ -643,8 +720,8 @@
       oldStyle.cssText = before;
       const relevant = new Set([...oldStyle, ...parent.style].filter(name => FONT_PROPERTY_RE.test(name) || index.variables.has(name)));
       // 引用关系变化时重新分析当前样式，纳入新依赖并更新相关规则/媒体条件。
-      if ([...relevant].some(name => JSON.stringify(variableReferences(oldStyle.getPropertyValue(name)))
-          !== JSON.stringify(variableReferences(parent.style.getPropertyValue(name))))) {
+      if ([...relevant].some(name => JSON.stringify([variableReferences(oldStyle.getPropertyValue(name)), attributeReferences(oldStyle.getPropertyValue(name))])
+          !== JSON.stringify([variableReferences(parent.style.getPropertyValue(name)), attributeReferences(parent.style.getPropertyValue(name))]))) {
         invalidateTypography();
         getTypographyIndex();
         return true;
@@ -718,11 +795,36 @@
 
   function firstFamily(value) {
     const parts = splitFamilies(value || "");
+    // 共用标点扩展注册的范围字体只负责部分字符，后面的字体仍是正文首选。
+    if (sharedPunctuationFont && parts.length > 1 && normalizeFamily(parts[0]) === PUNCTUATION_FAMILY) parts.shift();
     return parts.length ? normalizeFamily(parts[0]) : "";
   }
 
+  function syncSharedPunctuationFont(force = false) {
+    const fonts = document.fonts;
+    const count = fonts?.size || 0;
+    // 稳态批次不遍历字体集合；配置事件会检查数量未变的删除/重建。
+    if (!force && count === sharedFontCount && (!sharedPunctuationFont
+        || fonts.has(sharedPunctuationFont) && sharedPunctuationFont.unicodeRange === sharedPunctuationRange)) return false;
+    sharedFontCount = count;
+    let next = null;
+    for (const face of fonts || []) {
+      if (normalizeFamily(face.family) === PUNCTUATION_FAMILY && face.unicodeRange.toUpperCase() !== "U+0-10FFFF") {
+        next = face;
+        break;
+      }
+    }
+    const range = next?.unicodeRange || "";
+    if (next === sharedPunctuationFont && range === sharedPunctuationRange) return false;
+    sharedPunctuationFont = next;
+    sharedPunctuationRange = range;
+    invalidateTypography();
+    return true;
+  }
+
   function computeSiteState() {
-    return siteState(settings.siteRules, location);
+    // 特殊子框架按创建来源匹配，普通网页框架继续使用自身地址。
+    return siteState(settings.siteRules, sourceAddress(location.href, document.referrer, ...(location.ancestorOrigins || [])));
   }
 
   // 把站点覆盖落到工作副本上：settings 在每次 loadSettings 时都会
@@ -973,6 +1075,7 @@
   // 采样时暂时关闭扩展样式，避免已替换祖先污染动态节点和后续分片。
   function applyBatch(nodes) {
     if (!settings.enabled || siteOff) return;
+    syncSharedPunctuationFont();
     const sheets = [STYLE_ID, CUSTOM_STYLE_ID].map(id => document.getElementById(id)?.sheet).filter(Boolean);
     const disabled = sheets.map(sheet => sheet.disabled);
     const snapshots = [];
@@ -1136,6 +1239,14 @@
   function flushPending() {
     scheduled = false;
 
+    // 网站可能移除扩展样式或替换 head；即使此时没有文字也恢复已启用的样式。
+    if (!document.getElementById(STYLE_ID)
+        || cssDetected && settings.customCSSOn && settings.customCSS.trim() && !document.getElementById(CUSTOM_STYLE_ID)) {
+      ensureStyle();
+      ensureCustomStyle();
+      styleNeedsReposition = true;
+    }
+
     // 将同一属性的密集写入合并为最初值与最终值，索引分析也避开输入阶段。
     for (const [parent, attributes] of pendingAttributes) {
       if (!parent.isConnected) continue;
@@ -1229,7 +1340,7 @@
         video = true;
       } else if (resource.matches("style, link[rel='stylesheet']")) {
         if (![STYLE_ID, CUSTOM_STYLE_ID].includes(resource.id)) stylesheet = true;
-      } else if (resource.isConnected && typographyIndex && inlineAddsVariableDependency(resource.style, typographyIndex)) stylesheet = true;
+      } else if (resource.isConnected && typographyIndex && inlineAddsTypographyDependency(resource.style, typographyIndex)) stylesheet = true;
     }
     if (video) releaseVideoWork();
     if (stylesheet) queueStylesheetScan();
@@ -1329,7 +1440,7 @@
       console.warn("sfs settings load failed:", error);
       return;
     }
-    if (epoch !== loadEpoch) return;
+    if (epoch !== loadEpoch || !document.documentElement) return;
     settings = normalizeSettings(stored);
     cssGeneration = stored[META_KEY]?.id || null;
     siteCSSGenerations = Array.isArray(stored.siteRules) ? stored.siteRules.map(rule => rule?.customCSSChunks?.id).filter(Boolean) : [];
@@ -1373,12 +1484,23 @@
     }
   }
 
-  document.addEventListener("load", event => {
+  listenPage(document, "load", event => {
     if (event.target instanceof Element && event.target.matches("link[rel='stylesheet']")) queueStylesheetScan();
   }, true);
 
+  // 标点扩展的设置切换会通过 CSSOM 恢复字体；沿用其低频配置事件合并重检。
+  listenPage(window, PUNCTUATION_CONFIG_EVENT, event => {
+    if (typeof event.detail !== "string" || !appliedConfiguration || !settings.enabled || siteOff) return;
+    let configuration;
+    try { configuration = JSON.parse(event.detail); } catch { return; }
+    if (typeof configuration?.enabled !== "boolean" || typeof configuration.font !== "string" || !Array.isArray(configuration.groups)) return;
+    scheduleFontWork(() => {
+      if (syncSharedPunctuationFont(true)) queue(document.documentElement);
+    });
+  });
+
   // 容器条件及尚未读出的跨域字体条件在视口变化后补扫，连续缩放合并处理。
-  window.addEventListener("resize", () => {
+  listenPage(window, "resize", () => {
     if (!settings.enabled || siteOff || !typographyIndex?.unknown) return;
     clearTimeout(viewportTimer);
     const epoch = scanEpoch;
@@ -1399,14 +1521,21 @@
     if (relevant) loadSettings();
   });
 
-  if (document.documentElement) {
-    loadSettings();
-  } else {
-    new MutationObserver((_, obs) => {
-      if (document.documentElement) {
-        obs.disconnect();
-        loadSettings();
-      }
-    }).observe(document, { childList: true, subtree: true });
-  }
+  // document.open 会移除旧 html 并清除文档/窗口事件；仅在根节点换代时恢复。
+  let observedRoot = document.documentElement;
+  new MutationObserver(() => {
+    const root = document.documentElement;
+    if (root === observedRoot) return;
+    observedRoot = root;
+    loadEpoch++;
+    if (observer) observer.disconnect();
+    cancelScans();
+    appliedConfiguration = null;
+    composing = selecting = false;
+    selectionPointer = null;
+    inputDeadline = 0;
+    restorePageEvents();
+    if (root) loadSettings();
+  }).observe(document, { childList: true });
+  if (observedRoot) loadSettings();
 })();

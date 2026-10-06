@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extName__",
-  "version": "2.1.7",
+  "version": "2.1.8",
   "description": "__MSG_extDescription__",
   "permissions": [
     "storage"
@@ -19,7 +19,8 @@
         "content.js"
       ],
       "run_at": "document_start",
-      "all_frames": true
+      "all_frames": true,
+      "match_origin_as_fallback": true
     }
   ],
   "options_ui": {

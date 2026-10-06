@@ -186,19 +186,31 @@ body,
     const scheme = text.match(/^([a-z][a-z\d+.-]*):\/\//i);
     if (scheme && !/^https?$/i.test(scheme[1])) return null;
     const authority = text.replace(/^https?:\/\//i, "").split(/[/?#]/)[0].replace(/^\*\./, "");
-    if (!authority || authority.includes("@")) return null;
+    if (!authority || authority.includes("@") || authority.includes("*")) return null;
     // URL 会省略默认端口，因此从原始 authority 单独保留显式端口。
     const parts = authority.match(/^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/);
     if (!parts) return null;
     try {
       const url = new URL("http://" + authority);
       const host = url.hostname.toLowerCase().replace(/\.$/, "");
-      if (!host) return null;
+      if (!host || host.includes("*")) return null;
       const port = parts[2] === undefined ? null : String(Number(parts[2]));
       return { host, port };
     } catch {
       return null;
     }
+  }
+
+  function sourceAddress(address, ...sources) {
+    if (!/^(?:about:(?:blank|srcdoc)(?:[#?]|$)|blob:|data:|filesystem:)/i.test(address || "")) return address;
+    for (const source of [address, ...sources]) {
+      try {
+        const url = new URL(source);
+        if (["http:", "https:", "file:"].includes(url.protocol)) return url.href;
+        if (/^https?:\/\//.test(url.origin)) return url.origin;
+      } catch {}
+    }
+    return address;
   }
 
   function siteState(rules, address) {
@@ -316,6 +328,6 @@ body,
   globalThis.SFS = {
     DEFAULT_CUSTOM_CSS, DEFAULTS, CC_PREFIX, SITE_CC_PREFIX, META_KEY, OVERRIDE_KEYS, LIGATURE_LEVELS,
     ruleOverride, normalizeLigatureLevel, normalizeSiteRule, siteLigatureLevel, ligatureDeclarations,
-    parseDomain, siteState, assembleCSSChunks, assembleCustomCSS, normalizeSettings, chunkCustomCSS, writeSettings
+    parseDomain, sourceAddress, siteState, assembleCSSChunks, assembleCustomCSS, normalizeSettings, chunkCustomCSS, writeSettings
   };
 })();

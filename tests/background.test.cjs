@@ -9,8 +9,8 @@ function background(fetch) {
   let listener;
   vm.runInNewContext(source, { URL, TextDecoder, Uint8Array, AbortSignal, fetch,
     chrome: { action: { onClicked: { addListener() {} } }, runtime: { id: "test", onMessage: { addListener(callback) { listener = callback; } } } } });
-  return (url, sender = { id: "test", tab: { id: 1 } }) => new Promise(resolve => {
-    if (listener({ type: "sfs-read-stylesheet", url }, sender, resolve) !== true) resolve(null);
+  return (url, sender = { id: "test", tab: { id: 1 } }, encoding) => new Promise(resolve => {
+    if (listener({ type: "sfs-read-stylesheet", url, encoding }, sender, resolve) !== true) resolve(null);
   });
 }
 function cssResponse(css = ".target{font-family:Arial}") {
@@ -59,4 +59,48 @@ test("大量读取保持队列容量上限，已接收请求完整结束", async
   assert.equal(calls, 128);
   assert.ok(results.slice(0, 128).every(result => result?.css));
   assert.ok(results.slice(128).every(result => result === null));
+});
+
+test("CSS 解码保留中文标识符，遵循 BOM、HTTP、charset 声明及页面编码", async () => {
+  const css = ':root{--字体:Arial}.target{font-family:var(--字体)}';
+  const gbk = Buffer.concat([Buffer.from(':root{--'), Buffer.from("d7d6cce5", "hex"), Buffer.from(':Arial}.target{font-family:var(--'), Buffer.from("d7d6cce5", "hex"), Buffer.from(')}')]);
+  const declared = Buffer.concat([Buffer.from('@charset "gbk";'), gbk]);
+  const utf16be = Buffer.from(css, "utf16le"); utf16be.swap16();
+  const cases = [
+    [gbk, "text/css; charset=GBK", undefined, css],
+    [declared, "text/css", undefined, '@charset "gbk";' + css],
+    [declared, "text/css; charset=unknown", undefined, '@charset "gbk";' + css],
+    [Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(css)]), "text/css; charset=GBK", undefined, css],
+    [Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(css, "utf16le")]), "text/css; charset=utf-8", undefined, css],
+    [Buffer.concat([Buffer.from([0xfe, 0xff]), utf16be]), "text/css; charset=utf-8", undefined, css],
+    [Buffer.from('@charset "utf-16le";' + css), "text/css", undefined, '@charset "utf-16le";' + css],
+    [gbk, "text/css", "GBK", css],
+    [Buffer.from(css), "text/css", "unknown", css],
+    [Buffer.from(css), "text/css; other=\"charset=GBK\"", undefined, css],
+    [Buffer.from(css), "text/css; other=\"x; charset=GBK\"; charset=utf-8", undefined, css],
+    [gbk, 'text/css; other="x; y=z"; charset="\\g\\b\\k"', undefined, css],
+    [Buffer.from(css), "text/css; charset=unknown; charset=GBK", undefined, css],
+    [Buffer.from('@CHARSET "GBK";' + css), "text/css", undefined, '@CHARSET "GBK";' + css],
+    [Buffer.from('@charset  "GBK";' + css), "text/css", undefined, '@charset  "GBK";' + css],
+    [Buffer.from("@charset 'GBK';" + css), "text/css", undefined, "@charset 'GBK';" + css],
+    [Buffer.from('/* Prefix */@charset "GBK";' + css), "text/css", undefined, '/* Prefix */@charset "GBK";' + css]
+  ];
+  for (const [bytes, contentType, encoding, expected] of cases) {
+    const read = background(async () => new Response(bytes, { headers: { "Content-Type": contentType } }));
+    assert.equal((await read("https://example.com/font.css", undefined, encoding)).css, expected, contentType + "/" + encoding);
+  }
+});
+
+test("同一 CSS 被不同编码页面引用时分别解码，同编码请求仍合并", async () => {
+  let release, calls = 0;
+  const barrier = new Promise(resolve => { release = resolve; });
+  const bytes = Buffer.concat([Buffer.from(':root{--'), Buffer.from("d7d6cce5", "hex"), Buffer.from(':Arial}')]);
+  const read = background(async () => { calls++; await barrier; return new Response(bytes, { headers: { "Content-Type": "text/css" } }); });
+  const pending = [read("https://example.com/font.css", undefined, "utf-8"), read("https://example.com/font.css", undefined, "GBK"), read("https://example.com/font.css", undefined, "gbk")];
+  assert.equal(calls, 2);
+  release();
+  const results = await Promise.all(pending);
+  assert.equal(results[0].css, new TextDecoder().decode(bytes));
+  assert.equal(results[1].css, ':root{--字体:Arial}');
+  assert.equal(results[2].css, results[1].css);
 });

@@ -40,9 +40,22 @@ test("站点规则保留端口，识别默认端口与 IPv6", () => {
   for (const [domain, url, force] of cases) {
     assert.equal(SFS.siteState([{ domain }], new URL(url)).force, force, domain + " => " + url);
   }
-  for (const domain of ["", "example.com:99999", "example.com:abc", "http://u:p@example.com", "ftp://example.com", "::1", "bad host", ":80", "example.com:"]) {
+  for (const domain of ["", "example.com:99999", "example.com:abc", "http://u:p@example.com", "ftp://example.com", "::1", "bad host", ":80", "example.com:", "foo*.example.com", "**.example.com", "*", "https://foo*.example.com/path", "foo%2a.example.com", "%2a.example.com"]) {
     assert.equal(SFS.parseDomain(domain), null, domain);
   }
+});
+
+test("特殊地址按最近的有效来源匹配，保留来源端口及 blob 自身来源", () => {
+  const cases = [
+    ["https://own.example.com:8080/path", ["https://parent.example.com"], "https://own.example.com:8080/path"],
+    ["about:blank", ["https://parent.example.com:8080/path", "https://top.example.com"], "https://parent.example.com:8080/path"],
+    ["about:srcdoc", ["", "null", "https://parent.example.com:8080", "https://top.example.com"], "https://parent.example.com:8080/"],
+    ["data:text/html,Text", ["https://parent.example.com:8080/path"], "https://parent.example.com:8080/path"],
+    ["blob:https://creator.example.com:8080/id", ["https://parent.example.com"], "https://creator.example.com:8080"],
+    ["blob:null/id", ["", "https://parent.example.com:8080"], "https://parent.example.com:8080/"],
+    ["about:blank", ["", "null"], "about:blank"]
+  ];
+  for (const [address, sources, expected] of cases) assert.equal(SFS.sourceAddress(address, ...sources), expected, address);
 });
 
 test("更具体的站点规则优先，同等规则维持顺序", () => {
@@ -166,8 +179,15 @@ before(async () => {
   server = http.createServer((request, response) => {
     const file = request.url.split("?")[0];
     if (fixtures.has(file)) {
+      const fixture = fixtures.get(file);
       response.setHeader("Content-Type", "text/html; charset=utf-8");
-      response.end(fixtures.get(file));
+      if (fixture.csp) response.setHeader("Content-Security-Policy", fixture.csp);
+      response.end(typeof fixture === "string" ? fixture : fixture.html);
+      return;
+    }
+    if (file === "/attribute-font.css") {
+      response.setHeader("Content-Type", "text/css");
+      response.end('#text{font-family:attr(data-font type(<custom-ident>),Arial)}');
       return;
     }
     if (file === "/slow.css") {
@@ -393,6 +413,113 @@ test("空 CSS 恢复普通链，非空 CSS 只在检测命中后注入，禁用�
   assert.equal(await page.locator("#sfs-style, #sfs-custom-style").count(), 0);
   assert.deepEqual(page.__errors, []);
   await page.close();
+});
+
+test("网站移除扩展样式或替换 head 后，恢复自定义 CSS 及原有顺序", async () => {
+  const customCSS = '#text{font-family:monospace!important;color:rgb(0,128,0)!important}';
+  const page = await pageFor('<p id="text" style="font-family:Arial">Text</p>', { ...base, customCSSOn: true, customCSS });
+  await page.waitForFunction(() => !!document.getElementById("sfs-custom-style"));
+  for (const replaceHead of [false, true]) {
+    await page.evaluate(replaceHead => {
+      if (replaceHead) document.head.replaceWith(document.createElement("head"));
+      else document.getElementById("sfs-custom-style").remove();
+    }, replaceHead);
+    await page.waitForFunction(() => document.getElementById("sfs-custom-style")?.textContent.includes("monospace"), null, { timeout: 1000 });
+    assert.equal(await family(page, "text"), "monospace");
+    assert.equal(await page.locator("#text").evaluate(el => getComputedStyle(el).color), "rgb(0, 128, 0)");
+    assert.equal(await page.evaluate(() => !!(document.getElementById("sfs-style").compareDocumentPosition(document.getElementById("sfs-custom-style")) & Node.DOCUMENT_POSITION_FOLLOWING)), true);
+  }
+  await page.evaluate(() => {
+    document.getElementById("text").remove();
+    document.head.replaceWith(document.createElement("head"));
+  });
+  await page.waitForFunction(() => !!document.getElementById("sfs-custom-style"), null, { timeout: 1000 });
+  await page.evaluate(() => __change({ enabled: false }));
+  await page.waitForFunction(() => !document.documentElement.hasAttribute("data-sfs"));
+  assert.equal(await page.locator("#sfs-style, #sfs-custom-style").count(), 0);
+  assert.deepEqual(page.__errors, []);
+  await page.close();
+});
+
+test("字体 attr() 依赖随已有属性变化更新，支持变量和后来加入的内联声明", async () => {
+  const fixtures = [
+    '<style>.target{font-family:attr(data-font type(<custom-ident>),Arial)}</style><p id="text" class="target" data-font="Arial">Text</p>',
+    '<style>.target{--family:attr(data-font type(<custom-ident>),Arial);font-family:var(--family)}</style><p id="text" class="target" data-font="Arial">Text</p>',
+    '<p id="text" data-font="Arial" style="font-family:Arial">Text</p>'
+  ];
+  for (const [index, fixture] of fixtures.entries()) {
+    const page = await pageFor(fixture, base, false, "zh-CN", () => {
+      window.__fontReads = 0;
+      const original = window.getComputedStyle;
+      window.getComputedStyle = (...args) => { window.__fontReads++; return original(...args); };
+    });
+    await marked(page, "text");
+    if (index === 2) await page.evaluate(() => { document.getElementById("text").style.fontFamily = "attr(data-font type(<custom-ident>),Arial)"; });
+    await page.waitForTimeout(100);
+    await page.evaluate(() => {
+      __fontReads = 0;
+      document.getElementById("text").setAttribute("data-layout", "20");
+    });
+    await page.waitForTimeout(100);
+    assert.equal(await page.evaluate(() => __fontReads), 0, "无关属性仍不采样字体");
+    await page.evaluate(() => document.getElementById("text").setAttribute("data-font", "CustomFont"));
+    await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"), null, { timeout: 1000 });
+    assert.equal(await family(page, "text"), "CustomFont");
+    await page.evaluate(() => document.getElementById("text").setAttribute("data-font", "Arial"));
+    await marked(page, "text");
+    assert.equal(await family(page, "text"), "serif");
+    assert.deepEqual(page.__errors, []);
+    await page.close();
+  }
+});
+
+test("新增内联 attr() 字体不会复用仅在选择器中出现过的属性缓存", async () => {
+  const page = await pageFor('<style>.unused[data-font]{font-family:Arial}</style><p id="text" style="font-family:Arial">Text</p>', base);
+  await marked(page, "text");
+  await page.evaluate(() => {
+    for (const [id, family] of [["added-target", "Arial"], ["added-design", "CustomFont"]]) {
+      const element = document.createElement("p");
+      element.id = id;
+      element.textContent = "Added";
+      element.dataset.font = family;
+      element.style.fontFamily = "attr(data-font type(<custom-ident>),Arial)";
+      document.body.appendChild(element);
+    }
+  });
+  await marked(page, "added-target");
+  await page.waitForFunction(() => getComputedStyle(document.getElementById("added-design")).fontFamily === "CustomFont", null, { timeout: 1000 });
+  assert.equal(await page.locator("#added-design").getAttribute("data-sfs-replaced"), null);
+  assert.deepEqual(page.__errors, []);
+  await page.close();
+});
+
+test("SVG 的 attr() 保留属性名大小写，保护快照随原字体更新", async () => {
+  const page = await pageFor('<style>text{font-family:attr(data-Font type(<custom-ident>),Arial)}</style><div id="parent" style="font-family:Arial">Root<svg><text id="graphic"></text></svg></div>', base);
+  await marked(page, "parent");
+  await page.locator("#graphic").evaluate(el => { el.setAttribute("data-Font", "Arial"); el.textContent = "Graphic"; });
+  await page.waitForFunction(() => document.getElementById("graphic").hasAttribute("data-sfs-preserve"));
+  assert.equal(await family(page, "graphic"), "Arial");
+  await page.locator("#graphic").evaluate(el => el.setAttribute("data-Font", "CustomFont"));
+  await page.waitForFunction(() => getComputedStyle(document.getElementById("graphic")).fontFamily === "CustomFont", null, { timeout: 1000 });
+  assert.equal(await page.locator("#graphic").getAttribute("data-sfs-replaced"), null);
+  await page.locator("#graphic").evaluate(el => el.setAttribute("data-Font", "Arial"));
+  await page.waitForFunction(() => getComputedStyle(document.getElementById("graphic")).fontFamily === "Arial");
+  assert.deepEqual(page.__errors, []);
+  await page.close();
+});
+
+test("网站同名字体未注册专用范围时，保持首选字体的名单判断", async () => {
+  for (const registered of [false, true]) {
+    const page = await pageFor('<p id="text" style="font-family:&quot;Shared Punctuation Font&quot;,Arial">Text</p>', base, false, "zh-CN", registered ? () => {
+      document.fonts.add(new FontFace("Shared Punctuation Font", 'local("Arial")'));
+    } : null);
+    await page.waitForFunction(() => document.documentElement.hasAttribute("data-sfs"));
+    await page.waitForTimeout(100);
+    assert.equal(await page.locator("#text").getAttribute("data-sfs-replaced"), null);
+    assert.match(await family(page, "text"), /^"Shared Punctuation Font", Arial$/);
+    assert.deepEqual(page.__errors, []);
+    await page.close();
+  }
 });
 
 test("本站 CSS 替换全局内容，分块更新、空内容与关闭覆盖均正确应用", async () => {
@@ -795,6 +922,315 @@ test("真实 MV3 加载、隔离内容脚本与同步存储联动", async () => 
     assert.ok((await options.locator("#status").getAttribute("class")).includes("success"));
     assert.equal(await options.evaluate(async () => SFS.assembleCustomCSS(await chrome.storage.sync.get(null))), "\u0001\\".repeat(6000));
     assert.deepEqual(errors, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test("真实 MV3 在严格 CSP 中跟踪字体属性并恢复被页面移除的自定义 CSS", async () => {
+  const context = await chromium.launchPersistentContext("", {
+    headless: true,
+    executablePath: chromium.executablePath(),
+    args: ["--disable-extensions-except=" + root, "--load-extension=" + root]
+  });
+  try {
+    const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker");
+    await worker.evaluate(base => chrome.storage.sync.set(base), base);
+    fixtures.set("/strict-attributes", {
+      csp: "default-src 'self'; script-src 'self'; style-src 'self'",
+      html: '<!doctype html><html><head><link rel="stylesheet" href="/attribute-font.css"></head><body><p id="text" data-font="Arial">Text</p></body></html>'
+    });
+    const page = await context.newPage();
+    await page.goto(origin + "/strict-attributes");
+    await marked(page, "text");
+    assert.equal(await family(page, "text"), "serif");
+    await page.locator("#text").evaluate(el => el.setAttribute("data-font", "CustomFont"));
+    await marked(page, "text", false);
+    assert.equal(await family(page, "text"), "CustomFont");
+    await page.locator("#text").evaluate(el => el.setAttribute("data-font", "Arial"));
+    await marked(page, "text");
+    const customCSS = '#text{font-family:monospace!important}';
+    await worker.evaluate(customCSS => chrome.storage.sync.set({ customCSSOn: true, customCSS }), customCSS);
+    await page.waitForFunction(() => !!document.getElementById("sfs-custom-style"));
+    await page.evaluate(() => {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "/attribute-font.css";
+      const head = document.createElement("head");
+      head.appendChild(link);
+      document.head.replaceWith(head);
+    });
+    await page.waitForFunction(() => document.getElementById("sfs-custom-style")?.textContent.includes("monospace"));
+    assert.equal(await family(page, "text"), "monospace");
+    await worker.evaluate(() => chrome.storage.sync.set({ enabled: false }));
+    await page.waitForFunction(() => !document.documentElement.hasAttribute("data-sfs"));
+    assert.equal(await family(page, "text"), "Arial");
+  } finally {
+    await context.close();
+  }
+});
+
+const punctuationRoot = process.env.SFS_PUNCTUATION_EXTENSION_ROOT || path.join(path.dirname(root), "共用标点字体替换浏览器扩展");
+
+test("真实 MV3 在 document.open 重写页面后继续替换、保护及跟踪输入方向", async () => {
+  const context = await chromium.launchPersistentContext("", { headless: true, executablePath: chromium.executablePath(),
+    args: ["--disable-extensions-except=" + root, "--load-extension=" + root] });
+  try {
+    const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker");
+    await worker.evaluate(() => chrome.storage.sync.set({ enabled: true, targets: ["Arial"], replacement: "serif", customCSSOn: false, ligatureLevel: "native" }));
+    fixtures.set("/rewritten-document", '<!doctype html><p id="text" style="font-family:Arial">Before</p>');
+    const page = await context.newPage();
+    await page.goto(origin + "/rewritten-document");
+    await marked(page, "text");
+    await page.evaluate(() => {
+      document.open();
+      document.write('<!doctype html><style>.target{font-family:Arial}.design{font-family:CustomFont}textarea:dir(ltr){font-family:Arial}textarea:dir(rtl){font-family:CustomFont}</style><p id="text" class="target">After</p><code id="code" class="target">Code</code><textarea id="edit" dir="auto">abc</textarea>');
+      document.close();
+    });
+    await page.waitForFunction(() => document.getElementById("text")?.hasAttribute("data-sfs-replaced"), null, { timeout: 1500 });
+    assert.equal(await family(page, "text"), "serif");
+    assert.equal(await page.locator("#code").getAttribute("data-sfs-replaced"), null);
+    assert.equal(await family(page, "code"), "Arial");
+    await marked(page, "edit");
+    await page.locator("#edit").evaluate(el => { el.value = "مرحبا"; el.dispatchEvent(new InputEvent("input", { bubbles: true })); });
+    await page.waitForFunction(() => !document.getElementById("edit").hasAttribute("data-sfs-replaced"), null, { timeout: 1500 });
+    assert.equal(await family(page, "edit"), "CustomFont");
+    await page.locator("#edit").evaluate(el => { el.value = "abc"; el.dispatchEvent(new InputEvent("input", { bubbles: true })); });
+    await marked(page, "edit");
+    await worker.evaluate(() => chrome.storage.sync.set({ enabled: false }));
+    await page.waitForFunction(() => !document.documentElement.hasAttribute("data-sfs"));
+    assert.equal(await family(page, "text"), "Arial");
+    await page.evaluate(() => {
+      const html = document.createElement("html");
+      html.innerHTML = '<head></head><body><p id="text" style="font-family:Arial">Replaced root</p></body>';
+      document.documentElement.replaceWith(html);
+    });
+    await page.waitForTimeout(100);
+    assert.equal(await page.locator("#sfs-style, #sfs-custom-style, [data-sfs-replaced]").count(), 0);
+    await worker.evaluate(() => chrome.storage.sync.set({ enabled: true }));
+    await marked(page, "text");
+    assert.equal(await family(page, "text"), "serif");
+  } finally { await context.close(); }
+});
+
+test("真实 MV3 的跨域转义 import 保留导入字体判断及动态变化", async () => {
+  let reads = 0;
+  const remote = http.createServer((request, response) => {
+    response.setHeader("Content-Type", "text/css");
+    if (request.url === "/parent.css") {
+      reads++;
+      response.end('@\\69mport "./imported.css";');
+    } else response.end('.target{font-family:Arial}.design{font-family:CustomFont}');
+  });
+  await new Promise(resolve => remote.listen(0, "127.0.0.1", resolve));
+  let context;
+  try {
+    context = await chromium.launchPersistentContext("", { headless: true, executablePath: chromium.executablePath(),
+      args: ["--disable-extensions-except=" + root, "--load-extension=" + root] });
+    const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker");
+    await worker.evaluate(() => chrome.storage.sync.set({ targets: ["Arial"], replacement: "serif", customCSSOn: false }));
+    fixtures.set("/escaped-import", '<!doctype html><html><head><link rel="stylesheet" href="http://127.0.0.1:' + remote.address().port + '/parent.css"></head><body><p id="text" class="target">Text</p><p id="design" class="design">Design</p></body></html>');
+    const page = await context.newPage();
+    await page.goto(origin + "/escaped-import");
+    await marked(page, "text");
+    await page.waitForFunction(() => document.getElementById("design").hasAttribute("data-sfs-preserve") === false);
+    await page.waitForTimeout(250);
+    assert.ok(reads >= 2, "已完成后台跨域读取");
+    assert.equal(await page.locator("#design").getAttribute("data-sfs-replaced"), null);
+    assert.equal(await family(page, "design"), "CustomFont");
+    await page.locator("#text").evaluate(el => el.className = "design");
+    await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"), null, { timeout: 1000 });
+    assert.equal(await family(page, "text"), "CustomFont");
+    await page.locator("#text").evaluate(el => el.className = "target");
+    await marked(page, "text");
+  } finally {
+    await context?.close();
+    await new Promise(resolve => remote.close(resolve));
+  }
+});
+
+test("真实 MV3 的跨域 CSS 按 charset 声明及页面编码读取中文字体变量", async () => {
+  let reads = 0;
+  const bytes = Buffer.concat([Buffer.from('@charset "gbk";:root{--'), Buffer.from("d7d6cce5", "hex"),
+    Buffer.from(':Arial}.target{font-family:var(--'), Buffer.from("d7d6cce5", "hex"), Buffer.from(')}')]);
+  const remote = http.createServer((request, response) => {
+    if (request.url === "/legacy") {
+      response.setHeader("Content-Type", "text/html; charset=gbk");
+      response.end('<!doctype html><link rel="stylesheet" href="http://localhost:' + remote.address().port + '/bare.css"><p id="text" class="target">Text</p>');
+    } else {
+      reads++;
+      response.setHeader("Content-Type", "text/css");
+      response.end(request.url === "/bare.css" ? bytes.subarray(Buffer.byteLength('@charset "gbk";')) : bytes);
+    }
+  });
+  await new Promise(resolve => remote.listen(0, "127.0.0.1", resolve));
+  let context;
+  try {
+    context = await chromium.launchPersistentContext("", { headless: true, executablePath: chromium.executablePath(),
+      args: ["--disable-extensions-except=" + root, "--load-extension=" + root] });
+    const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker");
+    await worker.evaluate(() => chrome.storage.sync.set({ targets: ["Arial"], replacement: "serif", customCSSOn: false }));
+    fixtures.set("/charset-variable", '<!doctype html><html><head><link rel="stylesheet" href="http://127.0.0.1:' + remote.address().port + '/font.css"></head><body><p id="text" class="target">Text</p></body></html>');
+    const page = await context.newPage();
+    await page.goto(origin + "/charset-variable");
+    await marked(page, "text");
+    await page.waitForTimeout(250);
+    assert.ok(reads >= 2, "已完成后台跨域读取");
+    await page.evaluate(() => document.documentElement.style.setProperty("--字体", "CustomFont"));
+    await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"), null, { timeout: 1500 });
+    assert.equal(await family(page, "text"), "CustomFont");
+    await page.evaluate(() => document.documentElement.style.setProperty("--字体", "Arial"));
+    await marked(page, "text");
+    await page.goto("http://127.0.0.1:" + remote.address().port + "/legacy");
+    assert.equal(await page.evaluate(() => document.characterSet), "GBK");
+    await marked(page, "text");
+    await page.waitForTimeout(250);
+    assert.ok(reads >= 4, "页面编码场景已完成后台跨域读取");
+    await page.evaluate(() => document.documentElement.style.setProperty("--字体", "CustomFont"));
+    await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"), null, { timeout: 1500 });
+    assert.equal(await family(page, "text"), "CustomFont");
+    await page.evaluate(() => document.documentElement.style.setProperty("--字体", "Arial"));
+    await marked(page, "text");
+  } finally {
+    await context?.close();
+    await new Promise(resolve => remote.close(resolve));
+  }
+});
+
+test("真实 MV3 的特殊子框架继承父站与显式端口规则，跨站框架按自身地址匹配", async () => {
+  const context = await chromium.launchPersistentContext("", { headless: true, executablePath: chromium.executablePath(),
+    args: ["--disable-extensions-except=" + root, "--load-extension=" + root] });
+  try {
+    const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker");
+    const port = new URL(origin).port;
+    await worker.evaluate(port => chrome.storage.sync.set({ enabled: true, targets: ["Arial"], replacement: "serif", customCSSOn: false,
+      siteRules: [{ domain: "127.0.0.1:" + port, action: "force" }, { domain: "localhost:" + port, action: "off" }] }), port);
+    fixtures.set("/special-frames", '<!doctype html><p id="parent" style="font-family:CustomFont">Parent</p>');
+    fixtures.set("/ordinary-frame", '<!doctype html><p id="text" style="font-family:Arial">Ordinary</p>');
+    const page = await context.newPage();
+    await page.goto(origin + "/special-frames");
+    await marked(page, "parent");
+    await page.evaluate(async url => {
+      const html = '<!doctype html><p id="text" style="font-family:CustomFont">Special</p>';
+      for (const type of ["srcdoc", "blank", "blob", "data", "ordinary"]) {
+        const frame = document.createElement("iframe");
+        frame.name = type;
+        if (type === "srcdoc") frame.srcdoc = html;
+        else if (type === "blob") frame.src = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+        else if (type === "data") frame.src = "data:text/html," + encodeURIComponent(html);
+        else if (type === "ordinary") frame.src = url;
+        const loaded = new Promise(resolve => frame.onload = resolve);
+        document.body.appendChild(frame);
+        if (type === "blank") {
+          frame.contentDocument.open(); frame.contentDocument.write(html); frame.contentDocument.close();
+        }
+        await loaded;
+      }
+    }, origin.replace("127.0.0.1", "localhost") + "/ordinary-frame");
+    const frames = page.frames().filter(frame => frame !== page.mainFrame());
+    assert.equal(frames.length, 5);
+    for (const frame of frames.filter(frame => frame.name() !== "ordinary")) {
+      await frame.waitForFunction(() => document.getElementById("text")?.hasAttribute("data-sfs-replaced"), null, { timeout: 1500 });
+      assert.equal(await frame.locator("#text").evaluate(el => getComputedStyle(el).fontFamily), "serif", frame.name());
+    }
+    const ordinary = frames.find(frame => frame.name() === "ordinary");
+    assert.equal(await ordinary.locator("#text").getAttribute("data-sfs-replaced"), null);
+    assert.equal(await ordinary.locator("#text").evaluate(el => getComputedStyle(el).fontFamily), "Arial");
+    await ordinary.evaluate(async () => {
+      const frame = document.createElement("iframe");
+      frame.name = "nested-srcdoc";
+      frame.referrerPolicy = "no-referrer";
+      frame.srcdoc = '<!doctype html><p id="text" style="font-family:CustomFont">Nested</p>';
+      const loaded = new Promise(resolve => frame.onload = resolve);
+      document.body.appendChild(frame);
+      await loaded;
+    });
+    const nested = page.frames().find(frame => frame.name() === "nested-srcdoc");
+    assert.ok(nested);
+    await nested.waitForFunction(() => !document.documentElement.hasAttribute("data-sfs"));
+    assert.equal(await nested.locator("#text").evaluate(el => getComputedStyle(el).fontFamily), "CustomFont");
+    assert.equal(await nested.evaluate(() => document.referrer), "");
+    await worker.evaluate(port => chrome.storage.sync.set({ siteRules: [{ domain: "127.0.0.1:" + port, action: "off" }] }), port);
+    for (const frame of frames.filter(frame => frame.name() !== "ordinary")) {
+      await frame.waitForFunction(() => !document.documentElement.hasAttribute("data-sfs"));
+      assert.equal(await frame.locator("#text").evaluate(el => getComputedStyle(el).fontFamily), "CustomFont");
+    }
+    await ordinary.waitForFunction(() => document.getElementById("text").hasAttribute("data-sfs-replaced"));
+    assert.equal(await ordinary.locator("#text").evaluate(el => getComputedStyle(el).fontFamily), "serif");
+    await nested.waitForFunction(() => document.documentElement.hasAttribute("data-sfs"));
+    assert.equal(await nested.locator("#text").getAttribute("data-sfs-replaced"), null);
+    await worker.evaluate(port => chrome.storage.sync.set({ siteRules: [{ domain: "127.0.0.1:" + (Number(port) + 1), action: "force" }] }), port);
+    for (const frame of frames.filter(frame => frame.name() !== "ordinary")) {
+      await frame.waitForFunction(() => document.documentElement.hasAttribute("data-sfs"));
+      assert.equal(await frame.locator("#text").getAttribute("data-sfs-replaced"), null, frame.name());
+    }
+  } finally { await context.close(); }
+});
+
+test("主字体与共用标点真实 MV3 联合加载，分别关闭及恢复保持正文和标点字体", {
+  skip: !fs.existsSync(path.join(punctuationRoot, "main-runtime.js"))
+}, async () => {
+  const extensions = root + "," + punctuationRoot;
+  const context = await chromium.launchPersistentContext("", {
+    headless: true,
+    executablePath: chromium.executablePath(),
+    args: ["--disable-extensions-except=" + extensions, "--load-extension=" + extensions]
+  });
+  try {
+    const workerFor = async id => context.serviceWorkers().find(worker => new URL(worker.url()).host === id)
+      || await context.waitForEvent("serviceworker", { predicate: worker => new URL(worker.url()).host === id });
+    const mainWorker = await workerFor("ecgcpjehkelnjfcgldmifejcoefohdcp");
+    const punctuationWorker = await workerFor("leodnciablfoggcacioldiippnfdonmg");
+    await mainWorker.evaluate(() => chrome.storage.sync.set({ enabled: true, replacement: '"Times New Roman"', targets: ["Arial"], protectCode: true, protectIcons: true, ligatureLevel: "native", customCSSOn: false, autoSpacing: false, siteRules: [] }));
+    await punctuationWorker.evaluate(() => chrome.storage.local.set({ settings: { enabled: true, font: "Courier New", groups: ["quotes", "ellipsis"], cjkMode: "off", siteRules: [] } }));
+    fixtures.set("/joint-fonts", '<!doctype html><html><head><style>body{font:24px Arial}#text{font-family:Arial}#design{font-family:CustomFont}#code{font-family:Arial}</style></head><body><p id="text">AB“…”中文English2026</p><p id="design">Design</p><code id="code">Code“…”</code></body></html>');
+    const page = await context.newPage();
+    await page.goto(origin + "/joint-fonts");
+    const hasPunctuation = () => [...document.fonts].some(face => face.family.includes("Shared Punctuation Font"));
+    await page.waitForFunction(hasPunctuation);
+    await marked(page, "text");
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFamily === '"Shared Punctuation Font", "Times New Roman"');
+    assert.equal(await page.locator("#design").getAttribute("data-sfs-replaced"), null);
+    assert.equal(await page.locator("#code").getAttribute("data-sfs-replaced"), null);
+    assert.equal(await family(page, "code"), '"Shared Punctuation Font", Arial');
+
+    const cdp = await context.newCDPSession(page);
+    await cdp.send("DOM.enable");
+    await cdp.send("CSS.enable");
+    await page.evaluate(() => document.fonts.ready);
+    const { root: documentRoot } = await cdp.send("DOM.getDocument");
+    const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: documentRoot.nodeId, selector: "#text" });
+    const { fonts } = await cdp.send("CSS.getPlatformFontsForNode", { nodeId });
+    assert.ok(fonts.some(font => font.familyName === "Times New Roman" && font.glyphCount > 0));
+    assert.ok(fonts.some(font => font.familyName === "Courier New" && font.glyphCount > 0));
+    await cdp.detach();
+
+    await mainWorker.evaluate(() => chrome.storage.sync.set({ enabled: false }));
+    await page.waitForFunction(() => !document.documentElement.hasAttribute("data-sfs"));
+    assert.equal(await family(page, "text"), '"Shared Punctuation Font", Arial');
+    assert.equal(await page.evaluate(hasPunctuation), true);
+    await mainWorker.evaluate(() => chrome.storage.sync.set({ enabled: true }));
+    await marked(page, "text");
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFamily.includes("Times New Roman"));
+
+    const setPunctuation = enabled => punctuationWorker.evaluate(async enabled => {
+      const { settings } = await chrome.storage.local.get("settings");
+      await chrome.storage.local.set({ settings: { ...settings, enabled } });
+    }, enabled);
+    await setPunctuation(false);
+    await page.waitForFunction(() => ![...document.fonts].some(face => face.family.includes("Shared Punctuation Font")));
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFamily === '"Times New Roman"');
+    assert.equal(await page.locator("#text").getAttribute("data-sfs-replaced"), "1");
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("code")).fontFamily === "Arial");
+    await setPunctuation(true);
+    await page.waitForFunction(hasPunctuation);
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFamily === '"Shared Punctuation Font", "Times New Roman"');
+    assert.equal(await page.locator("#text").getAttribute("data-sfs-replaced"), "1");
+    await setPunctuation(false);
+    await mainWorker.evaluate(() => chrome.storage.sync.set({ enabled: false }));
+    await page.waitForFunction(() => !document.documentElement.hasAttribute("data-sfs"));
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFamily === "Arial");
+    assert.equal(await page.locator("#design").getAttribute("data-sfs-replaced"), null);
   } finally {
     await context.close();
   }
