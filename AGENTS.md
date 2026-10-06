@@ -101,6 +101,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-release.ps1
 
 标准模式下，单个类名或 ID 的转义及非 ASCII 名称解码后可精确索引；复合转义选择器与怪异模式继续使用浏览器匹配。
 
+字体变量依赖按 CSS 标识符读取并解码，支持非 ASCII 名称、大小写敏感名称、转义函数与嵌套回退；字符串和注释中的文本不建立依赖。索引纳入当前内联样式，字体相关引用改变或新增子树引入新依赖时重新分析相关规则，普通变量值变化仍沿用分支检查。无关布局变量不得触发字体采样。
+
 站点规则保留显式端口，不填端口时匹配全部端口；HTTP/HTTPS 默认端口分别为 80/443。域名匹配主域名和子域名，更具体的主机优先，同一主机下端口规则优先，同等规则保持列表顺序。带 www 的域名保持原义。站点动作支持 `inherit`（沿用全局名单策略）、`force`、`off`；新条目默认 `inherit`，旧规则保持原动作。
 
 全局连字等级 `ligatureLevel` 为 `native`、`none`、`standard`、`extended`；站点还支持空字符串继承。旧 `standardLigatures` 开启映射到 `standard`、关闭映射到 `native`，显式新等级优先。连字规则按元素原始计算样式保留其他 OpenType 特性与上下文设置，仅修改 `liga`、`clig`、`dlig`、`hlig`。

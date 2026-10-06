@@ -354,10 +354,76 @@
   }
 
   function decodeIdentifier(value) {
-    return value.replace(/\\([0-9a-fA-F]{1,6})\s?|\\(.)/g, (_, hex, char) => {
+    return value.replace(/\\([0-9a-fA-F]{1,6})(?:\r\n|[ \t\r\n\f])?|\\([^\r\n\f])/g, (_, hex, char) => {
       const code = parseInt(hex, 16);
-      return hex ? String.fromCodePoint(code > 0 && code <= 0x10ffff ? code : 0xfffd) : char;
+      return hex ? String.fromCodePoint(code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff) ? code : 0xfffd) : char;
     });
+  }
+
+  function cssIdentifierAt(value, offset) {
+    const raw = value.slice(offset).match(/^(?:\\[0-9a-fA-F]{1,6}(?:\r\n|[ \t\r\n\f])?|\\[^\r\n\f]|[-_a-zA-Z0-9\u0080-\uffff])+/)?.[0];
+    return raw ? { name: decodeIdentifier(raw), end: offset + raw.length } : null;
+  }
+
+  function cssSpaceEnd(value, offset) {
+    while (offset < value.length) {
+      if (/[ \t\r\n\f]/.test(value[offset])) offset++;
+      else if (value.startsWith("/*", offset)) {
+        const end = value.indexOf("*/", offset + 2);
+        offset = end < 0 ? value.length : end + 2;
+      } else break;
+    }
+    return offset;
+  }
+
+  // CSSOM 会保留 var() 参数的原始转义、大小写和注释；按标识符读取并解码。
+  // 字符串、注释及非 var 函数名称中的文字不建立依赖，嵌套回退继续遍历。
+  function variableReferences(value) {
+    if (!value.includes("(")) return [];
+    const names = new Set();
+    for (let i = 0; i < value.length;) {
+      const next = cssSpaceEnd(value, i);
+      if (next !== i) { i = next; continue; }
+      const char = value[i];
+      if (char === '"' || char === "'") {
+        for (i++; i < value.length; i++) {
+          if (value[i] === "\\") i++;
+          else if (value[i] === char) { i++; break; }
+        }
+        continue;
+      }
+      if (char === "@" || char === "#") { i = cssIdentifierAt(value, i + 1)?.end || i + 1; continue; }
+      const token = cssIdentifierAt(value, i);
+      if (!token) { i++; continue; }
+      const fn = token.name.toLowerCase();
+      if (value[token.end] === "(") {
+        const start = cssSpaceEnd(value, token.end + 1);
+        if (fn === "var") {
+          const reference = cssIdentifierAt(value, start);
+          const end = reference ? cssSpaceEnd(value, reference.end) : start;
+          if (reference?.name.startsWith("--") && reference.name !== "--" && [",", ")"].includes(value[end])) names.add(reference.name);
+        } else if (fn === "url" && value[start] !== '"' && value[start] !== "'") {
+          // 未加引号的 URL 是独立词法单元，内部文字不作为函数解析。
+          i = start;
+          while (i < value.length && value[i] !== ")") { if (value[i] === "\\") i++; i++; }
+          i++;
+          continue;
+        }
+      }
+      i = token.end;
+    }
+    return [...names];
+  }
+
+  function inlineAddsVariableDependency(style, index) {
+    for (const name of style) {
+      if (FONT_PROPERTY_RE.test(name)) {
+        if (variableReferences(style.getPropertyValue(name)).some(reference => !index.variables.has(reference))) return true;
+      } else if (index.variables.has(name)) {
+        if (variableReferences(style.getPropertyValue(name)).some(reference => !index.variableDependencies.get(name)?.has(reference))) return true;
+      }
+    }
+    return false;
   }
 
   // 属性值和字符串中的标点不表示关系或状态；转义标点也保留标识符原义。
@@ -416,7 +482,6 @@
     const anchoredRules = [];
     const anchorFrequency = new Map();
     const keyframeStyles = [];
-    const variableReferences = value => [...value.matchAll(/var\(\s*(--[\w-]+)/g)].map(match => match[1]);
     const visit = (rules, ancestors = [], unsafe = false, media = []) => {
       for (const rule of rules) {
         const queries = rule.media?.mediaText ? [...media, rule.media.mediaText] : media;
@@ -443,13 +508,15 @@
       }
     }
     // 字体可能间接依赖 CSS 变量；只跟踪这条依赖链，避免布局变量引发整页补扫。
-    const variableDependencies = new Map();
-    for (const { rule } of declarations) {
-      for (const name of rule.style) {
-        if (FONT_PROPERTY_RE.test(name)) variableReferences(rule.style.getPropertyValue(name)).forEach(name => index.variables.add(name));
+    const variableDependencies = index.variableDependencies = new Map();
+    const variableStyles = [...declarations.map(({ rule }) => rule.style),
+      ...[...document.querySelectorAll("[style]")].map(el => el.style)];
+    for (const style of variableStyles) {
+      for (const name of style) {
+        if (FONT_PROPERTY_RE.test(name)) variableReferences(style.getPropertyValue(name)).forEach(name => index.variables.add(name));
         if (name.startsWith("--")) {
           if (!variableDependencies.has(name)) variableDependencies.set(name, new Set());
-          variableReferences(rule.style.getPropertyValue(name)).forEach(reference => variableDependencies.get(name).add(reference));
+          variableReferences(style.getPropertyValue(name)).forEach(reference => variableDependencies.get(name).add(reference));
         }
       }
     }
@@ -574,6 +641,14 @@
       if (!inlineCouldAffectTypography(before, index) && !inlineCouldAffectTypography(after, index)) return false;
       const oldStyle = document.createElement("span").style;
       oldStyle.cssText = before;
+      const relevant = new Set([...oldStyle, ...parent.style].filter(name => FONT_PROPERTY_RE.test(name) || index.variables.has(name)));
+      // 引用关系变化时重新分析当前样式，纳入新依赖并更新相关规则/媒体条件。
+      if ([...relevant].some(name => JSON.stringify(variableReferences(oldStyle.getPropertyValue(name)))
+          !== JSON.stringify(variableReferences(parent.style.getPropertyValue(name))))) {
+        invalidateTypography();
+        getTypographyIndex();
+        return true;
+      }
       return JSON.stringify(typographyInline(oldStyle, index)) !== JSON.stringify(typographyInline(parent.style, index));
     }
     return name === "id" && settings.protectIcons;
@@ -1143,7 +1218,7 @@
   // 新增、移动和移除整段子树时，同步发现内部样式表和已在播放的视频。
   // 包含样式表的变动由整页补扫覆盖，不再单独重复扫描该子树。
   function inspectResources(node) {
-    const selector = "style, link[rel='stylesheet'], video";
+    const selector = "style, link[rel='stylesheet'], video, [style]";
     const resources = node.firstElementChild ? [...node.querySelectorAll(selector)] : [];
     if (node.matches(selector)) resources.push(node);
     let stylesheet = false;
@@ -1152,7 +1227,9 @@
       if (resource instanceof HTMLVideoElement) {
         trackVideo(resource);
         video = true;
-      } else if (![STYLE_ID, CUSTOM_STYLE_ID].includes(resource.id)) stylesheet = true;
+      } else if (resource.matches("style, link[rel='stylesheet']")) {
+        if (![STYLE_ID, CUSTOM_STYLE_ID].includes(resource.id)) stylesheet = true;
+      } else if (resource.isConnected && typographyIndex && inlineAddsVariableDependency(resource.style, typographyIndex)) stylesheet = true;
     }
     if (video) releaseVideoWork();
     if (stylesheet) queueStylesheetScan();

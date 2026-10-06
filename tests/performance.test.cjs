@@ -1310,6 +1310,107 @@ test("深层继承和超过缓存容量的字体来源仍保持移动与重检�
   await page.close();
 });
 
+test("中文字体变量只切换祖先值时更新替换标记，无关变量不采样", async () => {
+  for (const customCSSOn of [false, true]) {
+    const page = await pageFor('<style>:root{--字体:Arial}.variable{font-family:var(--字体)}</style><p id="text" class="variable">Variable</p>', { customCSSOn });
+    try {
+      for (const value of ["CustomFont", "Arial"]) {
+        await page.evaluate(value => document.documentElement.style.setProperty("--字体", value), value);
+        await page.waitForFunction(target => document.getElementById("text").hasAttribute("data-sfs-replaced") === target, value === "Arial", { timeout: 1500 });
+      }
+      await page.evaluate(async () => {
+        __styleReads = __sheetDisables = 0;
+        for (let i = 0; i < 40; i++) {
+          document.documentElement.style.setProperty("--布局", i + "px");
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        }
+      });
+      assert.equal(await page.evaluate(() => __styleReads), 0);
+      assert.equal(await page.evaluate(() => __sheetDisables), 0);
+    } finally { await page.close(); }
+  }
+});
+
+test("CSSOM 保留的转义、注释及函数名称写法正确建立字体变量依赖", async t => {
+  const cases = [
+    { name: "混合名称", token: "--font字体", decoded: "--font字体" },
+    { name: "十六进制转义", token: String.raw`--\5b57 \4f53`, decoded: "--字体" },
+    { name: "标点转义", token: String.raw`--font\+wide`, decoded: "--font+wide" },
+    { name: "六位转义", token: String.raw`--font\00002b wide`, decoded: "--font+wide" },
+    { name: "非 ASCII 空白属于名称", token: "--f\\6f\u00a0nt", decoded: "--fo\u00a0nt" },
+    { name: "补充平面字符", token: String.raw`--\1f600`, decoded: "--😀" },
+    { name: "转义前导连字符", token: String.raw`\2d \2d font`, decoded: "--font" },
+    { name: "大写函数", token: "--font", decoded: "--font", fn: "VAR" },
+    { name: "转义函数", token: "--font", decoded: "--font", fn: String.raw`v\61 r` },
+    { name: "参数前注释", token: "--font", decoded: "--font", prefix: "/* 注释 */ " },
+    { name: "大小写敏感名称", token: "--Font", decoded: "--Font" }
+  ];
+  for (const customCSSOn of [false, true]) for (const item of cases) {
+    await t.test((customCSSOn ? "自定义 CSS：" : "普通替换：") + item.name, async () => {
+      const expression = (item.fn || "var") + '(' + (item.prefix || "") + item.token + ')';
+      const css = '<style>:root{' + item.token + ':Arial;--font:Arial}.variable{font-family:' + expression + '}</style>';
+      const page = await pageFor(css + '<p id="text" class="variable">Variable</p>', { customCSSOn });
+      try {
+        const serialized = await page.evaluate(() => [...document.styleSheets].flatMap(sheet => [...sheet.cssRules])
+          .find(rule => rule.selectorText === ".variable").style.getPropertyValue("font-family"));
+        assert.equal(serialized, expression, "确认浏览器保留了待测 var() 写法");
+        for (const value of ["CustomFont", "Arial"]) {
+          await page.evaluate(({ name, value }) => document.documentElement.style.setProperty(name, value), { name: item.decoded, value });
+          await page.waitForFunction(target => document.getElementById("text").hasAttribute("data-sfs-replaced") === target, value === "Arial", { timeout: 1500 });
+        }
+      } finally { await page.close(); }
+    });
+  }
+});
+
+test("嵌套回退和中文循环依赖正确终止，字符串及注释中的 var 不触发采样", async () => {
+  const page = await pageFor('<style>:root{--字体:Arial;--环甲:var(--环乙);--环乙:var(--环甲)}.variable{font-family:var(--未定义,var(--字体))}.cycle{font-family:var(--环甲,Arial)}.quoted{font-family:Arial,"var(--假字体)"/* var(--注释) */}</style>' +
+    '<p id="text" class="variable">Fallback</p><p class="cycle">Cycle</p><p class="quoted">Quoted</p>');
+  try {
+    await page.evaluate(() => { document.documentElement.style.setProperty("--假字体", "CustomFont"); document.documentElement.style.setProperty("--注释", "CustomFont"); });
+    await page.waitForTimeout(80);
+    assert.equal(await page.evaluate(() => __styleReads), 0);
+    for (const value of ["CustomFont", "Arial"]) {
+      await page.evaluate(value => document.documentElement.style.setProperty("--字体", value), value);
+      await page.waitForFunction(target => document.getElementById("text").hasAttribute("data-sfs-replaced") === target, value === "Arial");
+      assert.equal(await page.locator('.cycle[data-sfs-replaced="1"],.quoted[data-sfs-replaced="1"]').count(), 2);
+    }
+  } finally { await page.close(); }
+});
+
+test("已有祖先新增内联变量引用后跟踪后续值及样式表条件变化", async () => {
+  const page = await pageFor('<style>:root{--主字体:Arial;--后备字体:Arial}#shell.design{--后备字体:CustomFont}.variable{font-family:var(--主字体)}</style><main id="shell"><p id="text" class="variable">Inline chain</p></main>');
+  try {
+    await page.locator("#shell").evaluate(el => { el.style.setProperty("--后备字体", "Arial"); el.style.setProperty("--主字体", "var(--后备字体)"); });
+    await page.waitForTimeout(120);
+    await page.locator("#shell").evaluate(el => el.style.setProperty("--后备字体", "CustomFont"));
+    await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
+    await page.locator("#shell").evaluate(el => { el.style.removeProperty("--后备字体"); el.className = "design"; });
+    await page.waitForTimeout(80);
+    assert.equal(await page.locator("#text").getAttribute("data-sfs-replaced"), null);
+    await page.locator("#shell").evaluate(el => el.className = "");
+    await page.waitForFunction(() => document.getElementById("text").hasAttribute("data-sfs-replaced"));
+    await page.locator("#shell").evaluate(el => el.className = "design");
+    await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
+  } finally { await page.close(); }
+});
+
+test("初始及新增元素的内联字体变量进入依赖图", async () => {
+  const page = await pageFor('<main id="shell" style="--字体:Arial"><p id="text" style="font-family:var(--字体)">Inline font</p></main>');
+  try {
+    await page.locator("#shell").evaluate(el => el.style.setProperty("--字体", "CustomFont"));
+    await page.waitForFunction(() => !document.getElementById("text").hasAttribute("data-sfs-replaced"));
+    await page.locator("#shell").evaluate(el => {
+      el.style.setProperty("--新字体", "Arial");
+      el.insertAdjacentHTML("beforeend", '<p id="added" style="font-family:var(--新字体)">Added</p>');
+    });
+    await page.waitForFunction(() => document.getElementById("added").hasAttribute("data-sfs-replaced"));
+    await page.waitForTimeout(120);
+    await page.locator("#shell").evaluate(el => el.style.setProperty("--新字体", "CustomFont"));
+    await page.waitForFunction(() => !document.getElementById("added").hasAttribute("data-sfs-replaced"));
+  } finally { await page.close(); }
+});
+
 test("多层与循环字体变量依赖完成分析，布局变量继续过滤", async () => {
   const page = await pageFor('<style>:root{--a:var(--b);--b:var(--c);--c:Arial;--loop1:var(--loop2);--loop2:var(--loop1)}.variable{font-family:var(--a)}.loop{font-family:var(--loop1,Arial)}</style><p id="text" class="variable">Variable</p><p class="loop">Cycle</p>');
   await page.evaluate(() => document.documentElement.style.setProperty("--layout", "10px"));
