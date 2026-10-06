@@ -12,7 +12,7 @@ The extension runs on ordinary webpages in order to inspect CSS font-family info
 
 ## Settings
 
-Extension settings are stored using Chromium's `chrome.storage.sync` API. Depending on the user's browser account and sync settings, the browser vendor may synchronize these settings between the user's signed-in browser installations.
+Extension settings are stored using Chromium’s `chrome.storage.sync` API. Depending on the user’s browser account and sync settings, the browser vendor may synchronize these settings between the user’s signed-in browser installations.
 
 ## Network access and remote code
 
@@ -22,7 +22,7 @@ To avoid unnecessary font scans during page interactions, the extension analyzes
 
 ## Changes
 
-If the extension's data practices change, this policy will be updated before such changes are released.
+If the extension’s data practices change, this policy will be updated before such changes are released.
 
 ## Contact
 

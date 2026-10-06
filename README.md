@@ -59,10 +59,12 @@
 
 ## 安装
 
-1. 下载 Release 中的 `system-font-substituter-v<VERSION>.zip`。
+1. 从 [GitHub Release](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/latest) 下载 `system-font-substituter-v<VERSION>.zip`。
 2. Edge 打开 `edge://extensions/`，Chrome 打开 `chrome://extensions/`。
 3. 开启“开发人员模式”，将 ZIP 安装包拖入扩展管理页。
 4. 点击扩展图标进入设置页。
+
+固定扩展 ID 为 `ecgcpjehkelnjfcgldmifejcoefohdcp`。更新时拖入新版 ZIP，覆盖原扩展并沿用已有设置。
 
 ## 行为
 

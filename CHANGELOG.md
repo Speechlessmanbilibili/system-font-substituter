@@ -1,25 +1,25 @@
 # 更新日志
 
-根据 Git 提交、版本标签及 GitHub Release 记录整理。日期按北京时间记录；各条目记录对应版本发布时的功能修改。
+根据 Git 提交、版本标签及 GitHub Release 记录整理。版本标题链接到对应 Release，日期采用首次发布时的北京时间；同版本安装包的后续更新另行标注日期。
 
-## v2.1.8（2026-10-06）
+## [v2.1.8](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.1.8)（2026-10-06）
 
-- 在网站移除扩展样式或替换 head 后恢复已启用的自定义 CSS，保持普通样式与自定义样式的顺序。
-- 跟踪字体及相关变量中的 attr() 属性依赖，支持原有元素、后来添加的内联声明与新增子树，保留无关属性过滤。
+- 在网站移除扩展样式或替换 `head` 后恢复已启用的自定义 CSS，保持普通样式与自定义样式的顺序。
+- 跟踪字体及相关变量中的 `attr()` 属性依赖，支持原有元素、后来添加的内联声明与新增子树，保留无关属性过滤。
 - 保留 SVG 属性名大小写，更新字体变化后的保护快照。
 - 与共用标点字体替换同时启用时，按专用标点字体之后的正文首选字体判断名单；分别开关两个扩展时同步更新标记和字体快照。
-- 识别跨域 CSS 中转义的 @import 声明，保留导入字体的真实采样，修复设计字体误替换。
-- 向 about:blank、srcdoc、blob 和 data 框架注入，按创建来源匹配站点域名与端口规则，保留普通跨站框架的独立匹配。
-- 在 document.open 重写或替换页面根元素后恢复扫描及输入、拖选、媒体和样式加载监听，取消旧页面任务。
-- 按 BOM、HTTP、@charset 和引用页面编码读取跨域 CSS，保留中文字体名与变量；按 URL 和规范化编码合并请求。
+- 识别跨域 CSS 中转义的 `@import` 声明，保留导入字体的真实采样，修复设计字体误替换。
+- 向 `about:blank`、`srcdoc`、`blob` 和 `data` 框架注入，按创建来源匹配站点域名与端口规则，保留普通跨站框架的独立匹配。
+- 在 `document.open/write` 重写或替换页面根元素后恢复扫描及输入、拖选、媒体和样式加载监听，取消旧页面任务。
+- 按 BOM、HTTP charset、`@charset` 和引用页面编码读取跨域 CSS，保留中文字体名与变量；按 URL 和规范化编码合并请求。
 - 校验站点域名中的通配符，保留标准通配前缀的匹配行为。
 
-## v2.1.7（2026-10-06）
+## [v2.1.7](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.1.7)（2026-10-06）
 
-- 识别中文、转义及大小写敏感的字体变量名，支持 var() 函数的大写、转义、注释和嵌套回退写法。
+- 识别中文、转义及大小写敏感的字体变量名，支持 `var()` 函数的大写、转义、注释和嵌套回退写法。
 - 跟踪初始及新增元素的内联字体变量，引用关系改变时更新依赖图和相关样式规则，保留循环终止与无关布局变量过滤。
 
-## v2.1.6（2026-10-06）
+## [v2.1.6](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.1.6)（2026-10-06）
 
 - 区分属性选择器运算符、引号内容与真实关系和状态条件，保留静态字体规则缓存，减少重复采样及无关属性变化引起的整页检查。
 - 对单个转义类名或 ID 按解码后的名称精确索引，减少字体规则的重复匹配；复合选择器继续使用浏览器判断。
@@ -41,7 +41,7 @@
 - 批量初始化站点规则后统一挂入设置页，复用规则字段引用，并延后屏外规则的排版，减少大量规则加载、编辑和保存的开销。
 - 按版本归档四轮性能报告、完整样本与比较基线，按运行时间保存新报告，支持长期查阅与复现。
 
-## v2.1.5（2026-10-05）
+## [v2.1.5](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.1.5)（2026-10-05）
 
 - 视频播放期间合并动画属性与弹幕变化引起的字体检查，放到浏览器空闲时段处理，并缩小每批采样量，减少停用自定义 CSS 造成的播放干扰。
 - 视频暂停或结束后恢复普通扫描调度；禁用或重新加载配置时取消尚未执行的播放检查。
@@ -51,7 +51,7 @@
 - 合并多张跨域样式表读取完成后的整页补扫，减少加载期间的重复采样。
 - 排除图标等伪元素字体规则对宿主元素的无关依赖，减少播放器控件、搜索栏切换状态时的重复子树遍历，保留混合选择器列表中的实际字体规则。
 
-## v2.1.4（2026-10-05）
+## [v2.1.4](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.1.4)（2026-10-05）
 
 - 减少流式回答更新时的字体重检：已有非空文字的修改或文本节点替换复用采样结果，保留字体属性、结构、语言与自动文字方向变化的重检。
 - 合并同一帧多个独立区域的字体采样，减少反复停用扩展样式表造成的全页样式重算。
@@ -70,7 +70,7 @@
 - 自定义 CSS 接管时，省去对已由元素结构或类名确定受保护的代码、图标等元素的字体采样。
 - 从 Apple UI Mix 模板移除 Hiragino Sans、Apple SD Gothic Neo 与霞鹜新晰黑回退项，同步更新内置模板和独立 CSS 文件。
 
-## v2.1.2（2026-10-04）
+## [v2.1.2](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.1.2)（2026-10-04）
 
 - 重做站点规则条目，常驻显示 Auto Spacing、自定义 CSS 和连字程度，将代码保护、图标保护与站点字体收进“其他设置”。
 - 新增“沿用全局策略”站点行为，并作为新条目的默认选项；继承设置显示当前全局值，关闭覆盖时保留原配置。
@@ -83,7 +83,7 @@
 - 整理 CSS 注释并统一中文表述与标点，同步内置模板和独立 CSS 文件。
 - 新增本更新日志，集中维护历史版本记录。
 
-## v2.1.1（2026-10-04）
+## [v2.1.1](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.1.1)（2026-10-04）
 
 - 修复站点规则忽略端口的问题，支持默认端口、IPv6 和国际化域名，并优先采用更具体的主机及端口规则。
 - 统一设置页与内容脚本的默认配置，保留 OpenAI Sans/SC。
@@ -94,36 +94,40 @@
 - 补齐双语文案，保留恢复 CSS 按钮图标，并按平台显示保存快捷键。
 - 新增构建脚本，将版本 ZIP 同步至系统下载目录。
 
-## v2.1.0（2026-09-07）
+## [v2.1.0](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.1.0)（2026-09-07）
 
 - 重构设置页，统一浅色/深色主题、卡片、圆角与阴影。
 - 新增可编辑字体预览，提供排版预设和四档字重切换。
 - 将保护与排版规则改为卡片网格，新增站点规则空状态和 CSS 编辑区域。
 - 新增悬浮保存栏、未保存提示与 `Ctrl+S` / `Cmd+S` 快捷键。
 
-## v2.0.3（2026-09-06）
+### 2026-10-04 安装包更新
+
+- 将保护与排版规则卡片改为纵向全宽列表，允许说明文字换行，修复不同窗口宽度下的水平溢出。
+
+## [v2.0.3](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.0.3)（2026-09-06）
 
 - 将全局回退链的苹方港繁变体改为 PingFang UI HK/TC/MO。
 - 将日文与韩文回退字体分别改为 Hiragino Sans 和 Apple SD Gothic Neo。
 
-## v2.0.2（2026-09-06）
+## [v2.0.2](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.0.2)（2026-09-06）
 
 - 将西文段改为 SF Pro Text 静态套件，避免光学尺寸自动切换带来的窄紧观感。
 - 移除 v2.0.1 的 JavaScript 逐元素光学尺寸映射。
 
-## v2.0.1（2026-09-06）
+## [v2.0.1](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.0.1)（2026-09-06）
 
 - 将自定义 CSS 改为检测命中后注入，保留未命中网页的原有字体设置。
 - 将站点强制覆盖升级为站点特殊规则，新增“关闭覆盖”动作。
 - 按 CSS 字号逐元素设置光学尺寸，以改善高缩放下的西文字形。
 
-## v2.0.0（2026-09-06）
+## [v2.0.0](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.0.0)（2026-09-06）
 
 - 更新 Apple UI Mix 模板，适配 SF Pro 与 PingFang UI SC 变量字体。
 - 将字体权重映射简化为两段，移除静态字体时代的兼容规则。
 - 保留共有标点、带圈数字与私用区字符的 Unicode 范围分配。
 
-## v1.9.1（2026-09-05）
+## [v1.9.1](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v1.9.1)（2026-09-05）
 
 - 让非空自定义 CSS 接管替换字体链，关闭时恢复普通替换。
 - 扩展模板选择器至已标记元素与占位文字，并归一字体变体设置。
@@ -131,59 +135,59 @@
 - 精简模板回退链，移除网站专用兼容段。
 - 将自定义 CSS 改为分块存储，兼容旧版单键内容。
 
-## v1.9.0（2026-09-05）
+## [v1.9.0](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v1.9.0)（2026-09-05）
 
 - 新增自定义 CSS 注入与 Apple UI Mix 模板，并提供独立 CSS 文件。
 - 将自定义 CSS 放在扩展样式之后，优先应用其排版规则。
 - 为站点规则增加代码保护、图标保护、连字、Auto Spacing 与自定义 CSS 的三态覆盖。
 - 将默认替换字体改为 Em Dash Bridge、HarmonyOS Sans SC、Noto Sans SC 与霞鹜新晰黑。
 
-## v1.8.0（2026-08-29）
+## [v1.8.0](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v1.8.0)（2026-08-29）
 
 - 新增全局 Auto Spacing 开关，对已替换文字应用 `text-autospace: normal`。
 - 新增站点独立 Auto Spacing 开关。
 - 将简体中文文案中的全角斜线统一为半角 `/`。
 
-## v1.7.2（2026-08-26）
+## [v1.7.2](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v1.7.2)（2026-08-26）
 
 - 将替换规则扩展至 `::placeholder`，覆盖声明独立字体的占位文字。
 - 将空 `contenteditable` 区域纳入扫描范围。
 
-## v1.7.1（2026-08-26）
+## [v1.7.1](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v1.7.1)（2026-08-26）
 
 - 修复字体加载后补扫造成的整页字体闪回与持续卡顿，保留已替换标记。
 - 限制扩展样式表重新排序的频率，减少动态样式引发的级联重算。
 
-## v1.7.0（2026-08-26）
+## [v1.7.0](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v1.7.0)（2026-08-26）
 
 - 新增站点强制覆盖与站点专属字体配置。
 - 提高替换规则的优先级，并在动态样式插入后维护声明顺序。
 - 将大页面扫描改为分帧处理，为增量扫描增加祖先去重。
 - 在没有 WebFont 的页面跳过字体加载后的整页补扫。
 
-## v1.6.1（2026-08-26）
+## [v1.6.1](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v1.6.1)（2026-08-26）
 
 - 减少大型动态网页的运行开销，缩小扫描范围并取消全站属性监听。
 - 将标准连字改为已替换区域的纯 CSS 规则，保留两阶段字体判断。
 - 增加扩展图标、英文/简体中文 Manifest 本地化与公开隐私政策。
 
-## v1.5.5（2026-08-24）
+## [v1.5.5](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v1.5.5)（2026-08-24）
 
 - 回退会导致动态页面卡顿的标记暂停与周期校正逻辑。
 - 恢复两阶段扫描，将连字补强改为已替换区域及其后代的纯 CSS 规则。
 - 移除周期性整页遍历。
 
-## v1.5.2（2026-08-24）
+## [v1.5.2](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v1.5.2)（2026-08-24）
 
 - 改用可恢复的内联 `!important` 强制开启目标元素的标准连字。
 - 保留其他 OpenType 特性，并在动态样式变化后重新应用连字规则。
 
-## v1.5.1（2026-08-24）
+## [v1.5.1](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v1.5.1)（2026-08-24）
 
 - 增加默认关闭的标准连字开关，仅对已替换元素生效。
 - 在 Manifest 中加入固定公钥，使扩展 ID 不随解压目录变化。
 
-## v1.4.0（2026-08-24）
+## [v1.4.0](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v1.4.0)（2026-08-24）
 
 - 发布首个公开版本，按首选字体名单替换常见西文与简体中文系统/UI 字体。
 - 配置 CJK Punct Bridge、Hanken Grotesk 与 HarmonyOS Sans SC 默认字体链。
