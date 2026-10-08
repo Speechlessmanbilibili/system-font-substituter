@@ -2,6 +2,11 @@
 
 根据 Git 提交、版本标签及 GitHub Release 记录整理。版本标题链接到对应 Release，日期采用首次发布时的北京时间；同版本安装包的后续更新另行标注日期。
 
+## [v2.1.9](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.1.9)（2026-10-08）
+
+- 兼容共用标点字体替换的多个标点范围字体，按其后的正文首选字体进行名单与保护判断。
+- 在标点后备字体配置变化后更新识别与快照，保留未注册及全字符同名字体的原判断。
+
 ## [v2.1.8](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.1.8)（2026-10-06）
 
 - 在网站移除扩展样式或替换 `head` 后恢复已启用的自定义 CSS，保持普通样式与自定义样式的顺序。

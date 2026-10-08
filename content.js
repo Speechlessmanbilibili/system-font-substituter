@@ -71,6 +71,8 @@
   const fontResults = new Map();
   let sharedPunctuationFont = null;
   let sharedPunctuationRange = "";
+  let sharedPunctuationFamilies = new Set();
+  let sharedPunctuationFamilyKey = "";
   let sharedFontCount = -1;
   const FONT_SAMPLE_LIMIT = 1024;
   const NONSPACE_RE = /\S/;
@@ -796,7 +798,7 @@
   function firstFamily(value) {
     const parts = splitFamilies(value || "");
     // 共用标点扩展注册的范围字体只负责部分字符，后面的字体仍是正文首选。
-    if (sharedPunctuationFont && parts.length > 1 && normalizeFamily(parts[0]) === PUNCTUATION_FAMILY) parts.shift();
+    while (sharedPunctuationFont && parts.length > 1 && sharedPunctuationFamilies.has(normalizeFamily(parts[0]))) parts.shift();
     return parts.length ? normalizeFamily(parts[0]) : "";
   }
 
@@ -808,16 +810,22 @@
         || fonts.has(sharedPunctuationFont) && sharedPunctuationFont.unicodeRange === sharedPunctuationRange)) return false;
     sharedFontCount = count;
     let next = null;
+    const families = new Set();
     for (const face of fonts || []) {
-      if (normalizeFamily(face.family) === PUNCTUATION_FAMILY && face.unicodeRange.toUpperCase() !== "U+0-10FFFF") {
-        next = face;
-        break;
+      const family = normalizeFamily(face.family);
+      if ((family === PUNCTUATION_FAMILY || /^shared punctuation font (?:[2-9]|[12]\d|3[0-2])$/.test(family))
+          && face.unicodeRange.toUpperCase() !== "U+0-10FFFF") {
+        families.add(family);
+        if (family === PUNCTUATION_FAMILY) next ||= face;
       }
     }
     const range = next?.unicodeRange || "";
-    if (next === sharedPunctuationFont && range === sharedPunctuationRange) return false;
+    const key = [...families].sort().join("\0");
+    if (next === sharedPunctuationFont && range === sharedPunctuationRange && key === sharedPunctuationFamilyKey) return false;
     sharedPunctuationFont = next;
     sharedPunctuationRange = range;
+    sharedPunctuationFamilies = families;
+    sharedPunctuationFamilyKey = key;
     invalidateTypography();
     return true;
   }

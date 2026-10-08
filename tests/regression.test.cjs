@@ -522,6 +522,37 @@ test("网站同名字体未注册专用范围时，保持首选字体的名单�
   }
 });
 
+test("多个标点范围字体连续前置时按正文匹配，保留未注册及全字符后备字体", async () => {
+  for (const secondary of ["restricted", "full", "missing"]) {
+    const page = await pageFor('<p id="text" style="font-family:&quot;Shared Punctuation Font&quot;,&quot;Shared Punctuation Font 2&quot;,Arial">Text</p>', base, false, "zh-CN", () => {
+      document.fonts.add(new FontFace("Shared Punctuation Font", 'local("Arial")', { unicodeRange: "U+201C-201D" }));
+    });
+    await page.waitForFunction(() => document.documentElement.hasAttribute("data-sfs"));
+    await page.evaluate(secondary => {
+      if (secondary !== "missing") {
+        window.secondaryFace = new FontFace("Shared Punctuation Font 2", 'local("Courier New")', secondary === "restricted" ? { unicodeRange: "U+201C-201D" } : {});
+        document.fonts.add(secondaryFace);
+      }
+      window.dispatchEvent(new CustomEvent("shared-punctuation-font/v1/config", { detail: JSON.stringify({ enabled: true, font: "Arial, Courier New", groups: ["quotes"] }) }));
+    }, secondary);
+    if (secondary === "restricted") await marked(page, "text");
+    else {
+      await page.waitForTimeout(100);
+      assert.equal(await page.locator("#text").getAttribute("data-sfs-replaced"), null);
+    }
+    if (secondary === "full") {
+      await page.evaluate(() => {
+        document.fonts.delete(secondaryFace);
+        document.fonts.add(new FontFace("Shared Punctuation Font 2", 'local("Courier New")', { unicodeRange: "U+201C-201D" }));
+        window.dispatchEvent(new CustomEvent("shared-punctuation-font/v1/config", { detail: JSON.stringify({ enabled: true, font: "Arial, Courier New", groups: ["quotes"] }) }));
+      });
+      await marked(page, "text");
+    }
+    assert.deepEqual(page.__errors, []);
+    await page.close();
+  }
+});
+
 test("本站 CSS 替换全局内容，分块更新、空内容与关闭覆盖均正确应用", async () => {
   const globalCSS = "#text{color:rgb(255,0,0)!important}";
   const rule = { domain: "127.0.0.1", action: "inherit", customCSSMode: "site", customCSSOn: "on", customCSS: "#text{color:rgb(0,0,255)!important}" };
@@ -1204,6 +1235,19 @@ test("主字体与共用标点真实 MV3 联合加载，分别关闭及恢复保
     assert.ok(fonts.some(font => font.familyName === "Times New Roman" && font.glyphCount > 0));
     assert.ok(fonts.some(font => font.familyName === "Courier New" && font.glyphCount > 0));
     await cdp.detach();
+
+    await punctuationWorker.evaluate(async () => {
+      const { settings } = await chrome.storage.local.get("settings");
+      await chrome.storage.local.set({ settings: { ...settings, font: "Missing Font, Courier New, Arial" } });
+    });
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFamily === '"Shared Punctuation Font", "Shared Punctuation Font 2", "Shared Punctuation Font 3", "Times New Roman"');
+    assert.equal(await page.locator("#text").getAttribute("data-sfs-replaced"), "1");
+    assert.equal(await family(page, "code"), '"Shared Punctuation Font", "Shared Punctuation Font 2", "Shared Punctuation Font 3", Arial');
+    await punctuationWorker.evaluate(async () => {
+      const { settings } = await chrome.storage.local.get("settings");
+      await chrome.storage.local.set({ settings: { ...settings, font: "Courier New" } });
+    });
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFamily === '"Shared Punctuation Font", "Times New Roman"');
 
     await mainWorker.evaluate(() => chrome.storage.sync.set({ enabled: false }));
     await page.waitForFunction(() => !document.documentElement.hasAttribute("data-sfs"));
