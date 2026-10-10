@@ -1001,7 +1001,7 @@ test("真实 MV3 在严格 CSP 中跟踪字体属性并恢复被页面移除的�
   }
 });
 
-const punctuationRoot = process.env.SFS_PUNCTUATION_EXTENSION_ROOT || path.join(path.dirname(root), "共用标点字体替换浏览器扩展");
+const punctuationRoot = process.env.SFS_PUNCTUATION_EXTENSION_ROOT || path.join(path.dirname(root), "中西文字体替换浏览器扩展");
 
 test("真实 MV3 在 document.open 重写页面后继续替换、保护及跟踪输入方向", async () => {
   const context = await chromium.launchPersistentContext("", { headless: true, executablePath: chromium.executablePath(),
