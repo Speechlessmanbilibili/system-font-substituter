@@ -1214,16 +1214,17 @@ test("主字体与共用标点真实 MV3 联合加载，分别关闭及恢复保
     const punctuationWorker = await workerFor("leodnciablfoggcacioldiippnfdonmg");
     await mainWorker.evaluate(() => chrome.storage.sync.set({ enabled: true, replacement: '"Times New Roman"', targets: ["Arial"], protectCode: true, protectIcons: true, ligatureLevel: "native", customCSSOn: false, autoSpacing: false, siteRules: [] }));
     await punctuationWorker.evaluate(() => chrome.storage.local.set({ settings: { enabled: true, font: "Courier New", groups: ["quotes", "ellipsis"], cjkMode: "off", siteRules: [] } }));
-    fixtures.set("/joint-fonts", '<!doctype html><html><head><style>body{font:24px Arial}#text{font-family:Arial}#design{font-family:CustomFont}#code{font-family:Arial}</style></head><body><p id="text">AB“…”中文English2026</p><p id="design">Design</p><code id="code">Code“…”</code></body></html>');
+    fixtures.set("/joint-fonts", '<!doctype html><html><head><style>body{font:24px Arial,sans-serif}#text{font-family:Arial,sans-serif}#plain{font-family:Arial}#design{font-family:CustomFont}#code{font-family:Arial,sans-serif}</style></head><body><p id="text">AB“…”中文English2026</p><p id="plain">Plain“…”</p><p id="design">Design</p><code id="code">Code“…”</code></body></html>');
     const page = await context.newPage();
     await page.goto(origin + "/joint-fonts");
     const hasPunctuation = () => [...document.fonts].some(face => face.family.includes("Shared Punctuation Font"));
     await page.waitForFunction(hasPunctuation);
     await marked(page, "text");
-    await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFamily === '"Shared Punctuation Font", "Times New Roman"');
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFamily === '"Times New Roman"');
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("plain")).fontFamily === '"Times New Roman"');
     assert.equal(await page.locator("#design").getAttribute("data-sfs-replaced"), null);
     assert.equal(await page.locator("#code").getAttribute("data-sfs-replaced"), null);
-    assert.equal(await family(page, "code"), '"Shared Punctuation Font", Arial');
+    assert.equal(await family(page, "code"), '"Shared Punctuation Font", Arial, sans-serif');
 
     const cdp = await context.newCDPSession(page);
     await cdp.send("DOM.enable");
@@ -1233,25 +1234,32 @@ test("主字体与共用标点真实 MV3 联合加载，分别关闭及恢复保
     const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: documentRoot.nodeId, selector: "#text" });
     const { fonts } = await cdp.send("CSS.getPlatformFontsForNode", { nodeId });
     assert.ok(fonts.some(font => font.familyName === "Times New Roman" && font.glyphCount > 0));
-    assert.ok(fonts.some(font => font.familyName === "Courier New" && font.glyphCount > 0));
+    assert.equal(fonts.some(font => font.familyName === "Courier New"), false);
+    const { nodeId: codeId } = await cdp.send("DOM.querySelector", { nodeId: documentRoot.nodeId, selector: "#code" });
+    const { fonts: codeFonts } = await cdp.send("CSS.getPlatformFontsForNode", { nodeId: codeId });
+    assert.ok(codeFonts.some(font => font.familyName === "Arial" && font.glyphCount > 0));
+    assert.ok(codeFonts.some(font => font.familyName === "Courier New" && font.glyphCount > 0));
     await cdp.detach();
 
     await punctuationWorker.evaluate(async () => {
       const { settings } = await chrome.storage.local.get("settings");
       await chrome.storage.local.set({ settings: { ...settings, font: "Missing Font, Courier New, Arial" } });
     });
-    await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFamily === '"Shared Punctuation Font", "Shared Punctuation Font 2", "Shared Punctuation Font 3", "Times New Roman"');
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("code")).fontFamily.startsWith('"Shared Punctuation Font", "Shared Punctuation Font 2", "Shared Punctuation Font 3"'));
+    assert.equal(await family(page, "text"), '"Times New Roman"');
     assert.equal(await page.locator("#text").getAttribute("data-sfs-replaced"), "1");
-    assert.equal(await family(page, "code"), '"Shared Punctuation Font", "Shared Punctuation Font 2", "Shared Punctuation Font 3", Arial');
+    assert.equal(await family(page, "code"), '"Shared Punctuation Font", "Shared Punctuation Font 2", "Shared Punctuation Font 3", Arial, sans-serif');
     await punctuationWorker.evaluate(async () => {
       const { settings } = await chrome.storage.local.get("settings");
       await chrome.storage.local.set({ settings: { ...settings, font: "Courier New" } });
     });
-    await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFamily === '"Shared Punctuation Font", "Times New Roman"');
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("code")).fontFamily === '"Shared Punctuation Font", Arial, sans-serif');
+    assert.equal(await family(page, "text"), '"Times New Roman"');
 
     await mainWorker.evaluate(() => chrome.storage.sync.set({ enabled: false }));
     await page.waitForFunction(() => !document.documentElement.hasAttribute("data-sfs"));
-    assert.equal(await family(page, "text"), '"Shared Punctuation Font", Arial');
+    assert.equal(await family(page, "text"), '"Shared Punctuation Font", Arial, sans-serif');
+    assert.equal(await family(page, "plain"), "Arial");
     assert.equal(await page.evaluate(hasPunctuation), true);
     await mainWorker.evaluate(() => chrome.storage.sync.set({ enabled: true }));
     await marked(page, "text");
@@ -1265,15 +1273,16 @@ test("主字体与共用标点真实 MV3 联合加载，分别关闭及恢复保
     await page.waitForFunction(() => ![...document.fonts].some(face => face.family.includes("Shared Punctuation Font")));
     await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFamily === '"Times New Roman"');
     assert.equal(await page.locator("#text").getAttribute("data-sfs-replaced"), "1");
-    await page.waitForFunction(() => getComputedStyle(document.getElementById("code")).fontFamily === "Arial");
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("code")).fontFamily === "Arial, sans-serif");
     await setPunctuation(true);
     await page.waitForFunction(hasPunctuation);
-    await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFamily === '"Shared Punctuation Font", "Times New Roman"');
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("code")).fontFamily === '"Shared Punctuation Font", Arial, sans-serif');
+    assert.equal(await family(page, "text"), '"Times New Roman"');
     assert.equal(await page.locator("#text").getAttribute("data-sfs-replaced"), "1");
     await setPunctuation(false);
     await mainWorker.evaluate(() => chrome.storage.sync.set({ enabled: false }));
     await page.waitForFunction(() => !document.documentElement.hasAttribute("data-sfs"));
-    await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFamily === "Arial");
+    await page.waitForFunction(() => getComputedStyle(document.getElementById("text")).fontFamily === "Arial, sans-serif");
     assert.equal(await page.locator("#design").getAttribute("data-sfs-replaced"), null);
   } finally {
     await context.close();
