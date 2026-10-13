@@ -1259,7 +1259,7 @@ test("主字体与共用标点真实 MV3 联合加载，分别关闭及恢复保
     await mainWorker.evaluate(() => chrome.storage.sync.set({ enabled: false }));
     await page.waitForFunction(() => !document.documentElement.hasAttribute("data-sfs"));
     assert.equal(await family(page, "text"), '"Shared Punctuation Font", Arial, sans-serif');
-    assert.equal(await family(page, "plain"), "Arial");
+    assert.equal(await family(page, "plain"), '"Shared Punctuation Font", Arial');
     assert.equal(await page.evaluate(hasPunctuation), true);
     await mainWorker.evaluate(() => chrome.storage.sync.set({ enabled: true }));
     await marked(page, "text");
