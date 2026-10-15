@@ -3,7 +3,12 @@ const { DEFAULT_CUSTOM_CSS, DEFAULTS, normalizeSettings, normalizeSiteRule, pars
 const TEXT = {
   "zh-CN": {
     pageTitle: "字体替换器",
-    pageSubtitle: "替换常见西文与简中系统/UI 字体，并保留网站的设计字体、代码字体与图标字体。",
+    pageSubtitle: "为熟悉的文字，选择合意的字形。设置替换字体、排版与网站偏好。",
+    bookKicker: "阅读与排版 · 字体篇",
+    chapterNav: "章节导航",
+    contents: "本页目录",
+    navFont: "字体与试排",
+    indexNote: "从字形到留白，让阅读自成风格。",
     enable: "启用",
     running: "运行中",
     paused: "已停用",
@@ -104,7 +109,12 @@ const TEXT = {
   },
   en: {
     pageTitle: "System Font Substituter",
-    pageSubtitle: "Replace common Western and Simplified Chinese system/UI fonts while preserving site design fonts, code fonts, and icon fonts.",
+    pageSubtitle: "A considered typeface for familiar words. Set your fonts, typography, and site preferences.",
+    bookKicker: "READING & TYPE · FONT EDITION",
+    chapterNav: "Chapter navigation",
+    contents: "CONTENTS",
+    navFont: "Fonts & specimen",
+    indexNote: "Considered type. Comfortable reading.",
     enable: "Enable",
     running: "Active",
     paused: "Disabled",

@@ -2,6 +2,13 @@
 
 根据 Git 提交、版本标签及 GitHub Release 记录整理。版本标题链接到对应 Release，日期采用首次发布时的北京时间；同版本安装包的后续更新另行标注日期。
 
+## [v2.2.0](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.2.0)（2026-10-15）
+
+- 重构设置页为书页式布局，使用纸色、衬线标题、朱砂控件与章节目录，适配明暗主题和窄屏。
+- 重新设计试排区、站点条目、自绘下拉菜单、CSS 编辑子页和保存栏，保留草稿与返回定位。
+- 将代码编辑区的首选字体调整为 `Consolas`，保留菜单与折叠内容的过渡动画。
+- 更新扩展图标、页面标识和标签页图标，统一为字体书籍印记。
+
 ## [v2.1.9](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.1.9)（2026-10-08）
 
 - 兼容共用标点字体替换的多个标点范围字体，按其后的正文首选字体进行名单与保护判断。

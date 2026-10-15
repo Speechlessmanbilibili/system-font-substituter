@@ -195,10 +195,10 @@ before(async () => {
       setTimeout(() => response.end(".delayed{font-family:Arial}"), 150);
       return;
     }
-    const allowed = ["options.html", "options.css", "options.js", "content.js", "shared.js"];
+    const allowed = ["options.html", "options.css", "options.js", "content.js", "shared.js", "icons/source.svg"];
     const name = file.slice(1);
     if (!allowed.includes(name)) { response.writeHead(404); response.end(); return; }
-    response.setHeader("Content-Type", name.endsWith(".css") ? "text/css" : name.endsWith(".html") ? "text/html; charset=utf-8" : "text/javascript");
+    response.setHeader("Content-Type", name.endsWith(".svg") ? "image/svg+xml" : name.endsWith(".css") ? "text/css" : name.endsWith(".html") ? "text/html; charset=utf-8" : "text/javascript");
     response.end(fs.readFileSync(path.join(root, name)));
   });
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));

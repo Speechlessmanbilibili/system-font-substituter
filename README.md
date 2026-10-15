@@ -2,6 +2,10 @@
 
 一个面向 Chromium 的 Manifest V3 字体替换扩展。全局检查网页元素的 `font-family`，首选字体命中默认名单时替换；保留未命中名单的设计字体，并按保护设置保留图标字体和代码字体。还可对被替换文字开启 CSS Auto Spacing，或向页面注入自定义 CSS。
 
+设置页采用书页式排版，提供章节目录、字体试排、站点规则与独立 CSS 编辑子页，并适配明暗主题和窄屏。[查看界面设计与截图](docs/ui/README.md)。
+
+![设置页预览](docs/ui/options-light.png)
+
 ## 默认替换字体
 
 ```css
