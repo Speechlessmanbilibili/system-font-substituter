@@ -10,10 +10,10 @@ System Font Substituter 为 Chrome、Edge 等 Chromium 浏览器提供可定制�
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/ui/options-dark.png">
-  <img src="docs/ui/options-light.png" alt="字体替换器的书页式设置页，包含章节目录、字体输入与实时试排">
+  <img src="docs/ui/options-light.png" alt="字体替换器的工作台式设置页，包含章节目录、字体输入与常驻试样">
 </picture>
 
-[完整设置页](docs/ui/options-full.png) · [窄屏布局](docs/ui/options-mobile.png) · [界面设计](docs/ui/README.md)
+[完整设置页](docs/ui/options-full.png) · [工具栏弹窗](docs/ui/popup-light.png) · [窄屏布局](docs/ui/options-mobile.png) · [界面设计](docs/ui/README.md)
 
 ## 从字形开始，把阅读调顺手
 
@@ -23,7 +23,7 @@ System Font Substituter 为 Chrome、Edge 等 Chromium 浏览器提供可定制�
 - **保留代码与图标**：默认保护 `code`、`pre`、`kbd`、`samp`，并识别常见图标字体。
 - **从字体扩展到排版**：使用内置 Apple UI Mix 模板，或编写全局/本站 CSS，调整字体之外的阅读样式。
 
-设置页以纸色、衬线标题、朱砂色控件和章节目录组织内容，支持明暗主题、窄屏与键盘操作。代码编辑区优先使用 Consolas。
+设置页以纸色、衬线标题、朱砂色控件和三栏工作台组织内容，右侧试样常驻并跟随草稿更新；支持明暗主题、窄屏与键盘操作。代码编辑区优先使用 Consolas。
 
 ## 安装与开始使用
 

@@ -45,7 +45,7 @@ test("PowerShell 5.1 安装包的文件头与中央目录一致，路径和内�
     offset += 46 + nameLength + zip.readUInt16LE(offset + 30) + zip.readUInt16LE(offset + 32);
   }
 
-  const expected = ["manifest.json", "background.js", "shared.js", "content.js", "apple-ui-mix.css", "options.html", "options.css", "options.js", "LICENSE", "README.md", "CHANGELOG.md", "PRIVACY.md"];
+  const expected = ["manifest.json", "background.js", "shared.js", "content.js", "apple-ui-mix.css", "options.html", "options.css", "options.js", "popup.html", "popup.css", "popup.js", "LICENSE", "README.md", "CHANGELOG.md", "PRIVACY.md"];
   function collect(directory) {
     for (const entry of fs.readdirSync(path.join(root, directory), { withFileTypes: true })) {
       const name = directory + "/" + entry.name;
@@ -53,6 +53,7 @@ test("PowerShell 5.1 安装包的文件头与中央目录一致，路径和内�
       else expected.push(name);
     }
   }
+  collect("kit");
   collect("icons");
   collect("_locales");
   assert.deepEqual([...entries.keys()].sort(), expected.sort());

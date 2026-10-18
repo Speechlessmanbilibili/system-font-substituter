@@ -13,7 +13,7 @@ const TEXT = {
     running: "运行中",
     paused: "已停用",
     replacementTitle: "替换字体",
-    replacementDesc: "填写本机字体的 CSS font-family。可以使用单个字体，也可以填写完整 fallback 链。",
+    replacementDesc: "填写本机字体的CSS font-family。可以使用单个字体，也可以填写完整fallback链。",
     replacementLabel: "字体族",
     preview: "预览",
     previewTag: "实时渲染 · 支持直接编辑",
@@ -26,9 +26,9 @@ const TEXT = {
     targetsTitle: "默认替换名单",
     targetsDesc: "每行一个字体族。只有元素的首选字体命中此名单时才会替换。",
     families: "个字体族",
-    targetsHint: "默认只包含常见西文与简中系统/UI 字体；Inter、Open Sans 等可能承担视觉设计的 WebFont 不在默认名单中。",
+    targetsHint: "默认只包含常见西文与简中系统/UI字体；Inter、Open Sans等可能承担视觉设计的WebFont不在默认名单中。",
     siteRulesTitle: "站点特殊规则",
-    siteRulesDesc: "优先调整本站的 Auto Spacing、自定义 CSS 和连字程度；各项可跟随全局或独立设置。",
+    siteRulesDesc: "优先调整本站的Auto Spacing、自定义CSS和连字程度；各项可跟随全局或独立设置。",
     addSite: "添加站点",
     removeSite: "删除该站点",
     siteFontPlaceholder: "留空使用全局替换字体",
@@ -40,7 +40,7 @@ const TEXT = {
     siteOverridesToggle: "其他设置",
     siteOverridesDefault: "代码保护、图标保护、站点字体",
     siteFontSummary: "独立字体",
-    siteFontHint: "站点字体仅在强制替换且自定义 CSS 未接管字体时生效。",
+    siteFontHint: "站点字体仅在强制替换且自定义CSS未接管字体时生效。",
     siteOffHint: "本站保留网站原生设置；以下配置暂不生效，切回后恢复。",
     sitePausedHint: "全局已停用；本站配置将在全局启用后生效。",
     siteRulesHelp: "域名匹配与规则优先级",
@@ -58,54 +58,68 @@ const TEXT = {
     triOff: "关闭",
     emptyRulesTitle: "暂无站点特殊规则",
     emptyRulesHint: "添加站点后，可独立调整排版和保护规则。",
-    siteRulesHint: "域名匹配主域名及其子域名；可填写 example.com:3350 指定端口，不填端口则匹配全部端口。更具体的主机优先，同一主机下端口规则优先，同等规则保持列表顺序；www.example.com 不匹配 example.com。“沿用全局策略”继续按全局目标名单判断替换，“强制替换”跳过名单判断，代码与图标保护仍按配置生效。“关闭覆盖”停止本站的字体替换、排版覆盖与自定义 CSS。所有站点规则均受全局启用开关控制。",
-    customCSSTitle: "自定义 CSS",
+    siteRulesHint: "域名匹配主域名及其子域名；可填写example.com:3350指定端口，不填端口则匹配全部端口。更具体的主机优先，同一主机下端口规则优先，同等规则保持列表顺序；www.example.com不匹配example.com。“沿用全局策略”继续按全局目标名单判断替换，“强制替换”跳过名单判断，代码与图标保护仍按配置生效。“关闭覆盖”停止本站的字体替换、排版覆盖与自定义CSS。所有站点规则均受全局启用开关控制。",
+    customCSSTitle: "自定义CSS",
     customCSSDesc: "向页面注入自定义样式，可用于 @font-face、字体栈或全局排版；跟随全局启用开关，默认关闭。",
-    customCSSToggle: "插入自定义 CSS",
+    customCSSToggle: "插入自定义CSS",
     customCSSReset: "恢复默认内容",
-    siteCSSTitle: "本站自定义 CSS",
-    siteCSSDesc: "本站内容替换全局 CSS 内容；跟随本站 CSS 开关和站点行为，与整页设置一起保存。",
-    siteCSSSource: "CSS 内容来源",
-    siteCSSSwitch: "本站 CSS 开关",
+    siteCSSTitle: "本站自定义CSS",
+    siteCSSDesc: "本站内容替换全局CSS内容；跟随本站CSS开关和站点行为，与整页设置一起保存。",
+    siteCSSSource: "CSS内容来源",
+    siteCSSSwitch: "本站CSS开关",
     siteCSSGlobal: "使用全局内容",
     siteCSSLocal: "使用本站内容",
-    siteCSSEdit: "编辑 CSS",
+    siteCSSEdit: "编辑CSS",
     siteCSSGlobalSummary: "全局内容",
     siteCSSLocalSummary: "本站内容",
     siteCSSDraftDomain: "尚未填写域名",
-    siteCSSReadOnly: "正在查看全局 CSS；选择“使用本站内容”后可独立编辑。",
-    siteCSSLocalHint: "编辑内容会保留在当前设置草稿中，点击“保存设置”后生效。留空时不注入 CSS，也不会回退到全局内容。",
-    siteCSSActiveHint: "CSS 仅在页面命中替换条件时注入；与扩展排版规则冲突时，以 CSS 为准。",
-    siteCSSDisabledHint: "本站 CSS 当前关闭；内容仍会保存，开启后生效。",
+    siteCSSReadOnly: "正在查看全局CSS；选择“使用本站内容”后可独立编辑。",
+    siteCSSLocalHint: "编辑内容会保留在当前设置草稿中，点击“保存设置”后生效。留空时不注入CSS，也不会回退到全局内容。",
+    siteCSSActiveHint: "CSS仅在页面命中替换条件时注入；与扩展排版规则冲突时，以CSS为准。",
+    siteCSSDisabledHint: "本站CSS当前关闭；内容仍会保存，开启后生效。",
     copyGlobalCSS: "复制全局内容到本站",
     backToRules: "返回站点规则",
-    customCSSHint: "开启时由自定义 CSS 接管页面字体，替换字体链自动失效（标记逻辑仍用于连字程度与 Auto Spacing）。注入采用检测策略：仅当页面命中替换条件时才全局注入；样式始终注入在扩展自身样式之后，冲突时以自定义 CSS 为准。站点特殊规则中可按站点单独开关。留空则不注入、替换链恢复生效。",
-    cssTooLarge: "同步存储配额不足，未保存更改；请缩短自定义 CSS 或站点规则。",
-    invalidDomain: "站点格式无效，请填写域名、域名:端口或 HTTP/HTTPS 地址。",
-    invalidFont: "字体族格式无效，请使用有效的 CSS font-family 语法。",
+    customCSSHint: "开启时由自定义CSS接管页面字体，替换字体链自动失效（标记逻辑仍用于连字程度与Auto Spacing）。注入采用检测策略：仅当页面命中替换条件时才全局注入；样式始终注入在扩展自身样式之后，冲突时以自定义CSS为准。站点特殊规则中可按站点单独开关。留空则不注入、替换链恢复生效。",
+    cssTooLarge: "同步存储配额不足，未保存更改；请缩短自定义CSS或站点规则。",
+    invalidDomain: "站点格式无效，请填写域名、域名:端口或HTTP/HTTPS地址。",
+    invalidFont: "字体族格式无效，请使用有效的CSS font-family语法。",
     loadFailed: "设置读取失败，请重新打开设置页。",
     saveFailed: "保存失败，请重试",
     protectionTitle: "保护与排版规则",
     protectionDesc: "避免全局替换破坏代码区域或图标字体，并优化高级排版特性。",
     protectCode: "保护代码字体",
-    protectCodeDesc: "跳过 code、pre、kbd、samp 及其内部元素",
+    protectCodeDesc: "跳过code、pre、kbd、samp及其内部元素",
     protectIcons: "保护图标字体",
-    protectIconsDesc: "识别常见 Material Icons、Font Awesome 等图标字体",
+    protectIconsDesc: "识别常见Material Icons、Font Awesome等图标字体",
     standardLigatures: "标准连字",
-    standardLigaturesDesc: "仅对已被替换字体的文字强制开启 OpenType liga / clig，并覆盖网站的关闭设置；默认关闭",
+    standardLigaturesDesc: "仅对已被替换字体的文字强制开启OpenType liga / clig，并覆盖网站的关闭设置；默认关闭",
     autoSpacing: "Auto Spacing",
-    autoSpacingDesc: "对已被替换字体的文字强制启用 CSS text-autospace: normal，并覆盖网站设置；默认关闭",
+    autoSpacingDesc: "对已被替换字体的文字强制启用CSS text-autospace: normal，并覆盖网站设置；默认关闭",
     howItWorks: "工作方式",
-    howItWorks1: "扩展逐个检查元素计算后的 font-family，不对整个页面强制指定同一个字体。",
+    howItWorks1: "扩展逐个检查元素计算后的font-family，不对整个页面强制指定同一个字体。",
     howItWorks2: "只有第一个字体族命中名单时才会替换；动态页面会继续检查新增内容。",
     howItWorks3: "edge://、chrome://、扩展商店等浏览器受保护页面无法注入普通扩展。",
-    howItWorks4: "自定义 CSS 开启时替换链自动失效，页面字体由自定义 CSS 接管；关闭时恢复替换链。",
+    howItWorks4: "自定义CSS开启时替换链自动失效，页面字体由自定义CSS接管；关闭时恢复替换链。",
     reset: "恢复默认",
     save: "保存设置",
     saved: "已保存，已打开的网页会自动更新",
     resetDone: "已恢复默认",
     emptyFont: "替换字体不能为空",
-    unsavedChanges: "有未保存的更改"
+    unsavedChanges: "有未保存的更改",
+    pickFont: "从本机字体选择",
+    pickFontTitle: "选择本机字体",
+    pickFontSearch: "搜索字体名称",
+    pickFontHint: "点击字体即可追加到字体族输入框，可连续选择多个。",
+    pickFontEmpty: "没有匹配的字体。",
+    pickFontNoFonts: "没有读取到本机字体。",
+    fontPickerUnavailable: "当前浏览器无法读取本机字体列表。",
+    close: "关闭",
+    previewNote: "试样直接使用上方字体族渲染，可编辑文字；不会写入页面或配置。",
+    globalOffHint: "关闭后停止所有站点的替换；站点规则保留，重新开启后继续生效。",
+    shortcutSummary: "四条要点与快捷键",
+    fontFamilyHint: "支持完整后备链；选择器只会追加带引号的字体名称，不会改写已有内容。",
+    siteCSSPage: "本站CSS",
+    siteCSSBack: "站点特殊规则"
   },
   en: {
     pageTitle: "System Font Substituter",
@@ -211,7 +225,21 @@ const TEXT = {
     saved: "Saved. Open pages will update automatically.",
     resetDone: "Defaults restored",
     emptyFont: "Replacement font cannot be empty",
-    unsavedChanges: "Unsaved changes"
+    unsavedChanges: "Unsaved changes",
+    pickFont: "Choose a local font",
+    pickFontTitle: "Choose a local font",
+    pickFontSearch: "Search font names",
+    pickFontHint: "Click a font to append it to the family field; you can pick several.",
+    pickFontEmpty: "No matching fonts.",
+    pickFontNoFonts: "No local fonts were found.",
+    fontPickerUnavailable: "This browser cannot read the local font list.",
+    close: "Close",
+    previewNote: "The specimen renders with the font family above and is editable; it never changes the page or settings.",
+    globalOffHint: "Turn off replacement for every site; site rules stay saved and resume when re-enabled.",
+    shortcutSummary: "Essentials and shortcuts",
+    fontFamilyHint: "Supports a full fallback chain; the picker only appends quoted family names and never rewrites existing content.",
+    siteCSSPage: "Site CSS",
+    siteCSSBack: "Site rules"
   }
 };
 
@@ -220,7 +248,7 @@ const PRESET_TEXTS = {
 天地玄黄，宇宙洪荒。汉字与西文字符协同排版预览。
 0123456789 · fi fl ffi ffl · “弯引号” 与 ‘单引号’ — 破折号`,
   punct: `“双引号包裹内容”与‘单引号’测试，全角标点【】（）！：；？。
-破折号——与省略号……连接号与西文 Em Dash — En Dash –`,
+破折号——与省略号……连接号与西文Em Dash — En Dash –`,
   ligatures: `fi fl ff ffi ffl fj ft fb Th st ct
 0123456789 (89/100) $123.45 €99.00 ¥688.00`,
   latin: `Typography is the art and technique of arranging type to make written language legible, readable and appealing when displayed.
@@ -331,7 +359,7 @@ function clearDirty() {
 }
 
 // ============================================================================
-// UI 辅助函数
+// UI辅助函数
 // ============================================================================
 
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
@@ -571,6 +599,9 @@ function applyLanguage() {
   document.querySelectorAll("[data-i18n-aria]").forEach(el => {
     el.setAttribute("aria-label", t(el.dataset.i18nAria));
   });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
   const shortcut = document.querySelector(".shortcut-badge");
   if (shortcut) shortcut.textContent = /Mac/i.test(navigator.platform) ? "⌘S" : "Ctrl+S";
 }
@@ -619,11 +650,6 @@ function showStatus(message, type = "success") {
   const el = $("status");
   el.textContent = message;
   el.className = `status ${type}`;
-  clearTimeout(showStatus.timer);
-  showStatus.timer = setTimeout(() => {
-    el.textContent = "";
-    el.className = "status";
-  }, 2800);
 }
 
 function overrideLabel(key) {
@@ -880,6 +906,7 @@ async function load() {
   try {
     fill(normalizeSettings(await chrome.storage.sync.get(null)));
     loaded = true;
+    showStatus(t("saved"));
   } catch (error) {
     console.warn("sfs settings load failed:", error);
     showStatus(t("loadFailed"), "error");
@@ -1000,7 +1027,7 @@ $("targets").addEventListener("input", () => {
 $("enabled").addEventListener("change", () => {
   updateGlobalStatusBadge();
   refreshSiteRules();
-  checkDirty(true);  // change 事件立即检查
+  checkDirty(true);  // change事件立即检查
 });
 
 ["protectCode", "protectIcons", "ligatureLevel", "autoSpacing", "customCSSOn"].forEach(id => {
@@ -1102,7 +1129,7 @@ $("siteCSSEnabled").addEventListener("change", () => {
 $("save").addEventListener("click", save);
 $("reset").addEventListener("click", reset);
 
-// Ctrl/Cmd + S 保存
+// Ctrl/Cmd + S保存
 window.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
     e.preventDefault();
@@ -1129,4 +1156,67 @@ applyLanguage();
 document.querySelectorAll(".details-section, .site-rules-help").forEach(initAnimatedDetails);
 initCustomSelect($("ligatureLevel"), LIGATURE_LEVELS.map(level => ({ value: level, label: t(LIGATURE_LABELS[level]) })));
 initCustomSelect($("siteCSSEnabled"), overrideChoices("customCSSOn"));
+
+// 本机字体选择：只追加带引号的字体名，不改写已有字体链。
+const fontPicker = $("font-picker");
+const fontList = $("font-list");
+const fontSearch = $("font-search");
+let fontCatalog = [];
+function quoteFamily(name) {
+  return JSON.stringify(name);
+}
+function appendFamily(name) {
+  const input = $("replacement");
+  const current = input.value.trim();
+  if (current.toLowerCase().includes(name.toLowerCase())) return;
+  input.value = current ? current + ", " + quoteFamily(name) : quoteFamily(name);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+function renderFontList(query = "") {
+  const keyword = query.trim().toLowerCase();
+  fontList.replaceChildren();
+  const names = [...new Set(fontCatalog)].filter(name => !keyword || name.toLowerCase().includes(keyword)).sort((a, b) => a.localeCompare(b, "zh-CN"));
+  if (!names.length) {
+    const empty = document.createElement("p");
+    empty.className = "font-empty";
+    empty.textContent = keyword ? t("pickFontEmpty") : t("pickFontNoFonts");
+    fontList.appendChild(empty);
+    return;
+  }
+  for (const name of names) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "font-option";
+    button.dataset.font = name;
+    const label = document.createElement("span");
+    label.textContent = name;
+    button.appendChild(label);
+    button.addEventListener("click", () => appendFamily(name));
+    fontList.appendChild(button);
+  }
+}
+async function openFontPicker() {
+  if (!chrome.fontSettings?.getFontList) { showStatus(t("fontPickerUnavailable"), "error"); return; }
+  if (!fontCatalog.length) {
+    try {
+      fontCatalog = await new Promise(resolve => {
+        chrome.fontSettings.getFontList(list => {
+          resolve([...new Set((list || []).flatMap(font => [font.fontId, font.displayName]).filter(name => typeof name === "string" && name))]);
+        });
+      });
+    } catch { showStatus(t("fontPickerUnavailable"), "error"); return; }
+  }
+  fontSearch.value = "";
+  renderFontList();
+  if (!fontPicker.open) fontPicker.showModal();
+  fontSearch.focus();
+}
+if ($("pick-font")) {
+  $("pick-font").addEventListener("click", openFontPicker);
+  $("close-font-picker").addEventListener("click", () => fontPicker.close());
+  fontSearch.addEventListener("input", () => renderFontList(fontSearch.value));
+  fontPicker.addEventListener("click", event => { if (event.target === fontPicker) fontPicker.close(); });
+}
+
+if (window.DSH) DSH.initRailSpy();
 load();

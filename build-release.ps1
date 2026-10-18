@@ -14,7 +14,7 @@ if ($taskVersion -notmatch '^\d+\.\d+\.\d+(?:\.\d+)?$') {
 # 显式列出发布文件，避免将测试、缓存或 Git 元数据加入安装包。
 $taskNames = @(
     'manifest.json', 'background.js', 'shared.js', 'content.js', 'apple-ui-mix.css',
-    'options.html', 'options.css', 'options.js', 'icons', '_locales',
+    'options.html', 'options.css', 'options.js', 'popup.html', 'popup.css', 'popup.js', 'kit', 'icons', '_locales',
     'LICENSE', 'README.md', 'CHANGELOG.md', 'PRIVACY.md'
 )
 $taskFiles = @($taskNames | ForEach-Object {

@@ -195,7 +195,7 @@ before(async () => {
       setTimeout(() => response.end(".delayed{font-family:Arial}"), 150);
       return;
     }
-    const allowed = ["options.html", "options.css", "options.js", "content.js", "shared.js", "icons/source.svg"];
+    const allowed = ["options.html", "options.css", "options.js", "popup.html", "popup.css", "popup.js", "content.js", "shared.js", "kit/kit.css", "kit/kit.js", "icons/source.svg"];
     const name = file.slice(1);
     if (!allowed.includes(name)) { response.writeHead(404); response.end(); return; }
     response.setHeader("Content-Type", name.endsWith(".svg") ? "image/svg+xml" : name.endsWith(".css") ? "text/css" : name.endsWith(".html") ? "text/html; charset=utf-8" : "text/javascript");
