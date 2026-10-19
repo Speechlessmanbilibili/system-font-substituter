@@ -2,7 +2,7 @@
 
 根据 Git 提交、版本标签及 GitHub Release 记录整理。版本标题链接到对应 Release，日期采用首次发布时的北京时间；同版本安装包的后续更新另行标注日期。
 
-## v2.3.1（2026-10-19，未发布）
+## [v2.3.1](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.3.1)（2026-10-19）
 
 - 保存设置时合并其他窗口的新配置，保留保存期间的新草稿。
 - 工具栏弹窗按实际默认端口编辑原规则，全局开关仅更新对应字段。
