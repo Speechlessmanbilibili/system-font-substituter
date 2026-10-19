@@ -129,6 +129,8 @@ body,
 
   const CC_PREFIX = "customCSS#";
   const SITE_CC_PREFIX = "siteCSS#";
+  const RULE_PREFIX = "siteRules#";
+  const RULE_META_KEY = "siteRulesChunks";
   const META_KEY = "customCSSChunks";
   const OVERRIDE_KEYS = ["protectCode", "protectIcons", "standardLigatures", "autoSpacing", "customCSSOn"];
   const LIGATURE_LEVELS = ["native", "none", "standard", "extended"];
@@ -214,21 +216,7 @@ body,
   }
 
   function siteState(rules, address) {
-    const url = typeof address === "string" ? new URL(address) : address;
-    const host = url.hostname.toLowerCase().replace(/\.$/, "");
-    const port = url.port || (url.protocol === "https:" ? "443" : url.protocol === "http:" ? "80" : "");
-    let selected = null;
-    let score = -1;
-    for (const rule of rules) {
-      const domain = parseDomain(rule?.domain);
-      if (!domain || !(host === domain.host || host.endsWith("." + domain.host))) continue;
-      if (domain.port !== null && domain.port !== port) continue;
-      // 优先采用更具体的主机规则，同一主机下端口规则优先；同等规则沿用列表顺序。
-      const specificity = domain.host.length * 2 + (domain.port !== null ? 1 : 0);
-      if (specificity <= score) continue;
-      score = specificity;
-      selected = rule;
-    }
+    const selected = matchRule(rules, address);
     if (!selected) return { off: false, force: false, font: "", customCSS: null, overrides: {} };
     return {
       off: selected.action === "off",
@@ -242,6 +230,45 @@ body,
     };
   }
 
+  // 按字段合并草稿，保留其他窗口的新设置和同域名规则的独立编辑。
+  function mergeDraft(base, draft, latest) {
+    const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    const merge = (before, edited, current) => Object.fromEntries([...new Set([...Object.keys(current), ...Object.keys(edited)])]
+      .map(key => [key, equal(edited[key], before[key]) ? current[key] : edited[key]]));
+    const result = merge(base, draft, latest);
+    if (equal(base.siteRules, draft.siteRules)) return result;
+    const index = rules => {
+      const counts = new Map();
+      return new Map((rules || []).map(rule => {
+        const domain = parseDomain(rule.domain);
+        const name = domain ? domain.host + ":" + (domain.port || "") : rule.domain;
+        const count = counts.get(name) || 0; counts.set(name, count + 1);
+        return [name + "\0" + count, rule];
+      }));
+    };
+    const before = index(base.siteRules), edited = index(draft.siteRules), current = index(latest.siteRules);
+    const order = equal([...before.keys()], [...edited.keys()]) ? [...current.keys(), ...edited.keys()] : [...edited.keys(), ...current.keys()];
+    result.siteRules = [...new Set(order)].flatMap(key => {
+      if (before.has(key) && !edited.has(key)) return [];
+      if (!edited.has(key)) return current.has(key) ? [current.get(key)] : [];
+      if (!current.has(key)) return before.has(key) && equal(before.get(key), edited.get(key)) ? [] : [edited.get(key)];
+      return [merge(before.get(key) || {}, edited.get(key), current.get(key))];
+    });
+    return result;
+  }
+  function matchRule(rules, address) {
+    const url = typeof address === "string" ? new URL(address) : address;
+    const host = url.hostname.toLowerCase().replace(/\.$/, "");
+    const port = url.port || (url.protocol === "https:" ? "443" : url.protocol === "http:" ? "80" : "");
+    let best = null, score = -1;
+    for (const rule of rules) {
+      const domain = parseDomain(rule?.domain);
+      if (!domain || !(host === domain.host || host.endsWith("." + domain.host)) || domain.port !== null && domain.port !== port) continue;
+      const rank = domain.host.length * 2 + Number(domain.port !== null);
+      if (rank > score) { best = rule; score = rank; }
+    }
+    return best;
+  }
   function assembleCSSChunks(stored, meta, prefix = CC_PREFIX) {
     if (meta && typeof meta.id === "string" && /^[a-z\d-]+$/i.test(meta.id)
         && Number.isInteger(meta.count) && meta.count >= 0 && meta.count <= 512) {
@@ -274,9 +301,7 @@ body,
     result.standardLigatures = ["standard", "extended"].includes(result.ligatureLevel);
     if (typeof stored.replacement === "string" && stored.replacement.trim()) result.replacement = stored.replacement;
     if (Array.isArray(stored.targets)) result.targets = stored.targets.filter(value => typeof value === "string");
-    if (Array.isArray(stored.siteRules)) {
-      result.siteRules = stored.siteRules.filter(rule => rule && typeof rule === "object" && typeof rule.domain === "string").map(rule => normalizeSiteRule(rule, stored));
-    }
+    result.siteRules = assembleSiteRules(stored).filter(rule => rule && typeof rule === "object" && typeof rule.domain === "string").map(rule => normalizeSiteRule(rule, stored));
     result.customCSS = assembleCustomCSS(stored) ?? DEFAULT_CUSTOM_CSS;
     return result;
   }
@@ -302,31 +327,76 @@ body,
     return { items, meta: { id, count } };
   }
 
-  async function writeSettings(storage, payload, css, id = crypto.randomUUID()) {
+  const settingsWrites = new WeakMap();
+  async function writeSettings(storage, payload, css, id = crypto.randomUUID(), baseline = null) {
+    const publish = () => publishSettings(storage, payload, css, id, baseline);
+    // 扩展页面共享原生锁，避免并发发布时清理另一窗口仍在复用的分块。
+    if (globalThis.navigator?.locks) return navigator.locks.request("sfs-settings-write", publish);
+    const previous = settingsWrites.get(storage) || Promise.resolve();
+    const work = previous.catch(() => {}).then(publish);
+    settingsWrites.set(storage, work);
+    try { return await work; }
+    finally { if (settingsWrites.get(storage) === work) settingsWrites.delete(storage); }
+  }
+  async function publishSettings(storage, payload, css, id, baseline) {
     const old = await storage.get(null);
-    const { items, meta } = chunkCustomCSS(css, id);
+    if (baseline) {
+      const merged = mergeDraft(baseline, { ...baseline, ...payload, customCSS: css }, normalizeSettings(old));
+      ({ customCSS: css, ...payload } = merged);
+    }
+    const items = {}, keep = new Set();
+    const reuse = (text, meta, prefix, nextId) => {
+      if (assembleCSSChunks(old, meta, prefix) === text) {
+        for (let i = 0; i < meta.count; i++) keep.add(prefix + meta.id + "/" + i);
+        return meta;
+      }
+      const chunks = chunkCustomCSS(text, nextId, prefix);
+      Object.assign(items, chunks.items);
+      return chunks.meta;
+    };
+    const meta = reuse(css, old[META_KEY], CC_PREFIX, id);
+    const previousCSS = new Map(assembleSiteRules(old).flatMap(rule => {
+      const text = assembleCSSChunks(old, rule?.customCSSChunks, SITE_CC_PREFIX);
+      return text === null ? [] : [[text, rule.customCSSChunks]];
+    }));
     const siteRules = (payload.siteRules || []).map((rule, index) => {
       const normalized = normalizeSiteRule(rule);
       const { customCSS, ...reference } = normalized;
-      // 本站 CSS 同样分块，正文不写入 siteRules 单项。
+      // 未变化的 CSS 沿用原分块，开关和规则编辑不复制整份正文。
       if (customCSS || normalized.customCSSMode === "site") {
-        const chunks = chunkCustomCSS(customCSS, id + "-" + index, SITE_CC_PREFIX);
-        Object.assign(items, chunks.items);
-        reference.customCSSChunks = chunks.meta;
+        reference.customCSSChunks = reuse(customCSS, previousCSS.get(customCSS), SITE_CC_PREFIX, id + "-" + index);
       }
       return reference;
     });
+    const rulePayload = {};
+    if (Array.isArray(payload.siteRules)) {
+      const text = JSON.stringify(siteRules);
+      if (new TextEncoder().encode("siteRules" + text).length > 7500) {
+        rulePayload.siteRules = [];
+        rulePayload[RULE_META_KEY] = reuse(text, old[RULE_META_KEY], RULE_PREFIX, id + "-rules");
+      } else { rulePayload.siteRules = siteRules; rulePayload[RULE_META_KEY] = null; }
+    }
     // 新块与引用一次发布，读者不会看到新旧 CSS 拼接。失败时保留旧数据。
-    await storage.set({ ...payload, ...(Array.isArray(payload.siteRules) ? { siteRules } : {}), ...items, [META_KEY]: meta });
-    const stale = Object.keys(old).filter(key => key === "customCSS" || (key.startsWith(CC_PREFIX) || Array.isArray(payload.siteRules) && key.startsWith(SITE_CC_PREFIX)) && !(key in items));
+    await storage.set({ ...payload, ...rulePayload, ...items, [META_KEY]: meta });
+    const stale = Object.keys(old).filter(key => key === "customCSS" || (key.startsWith(CC_PREFIX)
+      || Array.isArray(payload.siteRules) && (key.startsWith(SITE_CC_PREFIX) || key.startsWith(RULE_PREFIX))) && !(key in items) && !keep.has(key));
     if (stale.length) {
       try { await storage.remove(stale); }
       catch (error) { console.warn("sfs CSS cleanup failed:", error); }
     }
+    return normalizeSettings({ ...old, ...payload, ...rulePayload, ...items, [META_KEY]: meta });
+  }
+
+  function assembleSiteRules(stored) {
+    const text = assembleCSSChunks(stored, stored[RULE_META_KEY], RULE_PREFIX);
+    if (text !== null) {
+      try { const rules = JSON.parse(text); if (Array.isArray(rules)) return rules; } catch {}
+    }
+    return Array.isArray(stored.siteRules) ? stored.siteRules : [];
   }
 
   globalThis.SFS = {
-    DEFAULT_CUSTOM_CSS, DEFAULTS, CC_PREFIX, SITE_CC_PREFIX, META_KEY, OVERRIDE_KEYS, LIGATURE_LEVELS,
+    mergeDraft, matchRule, assembleSiteRules, RULE_PREFIX, RULE_META_KEY, DEFAULT_CUSTOM_CSS, DEFAULTS, CC_PREFIX, SITE_CC_PREFIX, META_KEY, OVERRIDE_KEYS, LIGATURE_LEVELS,
     ruleOverride, normalizeLigatureLevel, normalizeSiteRule, siteLigatureLevel, ligatureDeclarations,
     parseDomain, sourceAddress, siteState, assembleCSSChunks, assembleCustomCSS, normalizeSettings, chunkCustomCSS, writeSettings
   };

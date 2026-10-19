@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const { DEFAULTS, normalizeSettings, siteState, sourceAddress, ligatureDeclarations, CC_PREFIX, SITE_CC_PREFIX, META_KEY, OVERRIDE_KEYS: SITE_OVERRIDE_KEYS } = SFS;
+  const { DEFAULTS, normalizeSettings, siteState, sourceAddress, ligatureDeclarations, CC_PREFIX, SITE_CC_PREFIX, META_KEY, RULE_PREFIX, RULE_META_KEY, assembleSiteRules, OVERRIDE_KEYS: SITE_OVERRIDE_KEYS } = SFS;
 
   const MARK = "data-sfs-replaced";
   const LIGATURE_MARK = "data-sfs-ligatures";
@@ -47,6 +47,7 @@
   let appliedConfiguration = null;
   let cssGeneration = null;
   let siteCSSGenerations = [];
+  let ruleGeneration = null;
   let sampledElements = new WeakSet();
   let nonemptyTextNodes = new WeakSet();
   let autoDirections = new WeakMap();
@@ -540,7 +541,7 @@
 
   function getTypographyIndex() {
     if (typographyIndex) return typographyIndex;
-    const index = { rules: [], classes: new Set(), attributes: new Set(), valueAttributes: new Set(), variables: new Set(), media: [],
+    const index = { rules: [], stateEvents: new Set(), classes: new Set(), attributes: new Set(), valueAttributes: new Set(), variables: new Set(), media: [],
       classRules: new Map(), idRules: new Map(), tagRules: new Map(), generalRules: [], exactRules: new Set(),
       unknown: false, cacheable: true, relational: false, classAttribute: false, styleAttribute: false };
     const declarations = [];
@@ -614,6 +615,14 @@
       const selector = selectors.join(" ");
       const dependencies = selectorDependencies(selector);
       const syntax = dependencies.syntax;
+      const events = index.stateEvents;
+      if (/:hover/i.test(syntax)) { events.add("pointerover"); events.add("pointerout"); }
+      if (/:focus/i.test(syntax)) { events.add("focusin"); events.add("focusout"); }
+      if (/:focus-visible|:active/i.test(syntax)) for (const type of ["pointerdown", "pointerup", "pointercancel", "keydown", "keyup"]) events.add(type);
+      if (/:(?:checked|valid|invalid|in-range|out-of-range|placeholder-shown|user-valid|user-invalid)/i.test(syntax)) { events.add("input"); events.add("change"); }
+      if (/:(?:open|popover-open|modal)/i.test(syntax)) events.add("toggle");
+      if (/:target/i.test(syntax)) events.add("hashchange");
+      if (events.size) index.cacheable = false;
       const id = index.rules.push(elementSelector) - 1;
       // 列表中每个分支都有必要条件时，按这些条件查找候选，再由浏览器判断。
       const simple = elementSelector.trim().match(/^([.#]?)([a-zA-Z_][\w-]*)$/);
@@ -1451,7 +1460,8 @@
     if (epoch !== loadEpoch || !document.documentElement) return;
     settings = normalizeSettings(stored);
     cssGeneration = stored[META_KEY]?.id || null;
-    siteCSSGenerations = Array.isArray(stored.siteRules) ? stored.siteRules.map(rule => rule?.customCSSChunks?.id).filter(Boolean) : [];
+    ruleGeneration = stored[RULE_META_KEY]?.id || null;
+    siteCSSGenerations = assembleSiteRules(stored).map(rule => rule?.customCSSChunks?.id).filter(Boolean);
     targetSet = new Set(settings.targets.map(normalizeFamily).filter(Boolean));
     const site = computeSiteState();
     siteOff = site.off;
@@ -1496,6 +1506,16 @@
     if (event.target instanceof Element && event.target.matches("link[rel='stylesheet']")) queueStylesheetScan();
   }, true);
 
+  // 只有字体声明真实依赖交互状态时补扫，普通悬停和输入沿用原调度。
+  function typographyStateChanged(event) {
+    if (!settings.enabled || siteOff || !typographyIndex?.stateEvents.has(event.type)) return;
+    queue(document.documentElement);
+  }
+  for (const type of ["pointerover", "pointerout", "focusin", "focusout", "pointerdown", "pointerup", "pointercancel", "keydown", "keyup", "input", "change", "toggle"]) {
+    listenPage(document, type, typographyStateChanged, true);
+  }
+  listenPage(window, "hashchange", typographyStateChanged);
+
   // 标点扩展的设置切换会通过 CSSOM 恢复字体；沿用其低频配置事件合并重检。
   listenPage(window, PUNCTUATION_CONFIG_EVENT, event => {
     if (typeof event.detail !== "string" || !appliedConfiguration || !settings.enabled || siteOff) return;
@@ -1522,7 +1542,7 @@
     if (area !== "sync") return;
     // 已发布的新引用不受旧块清理影响；仅重新读取设置与当前 CSS 块。
     const relevant = Object.keys(changes).some(key =>
-      key === META_KEY || key in DEFAULTS && key !== "customCSS"
+      key === META_KEY || key === RULE_META_KEY || ruleGeneration && key.startsWith(RULE_PREFIX + ruleGeneration + "/") || key in DEFAULTS && key !== "customCSS"
       || siteCSSGenerations.some(id => key.startsWith(SITE_CC_PREFIX + id + "/"))
       || (cssGeneration ? key.startsWith(CC_PREFIX + cssGeneration + "/") : key === "customCSS" || /^customCSS#\d+$/.test(key))
     );

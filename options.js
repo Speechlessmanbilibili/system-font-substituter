@@ -948,9 +948,11 @@ async function save() {
   const css = $("customCSS").value;
   setBusy(true);
   try {
-    await writeSettings(chrome.storage.sync, payload, css);
-    // 保存成功后更新原始状态快照为刚保存的内容
-    originalState = structuredClone({ ...payload, customCSS: css });
+    const submitted = { ...payload, customCSS: css };
+    const merged = await writeSettings(chrome.storage.sync, payload, css, undefined, originalState);
+    const current = collectCurrentState(), rebased = SFS.mergeDraft(submitted, current, merged);
+    if (!deepEqual(current, rebased)) fill(rebased);
+    originalState = structuredClone(merged);
     // 保存后重新检查，如果保存期间用户又修改了，会重新标记为未保存
     checkDirty(true);
     if (deepEqual(collectCurrentState(), originalState)) showStatus(t("saved"));

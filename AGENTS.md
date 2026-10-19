@@ -125,7 +125,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-release.ps1
 
 `chrome.storage.sync` 的单项容量上限约为 8 KB。当前 CSS 使用 `customCSS#<generation>/<index>` 分块，每块最多 2500 个字符，序列化字节预算为 7500；`customCSSChunks` 保存代次与块数，块数为零表示显式空内容。读取兼容旧版连续编号块与单键 CSS。站点覆盖项采用“跟随全局/开启/关闭”三态。
 
-本站 CSS 使用相同算法及 `siteCSS#<generation>/<index>` 前缀；每条规则的 `customCSSChunks` 保存引用。`normalizeSettings` 在内存中还原规则正文，`writeSettings` 写入时剥离正文并一次发布所有分块与引用。不要将本站 CSS 正文直接写进 `siteRules`，也不要在内容脚本迁移写入。
+本站 CSS 使用相同算法及 `siteCSS#<generation>/<index>` 前缀；每条规则的 `customCSSChunks` 保存引用。`normalizeSettings` 在内存中还原规则正文，`writeSettings` 写入时剥离正文并一次发布所有分块与引用。未变化的 CSS 复用旧引用，修改全局开关只写对应字段。
+
+规则序列化超过 7500 字节时使用 `siteRules#<generation>/<index>` 分块及 `siteRulesChunks` 引用，小列表兼容原 `siteRules` 数组。所有读取通过 `assembleSiteRules`/`normalizeSettings` 还原；内容脚本跟踪当前规则与本站 CSS 分块。发布及清理通过扩展页面共享的原生锁串行执行，新分块及引用一次发布，成功后清理旧块。设置页在锁内按打开时的基线、提交草稿与最新存储合并字段，并保留保存期间的新编辑。
 
 当前观察范围为普通 DOM；Shadow DOM 内部节点和不产生 DOM 变动的 CSSOM 写入不在范围内。保存时旧块与新块短暂共存，仍受同步存储总配额限制。
 

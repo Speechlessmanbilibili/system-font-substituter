@@ -17,35 +17,19 @@
     return SFS.normalizeSettings(await chrome.storage.sync.get(null));
   }
 
-  async function write(value) {
-    const { customCSS, ...payload } = value;
-    await SFS.writeSettings(chrome.storage.sync, payload, customCSS);
-    settings = value;
+  async function write(value, field, baseline) {
+    if (field === "enabled") { await chrome.storage.sync.set({ enabled: value.enabled }); settings = value; }
+    else settings = await SFS.writeSettings(chrome.storage.sync, { siteRules: value.siteRules }, value.customCSS, undefined, baseline);
   }
 
-  function matchRule(rules, href) {
-    let parsed;
-    try { parsed = new URL(href); } catch { return null; }
-    const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
-    const port = parsed.port || (parsed.protocol === "https:" ? "443" : parsed.protocol === "http:" ? "80" : "");
-    let best = null;
-    let score = -1;
-    for (const rule of rules) {
-      const domain = SFS.parseDomain(rule?.domain);
-      if (!domain || !(host === domain.host || host.endsWith("." + domain.host))) continue;
-      if (domain.port !== null && domain.port !== port) continue;
-      const specificity = domain.host.length * 2 + (domain.port !== null ? 1 : 0);
-      if (specificity > score) { best = rule; score = specificity; }
-    }
-    return best;
-  }
+  const matchRule = (rules, href) => SFS.matchRule(rules, href);
 
   function currentDomain(matched) {
     if (!url) return null;
     const parsed = SFS.parseDomain(url.href);
     if (!parsed) return null;
     const matchedDomain = matched ? SFS.parseDomain(matched.domain) : null;
-    if (matchedDomain && matchedDomain.host === parsed.host && matchedDomain.port !== null && matchedDomain.port === parsed.port) return matched.domain;
+    if (matchedDomain && matchedDomain.host === parsed.host && matchedDomain.port !== null && matchedDomain.port === (parsed.port || (url.protocol === "https:" ? "443" : "80"))) return matched.domain;
     return parsed.port ? parsed.host + ":" + parsed.port : parsed.host;
   }
 
@@ -88,7 +72,7 @@
       const rules = latest.siteRules.slice();
       if (index >= 0) rules[index] = { ...rules[index], action: value };
       else rules.push({ domain, action: value });
-      await write({ ...latest, siteRules: rules });
+      await write({ ...latest, siteRules: rules }, "siteRules", latest);
       render();
       status("已保存", "success");
     } catch {
@@ -109,7 +93,7 @@
     setBusy(true);
     try {
       const latest = await read();
-      await write({ ...latest, enabled: next });
+      await write({ ...latest, enabled: next }, "enabled");
       render();
       status("已保存", "success");
     } catch {
