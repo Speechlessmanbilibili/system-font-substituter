@@ -877,7 +877,8 @@ async function save() {
   setBusy(true);
   try {
     const submitted = { ...payload, customCSS: css };
-    const merged = await writeSettings(chrome.storage.sync, payload, css, undefined, originalState);
+    const baseline = originalState;
+    const merged = await writeSettings(chrome.storage.sync, latest => SFS.mergeDraft(baseline, submitted, latest));
     const current = collectCurrentState(), rebased = SFS.mergeDraft(submitted, current, merged);
     if (!deepEqual(current, rebased)) fill(rebased);
     originalState = structuredClone(merged);
@@ -896,8 +897,7 @@ async function reset() {
   if (busy || !loaded) return;
   setBusy(true);
   try {
-    const { customCSS, ...payload } = DEFAULTS;
-    await writeSettings(chrome.storage.sync, payload, customCSS);
+    await writeSettings(chrome.storage.sync, () => DEFAULTS);
     fill(DEFAULTS);
     showStatus(t("resetDone"));
   } catch (error) {

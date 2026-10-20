@@ -327,67 +327,59 @@ body,
     return { items, meta: { id, count } };
   }
 
-  function writeSettings(storage, payload, css, id = crypto.randomUUID(), baseline = null) {
+  function writeSettings(storage, change) {
     // 扩展页面共享原生锁，避免并发发布时清理另一窗口仍在复用的分块。
-    return navigator.locks.request("sfs-settings-write", () => publishSettings(storage, payload, css, id, baseline));
-  }
-  async function publishSettings(storage, payload, css, id, baseline) {
-    const old = await storage.get(null);
-    if (typeof payload === "function") {
-      const latest = normalizeSettings(old);
-      payload = payload(latest);
-      if (!("siteRules" in payload)) {
-        await storage.set(payload);
-        return { ...latest, ...payload };
+    return navigator.locks.request("sfs-settings-write", async () => {
+      const old = await storage.get(null);
+      const latest = normalizeSettings(old), patch = change(latest);
+      if (!("siteRules" in patch) && !("customCSS" in patch)) {
+        await storage.set(patch);
+        return { ...latest, ...patch };
       }
-      css = latest.customCSS;
-      baseline = latest;
-    }
-    if (baseline) {
-      const merged = mergeDraft(baseline, { ...baseline, ...payload, customCSS: css }, normalizeSettings(old));
-      ({ customCSS: css, ...payload } = merged);
-    }
-    const items = {}, keep = new Set();
-    const reuse = (text, meta, prefix, nextId) => {
-      if (assembleCSSChunks(old, meta, prefix) === text) {
-        for (let i = 0; i < meta.count; i++) keep.add(prefix + meta.id + "/" + i);
-        return meta;
+      const { customCSS: css = latest.customCSS, ...payload } = patch;
+      const id = crypto.randomUUID();
+      const items = {}, keep = new Set();
+      const reuse = (text, meta, prefix, nextId) => {
+        if (assembleCSSChunks(old, meta, prefix) === text) {
+          for (let i = 0; i < meta.count; i++) keep.add(prefix + meta.id + "/" + i);
+          return meta;
+        }
+        const chunks = chunkCustomCSS(text, nextId, prefix);
+        Object.assign(items, chunks.items);
+        return chunks.meta;
+      };
+      const meta = reuse(css, old[META_KEY], CC_PREFIX, id);
+      const previousCSS = new Map(assembleSiteRules(old).flatMap(rule => {
+        const text = assembleCSSChunks(old, rule?.customCSSChunks, SITE_CC_PREFIX);
+        return text === null ? [] : [[text, rule.customCSSChunks]];
+      }));
+      const siteRules = (payload.siteRules || []).map((rule, index) => {
+        const normalized = normalizeSiteRule(rule);
+        const { customCSS, ...reference } = normalized;
+        // 未变化的 CSS 沿用原分块，开关和规则编辑不复制整份正文。
+        if (customCSS || normalized.customCSSMode === "site") {
+          reference.customCSSChunks = reuse(customCSS, previousCSS.get(customCSS), SITE_CC_PREFIX, id + "-" + index);
+        }
+        return reference;
+      });
+      const rulePayload = {};
+      if (Array.isArray(payload.siteRules)) {
+        const text = JSON.stringify(siteRules);
+        if (new TextEncoder().encode("siteRules" + text).length > 7500) {
+          rulePayload.siteRules = [];
+          rulePayload[RULE_META_KEY] = reuse(text, old[RULE_META_KEY], RULE_PREFIX, id + "-rules");
+        } else { rulePayload.siteRules = siteRules; rulePayload[RULE_META_KEY] = null; }
       }
-      const chunks = chunkCustomCSS(text, nextId, prefix);
-      Object.assign(items, chunks.items);
-      return chunks.meta;
-    };
-    const meta = reuse(css, old[META_KEY], CC_PREFIX, id);
-    const previousCSS = new Map(assembleSiteRules(old).flatMap(rule => {
-      const text = assembleCSSChunks(old, rule?.customCSSChunks, SITE_CC_PREFIX);
-      return text === null ? [] : [[text, rule.customCSSChunks]];
-    }));
-    const siteRules = (payload.siteRules || []).map((rule, index) => {
-      const normalized = normalizeSiteRule(rule);
-      const { customCSS, ...reference } = normalized;
-      // 未变化的 CSS 沿用原分块，开关和规则编辑不复制整份正文。
-      if (customCSS || normalized.customCSSMode === "site") {
-        reference.customCSSChunks = reuse(customCSS, previousCSS.get(customCSS), SITE_CC_PREFIX, id + "-" + index);
+      // 新块与引用一次发布，读者不会看到新旧 CSS 拼接。失败时保留旧数据。
+      await storage.set({ ...payload, ...rulePayload, ...items, [META_KEY]: meta });
+      const stale = Object.keys(old).filter(key => key === "customCSS" || (key.startsWith(CC_PREFIX)
+        || Array.isArray(payload.siteRules) && (key.startsWith(SITE_CC_PREFIX) || key.startsWith(RULE_PREFIX))) && !(key in items) && !keep.has(key));
+      if (stale.length) {
+        try { await storage.remove(stale); }
+        catch (error) { console.warn("sfs CSS cleanup failed:", error); }
       }
-      return reference;
+      return normalizeSettings({ ...old, ...payload, ...rulePayload, ...items, [META_KEY]: meta });
     });
-    const rulePayload = {};
-    if (Array.isArray(payload.siteRules)) {
-      const text = JSON.stringify(siteRules);
-      if (new TextEncoder().encode("siteRules" + text).length > 7500) {
-        rulePayload.siteRules = [];
-        rulePayload[RULE_META_KEY] = reuse(text, old[RULE_META_KEY], RULE_PREFIX, id + "-rules");
-      } else { rulePayload.siteRules = siteRules; rulePayload[RULE_META_KEY] = null; }
-    }
-    // 新块与引用一次发布，读者不会看到新旧 CSS 拼接。失败时保留旧数据。
-    await storage.set({ ...payload, ...rulePayload, ...items, [META_KEY]: meta });
-    const stale = Object.keys(old).filter(key => key === "customCSS" || (key.startsWith(CC_PREFIX)
-      || Array.isArray(payload.siteRules) && (key.startsWith(SITE_CC_PREFIX) || key.startsWith(RULE_PREFIX))) && !(key in items) && !keep.has(key));
-    if (stale.length) {
-      try { await storage.remove(stale); }
-      catch (error) { console.warn("sfs CSS cleanup failed:", error); }
-    }
-    return normalizeSettings({ ...old, ...payload, ...rulePayload, ...items, [META_KEY]: meta });
   }
 
   function assembleSiteRules(stored) {

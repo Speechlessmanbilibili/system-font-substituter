@@ -1390,10 +1390,15 @@ test("多层与循环字体变量依赖完成分析，布局变量继续过滤",
   await page.close();
 });
 
-test("真实 MV3 完成 40 张跨域 CSS 读取，子框架和延后字体规则仍生效", async t => {
+test("真实 MV3 跨域读取、子框架与交互共用会话，字体变化仍重检", async t => {
   let requests = 0;
   const remote = http.createServer((request, response) => {
     requests++;
+    if (request.url === "/font.css") {
+      response.setHeader("Content-Type", "text/css");
+      response.end('.target{font-family:Arial}.design{font-family:CustomFont}[class^="van-icon-"]::before{font-family:vanfont}');
+      return;
+    }
     setTimeout(() => { response.setHeader("Content-Type", "text/css"); response.end('.remote-' + request.url.match(/\d+/)[0] + '{font-family:CustomFont}'); }, 20);
   });
   await new Promise(resolve => remote.listen(0, "127.0.0.1", resolve));
@@ -1401,6 +1406,7 @@ test("真实 MV3 完成 40 张跨域 CSS 读取，子框架和延后字体规则
   try {
     context = await chromium.launchPersistentContext("", { headless: true, executablePath: chromium.executablePath(),
       args: ["--disable-extensions-except=" + root, "--load-extension=" + root] });
+    {
     const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker");
     await worker.evaluate(() => chrome.storage.sync.set({ enabled: false, targets: ["Arial"], replacement: "serif", customCSSOn: false }));
     fixtures.set("/child-frame", '<!doctype html><style>.target{font-family:Arial}</style><p class="target" id="child">Child</p><input class="target" placeholder="Empty">');
@@ -1429,22 +1435,12 @@ test("真实 MV3 完成 40 张跨域 CSS 读取，子框架和延后字体规则
     await frame.evaluate(() => { const style = document.createElement("style"); style.textContent = '.target{font-family:CustomFont}'; document.head.appendChild(style); });
     await frame.waitForFunction(() => !document.getElementById("child").hasAttribute("data-sfs-replaced"));
     t.diagnostic("40 张 CSS 完整读取；主页面无关交互 0 次采样；子框架动态字体规则完成重检");
-  } finally { await context?.close(); await new Promise(resolve => remote.close(resolve)); }
-});
-
-test("真实 MV3 读取跨域 CSS 后，交互优化生效且字体变化仍重检", async t => {
-  let requests = 0;
-  const remote = http.createServer((request, response) => {
-    requests++;
-    response.setHeader("Content-Type", "text/css");
-    response.end('.target { font-family: Arial; } .design { font-family: CustomFont; } [class^="van-icon-"]::before { font-family: vanfont; }');
-  });
-  await new Promise(resolve => remote.listen(0, "127.0.0.1", resolve));
-  let context;
-  try {
-    context = await chromium.launchPersistentContext("", { headless: true, executablePath: chromium.executablePath(),
-      args: ["--disable-extensions-except=" + root, "--load-extension=" + root] });
+    await cdp.detach(); await page.close();
+    }
+    requests = 0;
+    {
     const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker");
+    await worker.evaluate(() => chrome.storage.sync.clear());
     await worker.evaluate(() => chrome.storage.sync.set({ targets: ["Arial"], replacement: "serif", customCSSOn: true,
       customCSS: 'html, body, [data-sfs-replaced="1"] { font-family: serif !important; }' }));
     const route = "/cross-case";
@@ -1545,8 +1541,7 @@ test("真实 MV3 读取跨域 CSS 后，交互优化生效且字体变化仍重�
     const dragSettled = await cdp.send("Runtime.evaluate", { contextId: world.id, expression: "({reads: __reads, disables: __disables})", returnByValue: true });
     assert.equal(dragSettled.result.value.disables, 2);
     t.diagnostic(JSON.stringify({ mv3DragSettled: dragSettled.result.value }));
-  } finally {
-    await context?.close();
-    await new Promise(resolve => remote.close(resolve));
-  }
+    await cdp.detach(); await page.close();
+    }
+  } finally { await context?.close(); await new Promise(resolve => remote.close(resolve)); }
 });

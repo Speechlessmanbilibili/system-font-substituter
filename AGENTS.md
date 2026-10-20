@@ -54,7 +54,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-release.ps1
 | 文件 | 职责 |
 |---|---|
 | `manifest.json` | 声明 MV3 配置和固定的扩展 `key`；对应 ID 为 `ecgcpjehkelnjfcgldmifejcoefohdcp` |
-| `background.js` | 打开设置页，读取页面引用的跨域 CSS 并仅返回样式文本；不携带站点凭据，不执行或注入远程内容 |
+| `background.js` | 读取页面引用的跨域 CSS 并仅返回样式文本；不携带站点凭据，不执行或注入远程内容 |
 | `shared.js` | 统一默认值、站点与端口匹配、存储校验和 CSS 分块读写；先于内容脚本和设置页加载 |
 | `content.js` | 监控 DOM 节点、文本、相关属性和样式表加载；采样页面原始字体，维护替换/保护标记，并应用站点三态规则 |
 | `options.html`、`options.css`、`options.js` | 提供字体配置、实时预览、目标名单、站点规则、保护规则和自定义 CSS 编辑功能；支持中文和英文 |
@@ -107,7 +107,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-release.ps1
 
 字体值及相关变量中的 `attr()` 纳入属性观察，值依赖与选择器依赖分别记录；引用变化后更新索引。页面移除扩展样式或替换 `head` 时，在合并任务中恢复已启用样式，并保持普通样式、自定义 CSS 的先后顺序。
 
-共用标点扩展已注册受限字符范围的 `Shared Punctuation Font` 时，跳过连续前置且同样已注册受限范围的 `Shared Punctuation Font 2` 至 `Shared Punctuation Font 32`，按其后的正文首选字体进行名单与保护判断；其配置变化后失效相关快照。普通网站同名声明、未注册后备名称及覆盖全字符范围的字体保持原判断。
+共用标点扩展已注册受限字符范围的 `Shared Punctuation Font` 时，跳过连续前置且同样已注册受限范围的 `Shared Punctuation Font 2` 及之后的编号别名，按其后的正文首选字体进行名单与保护判断；其配置变化后失效相关快照。普通网站同名声明、未注册后备名称及覆盖全字符范围的字体保持原判断。
 
 页面生命周期观察器只监听 document 的直接子节点。更换根元素时取消旧任务、重新加载配置并恢复原生事件监听，稳态 DOM 更新沿用原观察范围。特殊来源框架按创建来源匹配域名和端口，普通跨站框架使用自身地址。
 

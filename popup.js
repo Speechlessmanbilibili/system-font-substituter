@@ -46,8 +46,7 @@
     $("host").textContent = url.hostname;
     const rule = matchRule(settings.siteRules, url.href);
     for (const input of document.querySelectorAll('input[name="site-mode"]')) input.checked = input.value === (rule?.action || "inherit");
-    const state = SFS.siteState(settings.siteRules, url.href);
-    const mode = state.off ? "关闭覆盖" : state.force ? "强制替换" : "沿用全局策略";
+    const mode = rule?.action === "off" ? "关闭覆盖" : rule && rule.action !== "inherit" ? "强制替换" : "沿用全局策略";
     const parts = [settings.enabled ? "已启用" : "已停用", mode];
     parts.push(rule ? "匹配" + rule.domain : "跟随全局");
     $("effective").textContent = "当前：" + parts.join(" · ");

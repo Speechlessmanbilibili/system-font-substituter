@@ -2,6 +2,12 @@
 
 根据 Git 提交、版本标签及 GitHub Release 记录整理。版本标题链接到对应 Release，日期采用首次发布时的北京时间；同版本安装包的后续更新另行标注日期。
 
+## [v2.3.3](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.3.3)（2026-10-20）
+
+- 支持超过 32 个前置标点范围字体，继续按原正文首选字体判断替换与保护。
+- 设置页、弹窗与重置统一在原生锁内更新配置，复用未修改的 CSS 分块。
+- 跨域样式读取仅针对浏览器安全异常进入后备采样。
+
 ## [v2.3.2](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.3.2)（2026-10-20）
 
 - 弹窗全局开关与设置页共用写入锁，保留并发保存的独立修改。

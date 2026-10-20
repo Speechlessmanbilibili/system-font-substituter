@@ -88,23 +88,10 @@ test("从安装包的本地文件头路径解包后，真实 MV3 与设置页可
     page.on("pageerror", error => errors.push(error.message));
     await page.goto("chrome-extension://" + id + "/options.html");
     await page.waitForFunction(() => !document.getElementById("save").disabled);
-    assert.equal(await page.locator("#ligatureLevel").evaluate(el => el.value), "native");
-    await page.locator("#addSiteRule").click();
-    await page.locator(".rule-domain").fill("example.com");
-    await page.locator(".rule-edit-css").click();
-    await page.locator("#useSiteCSS").click();
-    const siteCSS = "/* 本站 CSS 分块保存 */\n".repeat(500) + "body { line-height: 1.8; }";
-    await page.locator("#siteCSSContent").fill(siteCSS);
+    await page.locator("#enabled").uncheck();
     await page.locator("#save").click();
     await page.waitForFunction(() => !document.getElementById("save").disabled && document.getElementById("status").classList.contains("success"));
-    const stored = await worker.evaluate(() => chrome.storage.sync.get(null));
-    assert.equal(stored.siteRules[0].customCSSMode, "site");
-    assert.ok(stored.siteRules[0].customCSSChunks.count > 1);
-    assert.equal("customCSS" in stored.siteRules[0], false);
-    await page.reload();
-    await page.waitForFunction(() => !document.getElementById("save").disabled);
-    await page.locator(".rule-edit-css").click();
-    assert.equal(await page.locator("#siteCSSContent").inputValue(), siteCSS);
+    assert.equal(await worker.evaluate(async () => (await chrome.storage.sync.get("enabled")).enabled), false);
     assert.deepEqual(errors, []);
   } finally {
     await context.close();

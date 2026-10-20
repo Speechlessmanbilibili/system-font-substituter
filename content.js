@@ -539,6 +539,11 @@
     return { syntax, classes, attributes, id };
   }
 
+  function readableRules(sheet) {
+    try { return sheet.cssRules; }
+    catch (error) { if (error.name === "SecurityError") return null; throw error; }
+  }
+
   function getTypographyIndex() {
     if (typographyIndex) return typographyIndex;
     const index = { rules: [], stateEvents: new Set(), classes: new Set(), attributes: new Set(), valueAttributes: new Set(), variables: new Set(), media: [],
@@ -552,7 +557,9 @@
       for (const rule of rules) {
         const queries = rule.media?.mediaText ? [...media, rule.media.mediaText] : media;
         if (rule.styleSheet) {
-          try { visit(rule.styleSheet.cssRules, ancestors, unsafe, queries); } catch { index.unknown = true; }
+          const imported = readableRules(rule.styleSheet);
+          if (imported) visit(imported, ancestors, unsafe, queries);
+          else index.unknown = true;
         }
         const selector = rule.selectorText ? elementSelectors(rule.selectorText) : "";
         const selectors = selector ? [...ancestors, selector] : ancestors;
@@ -567,7 +574,9 @@
     for (const sheet of document.styleSheets) {
       if ([STYLE_ID, CUSTOM_STYLE_ID].includes(sheet.ownerNode?.id)) continue;
       const media = sheet.media?.mediaText ? [sheet.media.mediaText] : [];
-      try { visit(sheet.cssRules, [], false, media); } catch {
+      const rules = readableRules(sheet);
+      if (rules) visit(rules, [], false, media);
+      else {
         const external = externalSheetRules.get(sheet);
         if (external?.href === sheet.href) visit(external.rules, [], false, media);
         else { index.unknown = true; readExternalSheet(sheet); }
@@ -822,7 +831,7 @@
     const families = new Set();
     for (const face of fonts || []) {
       const family = normalizeFamily(face.family);
-      if ((family === PUNCTUATION_FAMILY || /^shared punctuation font (?:[2-9]|[12]\d|3[0-2])$/.test(family))
+      if ((family === PUNCTUATION_FAMILY || /^shared punctuation font (?:[2-9]\d*|1\d+)$/.test(family))
           && face.unicodeRange.toUpperCase() !== "U+0-10FFFF") {
         families.add(family);
         if (family === PUNCTUATION_FAMILY) next ||= face;

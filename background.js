@@ -1,7 +1,3 @@
-chrome.action.onClicked.addListener(() => {
-  chrome.runtime.openOptionsPage();
-});
-
 // 读取页面已引用、但受同源策略限制的 CSS；只返回样式文本，不执行或注入。
 // 不携带站点凭据，限制响应类型、大小与等待时间，并合并同时到来的重复请求。
 const stylesheetRequests = new Map();
