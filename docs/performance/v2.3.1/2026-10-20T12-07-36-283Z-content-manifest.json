@@ -1,0 +1,66 @@
+{
+  "baseline": {
+    "ref": "v2.3.1",
+    "revision": "b2d0729ac7a44d9c8a622c1b94dca11b529b2734"
+  },
+  "lineEndings": "LF",
+  "measuredSourceHashes": {
+    "before": {
+      "shared": "e92e565d46acc8ed1bce5cb8df521180635a92c000856e7c4a8767e90213e09f",
+      "content": "ea8f968cbe713a7f676f95f758776246581879e423f901393a4655712c10867b",
+      "css": "f320e9752476a3ba0385c4b4c6f837bd08967ff6a85a6996770fa14918fe5ac4"
+    },
+    "after": {
+      "shared": "50d95b471f4d713f310de6c2c372685f98f4f321a434e93fd3c3b68b63fdc2b6",
+      "content": "5873580fcb21635f4c836c2e8d8194528ee9811915a132abeb06dd1cecd45de1",
+      "css": "8f21da2021294b92716040bd882cfc13271692cb9041432974f03e57b697bae4"
+    }
+  },
+  "files": [
+    {
+      "path": "2026-10-20T12-07-36-283Z-content-sources/before/shared.js",
+      "bytes": 18024,
+      "sha256": "e92e565d46acc8ed1bce5cb8df521180635a92c000856e7c4a8767e90213e09f"
+    },
+    {
+      "path": "2026-10-20T12-07-36-283Z-content-sources/before/content.js",
+      "bytes": 69124,
+      "sha256": "ea8f968cbe713a7f676f95f758776246581879e423f901393a4655712c10867b"
+    },
+    {
+      "path": "2026-10-20T12-07-36-283Z-content-sources/before/apple-ui-mix.css",
+      "bytes": 2412,
+      "sha256": "f320e9752476a3ba0385c4b4c6f837bd08967ff6a85a6996770fa14918fe5ac4"
+    },
+    {
+      "path": "2026-10-20T12-07-36-283Z-content-sources/after/shared.js",
+      "bytes": 17933,
+      "sha256": "50d95b471f4d713f310de6c2c372685f98f4f321a434e93fd3c3b68b63fdc2b6"
+    },
+    {
+      "path": "2026-10-20T12-07-36-283Z-content-sources/after/content.js",
+      "bytes": 69092,
+      "sha256": "13bf560849db13d0044e4321292c63ea9615ca670201fd126a837675394d91ef"
+    },
+    {
+      "path": "2026-10-20T12-07-36-283Z-content-sources/after/apple-ui-mix.css",
+      "bytes": 2412,
+      "sha256": "f320e9752476a3ba0385c4b4c6f837bd08967ff6a85a6996770fa14918fe5ac4"
+    },
+    {
+      "path": "2026-10-20T12-07-36-283Z-content-summary.md",
+      "bytes": 788,
+      "sha256": "d8eb74c42e85ad477f2473ebe0fb049b417765438f9a5e2d62c2a1b5643dcfe5"
+    },
+    {
+      "path": "2026-10-20T12-07-36-283Z-content.json",
+      "bytes": 19842,
+      "sha256": "39794d45d726f43220cf4f4d67a25eeecd61954625478b77408425771cfc3cee"
+    },
+    {
+      "path": "2026-10-20T12-07-36-283Z-content.md",
+      "bytes": 1219,
+      "sha256": "42c56f7f6936c81384d7d6cf0ba455ca57a3591752f6946ab4b18679b8523b6e"
+    }
+  ]
+}

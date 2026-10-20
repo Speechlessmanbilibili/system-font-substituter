@@ -290,7 +290,7 @@
   }
 
   function readExternalSheet(sheet) {
-    if (!sheet.href || externalSheetPending.has(sheet) || !chrome.runtime?.sendMessage) return;
+    if (!sheet.href || externalSheetPending.has(sheet)) return;
     externalSheetPending.add(sheet);
     const href = sheet.href;
     chrome.runtime.sendMessage({ type: "sfs-read-stylesheet", url: href, encoding: document.characterSet }).then(result => {

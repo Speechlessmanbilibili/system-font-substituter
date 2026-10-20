@@ -271,25 +271,7 @@ let checkDirtyTimer = null;
 /**
  * 深度比较两个状态对象是否相等
  */
-function deepEqual(a, b) {
-  if (a === b) return true;
-  if (a == null || b == null) return false;
-  if (typeof a !== typeof b) return false;
-
-  if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) return false;
-    return a.every((item, i) => deepEqual(item, b[i]));
-  }
-
-  if (typeof a === 'object') {
-    const keysA = Object.keys(a).sort();
-    const keysB = Object.keys(b).sort();
-    if (!deepEqual(keysA, keysB)) return false;
-    return keysA.every(key => deepEqual(a[key], b[key]));
-  }
-
-  return false;
-}
+const deepEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 /**
  * 从当前表单收集状态
@@ -329,16 +311,10 @@ function checkDirty(immediate = false) {
 
     const hint = $("unsavedHint");
     const saveBtn = $("save");
-    if (hint) {
-      if (isDirty) {
-        hint.classList.add("visible");
-      } else {
-        hint.classList.remove("visible");
-      }
-    }
+    hint.classList.toggle("visible", isDirty);
 
     // 保存按钮状态也跟随脏状态
-    if (saveBtn && !busy) {
+    if (!busy) {
       saveBtn.disabled = false;  // 总是可以保存，即使没修改
     }
   };
@@ -355,59 +331,12 @@ function checkDirty(immediate = false) {
 
 function clearDirty() {
   const hint = $("unsavedHint");
-  if (hint) hint.classList.remove("visible");
+  hint.classList.remove("visible");
 }
 
 // ============================================================================
 // UI辅助函数
 // ============================================================================
-
-const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-
-function initAnimatedDetails(details) {
-  const summary = details.querySelector("summary");
-  const content = details.querySelector(":scope > :not(summary)");
-  let expanded = details.open;
-  let heightAnimation = null;
-  let contentAnimation = null;
-
-  function finish() {
-    heightAnimation?.cancel();
-    contentAnimation?.cancel();
-    heightAnimation = contentAnimation = null;
-    details.open = expanded;
-    details.dataset.expanded = String(expanded);
-    details.style.removeProperty("height");
-    details.style.removeProperty("overflow");
-  }
-
-  summary.addEventListener("click", event => {
-    event.preventDefault();
-    // 反向操作从当前画面继续，避免快速点击时跳回动画起点。
-    const startHeight = details.getBoundingClientRect().height;
-    const startOpacity = details.open ? Number(getComputedStyle(content).opacity) : 0;
-    expanded = !expanded;
-    if (reducedMotion.matches) { finish(); return; }
-    heightAnimation?.cancel();
-    contentAnimation?.cancel();
-    details.open = true;
-    details.dataset.expanded = String(expanded);
-    details.style.height = "auto";
-    const style = getComputedStyle(details);
-    const endHeight = expanded ? details.getBoundingClientRect().height
-      : summary.getBoundingClientRect().height + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
-    details.style.height = startHeight + "px";
-    details.style.overflow = "hidden";
-    const timing = { duration: expanded ? 280 : 220, easing: "cubic-bezier(0.16, 1, 0.3, 1)" };
-    heightAnimation = details.animate([{ height: startHeight + "px" }, { height: endHeight + "px" }], timing);
-    contentAnimation = content.animate([{ opacity: startOpacity }, { opacity: expanded ? 1 : 0 }], timing);
-    heightAnimation.onfinish = finish;
-  });
-
-  // 视口或动效偏好改变时恢复自然高度，避免截断内容。
-  window.addEventListener("resize", finish);
-  reducedMotion.addEventListener("change", () => { if (reducedMotion.matches) finish(); });
-}
 
 // 自绘下拉菜单：按钮承载值，列表浮层统一管理，避免原生菜单与页面主题脱节。
 const selectStates = new WeakMap();
@@ -610,7 +539,6 @@ function updateGlobalStatusBadge() {
   const enabled = $("enabled").checked;
   const badge = $("globalStatusBadge");
   const text = $("globalStatusText");
-  if (!badge || !text) return;
 
   if (enabled) {
     badge.classList.remove("disabled");
@@ -624,7 +552,6 @@ function updateGlobalStatusBadge() {
 function updateEmptyRulesState() {
   const siteRules = $("siteRules");
   const emptyBox = $("emptySiteRules");
-  if (!siteRules || !emptyBox) return;
   const count = siteRules.querySelectorAll(".site-rule-row").length;
   if (count === 0) {
     emptyBox.classList.remove("hidden");
@@ -773,6 +700,7 @@ function addSiteRuleRow(rule = {}, focus = false, parent = $("siteRules")) {
   for (const select of row.querySelectorAll(".rule-override")) {
     select.value = normalized[select.dataset.key];
   }
+  DSH.animateDetails(row.querySelector("details"));
   parent.appendChild(row);
   refreshSiteRule(row);
   if (parent === $("siteRules")) updateEmptyRulesState();
@@ -1155,7 +1083,7 @@ window.addEventListener("beforeunload", e => {
 
 initPreviewControls();
 applyLanguage();
-document.querySelectorAll(".details-section, .site-rules-help").forEach(initAnimatedDetails);
+DSH.initDetails();
 initCustomSelect($("ligatureLevel"), LIGATURE_LEVELS.map(level => ({ value: level, label: t(LIGATURE_LABELS[level]) })));
 initCustomSelect($("siteCSSEnabled"), overrideChoices("customCSSOn"));
 
@@ -1170,7 +1098,6 @@ function quoteFamily(name) {
 function appendFamily(name) {
   const input = $("replacement");
   const current = input.value.trim();
-  if (current.toLowerCase().includes(name.toLowerCase())) return;
   input.value = current ? current + ", " + quoteFamily(name) : quoteFamily(name);
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
@@ -1198,7 +1125,6 @@ function renderFontList(query = "") {
   }
 }
 async function openFontPicker() {
-  if (!chrome.fontSettings?.getFontList) { showStatus(t("fontPickerUnavailable"), "error"); return; }
   if (!fontCatalog.length) {
     try {
       fontCatalog = await new Promise(resolve => {
@@ -1213,12 +1139,12 @@ async function openFontPicker() {
   if (!fontPicker.open) fontPicker.showModal();
   fontSearch.focus();
 }
-if ($("pick-font")) {
+{
   $("pick-font").addEventListener("click", openFontPicker);
   $("close-font-picker").addEventListener("click", () => fontPicker.close());
   fontSearch.addEventListener("input", () => renderFontList(fontSearch.value));
   fontPicker.addEventListener("click", event => { if (event.target === fontPicker) fontPicker.close(); });
 }
 
-if (window.DSH) DSH.initRailSpy();
+DSH.initRailSpy();
 load();

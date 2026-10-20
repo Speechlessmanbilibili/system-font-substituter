@@ -35,6 +35,7 @@ test("40 张跨域 CSS 排队完成，最多并发 32 个并合并重复请求",
 test("请求失败后继续排队，响应类型、大小和来源仍校验", async () => {
   const read = background(async url => {
     if (url.endsWith("error.css")) throw Error("network");
+    if (url.endsWith("invalid.css")) return new Response("", { headers: { "Content-Type": "text/css-invalid" } });
     if (url.endsWith("html.css")) return new Response("<html>", { headers: { "Content-Type": "text/html" } });
     if (url.endsWith("large.css")) return cssResponse("a".repeat(2 * 1024 * 1024 + 1));
     return cssResponse("/* 中文 */");
@@ -43,7 +44,7 @@ test("请求失败后继续排队，响应类型、大小和来源仍校验", as
   assert.equal(await read("https://u:p@example.com/test.css"), null);
   assert.equal(await read("https://example.com/test.css", { id: "other", tab: {} }), null);
   assert.equal(await read("https://example.com/test.css", { id: "test" }), null);
-  for (const name of ["error", "html", "large"]) assert.equal(await read("https://example.com/" + name + ".css"), null);
+  for (const name of ["error", "html", "invalid", "large"]) assert.equal(await read("https://example.com/" + name + ".css"), null);
   const results = await Promise.all(Array.from({ length: 40 }, (_, i) => read("https://example.com/valid-" + i + ".css")));
   assert.ok(results.every(result => result.css === "/* 中文 */"));
 });

@@ -17,14 +17,15 @@ const output = path.resolve(root, process.argv.find(arg => arg.startsWith("--out
 const sources = {};
 for (const version of ["before", "after"]) {
   sources[version] = {};
-  for (const name of ["options.html", "options.css", "options.js", "shared.js"]) {
+  for (const name of ["options.html", "options.css", "options.js", "shared.js", "kit/kit.css", "kit/kit.js"]) {
     const result = version === "before" ? spawnSync("git", ["show", ref + ":" + name], { cwd: root, encoding: "utf8" }) : null;
-    if (result && result.status !== 0) throw Error(result.stderr);
-    sources[version][name] = result ? result.stdout : fs.readFileSync(path.join(root, name), "utf8");
+    if (result && result.status !== 0 && !name.startsWith("kit/")) throw Error(result.stderr);
+    sources[version][name] = result && result.status === 0 ? result.stdout : fs.readFileSync(path.join(root, name), "utf8");
   }
 }
 const server = http.createServer((request, response) => {
-  const [, version, name = ""] = request.url.split("/");
+  const [, version, ...parts] = request.url.split("/");
+  const name = parts.join("/");
   response.setHeader("Content-Type", name.endsWith(".css") ? "text/css" : name.endsWith(".js") ? "text/javascript" : "text/html; charset=utf-8");
   response.end(sources[version]?.[name] || "");
 });

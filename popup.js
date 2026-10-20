@@ -17,9 +17,8 @@
     return SFS.normalizeSettings(await chrome.storage.sync.get(null));
   }
 
-  async function write(value, field, baseline) {
-    if (field === "enabled") { await chrome.storage.sync.set({ enabled: value.enabled }); settings = value; }
-    else settings = await SFS.writeSettings(chrome.storage.sync, { siteRules: value.siteRules }, value.customCSS, undefined, baseline);
+  async function write(change) {
+    settings = await SFS.writeSettings(chrome.storage.sync, change);
   }
 
   const matchRule = (rules, href) => SFS.matchRule(rules, href);
@@ -64,15 +63,14 @@
     if (busy || !url?.hostname) return;
     setBusy(true);
     try {
-      const latest = await read();
-      const matched = matchRule(latest.siteRules, url.href);
-      const domain = currentDomain(matched);
-      if (!domain) return;
-      const index = latest.siteRules.findIndex(rule => rule.domain === domain);
-      const rules = latest.siteRules.slice();
-      if (index >= 0) rules[index] = { ...rules[index], action: value };
-      else rules.push({ domain, action: value });
-      await write({ ...latest, siteRules: rules }, "siteRules", latest);
+      await write(latest => {
+        const domain = currentDomain(matchRule(latest.siteRules, url.href));
+        const index = latest.siteRules.findIndex(rule => rule.domain === domain);
+        const rules = latest.siteRules.slice();
+        if (index >= 0) rules[index] = { ...rules[index], action: value };
+        else rules.push({ domain, action: value });
+        return { siteRules: rules };
+      });
       render();
       status("已保存", "success");
     } catch {
@@ -92,8 +90,7 @@
     const next = $("enabled").checked;
     setBusy(true);
     try {
-      const latest = await read();
-      await write({ ...latest, enabled: next }, "enabled");
+      await write(() => ({ enabled: next }));
       render();
       status("已保存", "success");
     } catch {

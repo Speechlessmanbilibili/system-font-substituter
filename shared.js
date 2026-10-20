@@ -327,19 +327,22 @@ body,
     return { items, meta: { id, count } };
   }
 
-  const settingsWrites = new WeakMap();
-  async function writeSettings(storage, payload, css, id = crypto.randomUUID(), baseline = null) {
-    const publish = () => publishSettings(storage, payload, css, id, baseline);
+  function writeSettings(storage, payload, css, id = crypto.randomUUID(), baseline = null) {
     // 扩展页面共享原生锁，避免并发发布时清理另一窗口仍在复用的分块。
-    if (globalThis.navigator?.locks) return navigator.locks.request("sfs-settings-write", publish);
-    const previous = settingsWrites.get(storage) || Promise.resolve();
-    const work = previous.catch(() => {}).then(publish);
-    settingsWrites.set(storage, work);
-    try { return await work; }
-    finally { if (settingsWrites.get(storage) === work) settingsWrites.delete(storage); }
+    return navigator.locks.request("sfs-settings-write", () => publishSettings(storage, payload, css, id, baseline));
   }
   async function publishSettings(storage, payload, css, id, baseline) {
     const old = await storage.get(null);
+    if (typeof payload === "function") {
+      const latest = normalizeSettings(old);
+      payload = payload(latest);
+      if (!("siteRules" in payload)) {
+        await storage.set(payload);
+        return { ...latest, ...payload };
+      }
+      css = latest.customCSS;
+      baseline = latest;
+    }
     if (baseline) {
       const merged = mergeDraft(baseline, { ...baseline, ...payload, customCSS: css }, normalizeSettings(old));
       ({ customCSS: css, ...payload } = merged);

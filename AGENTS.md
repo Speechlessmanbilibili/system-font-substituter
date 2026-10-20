@@ -138,3 +138,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-release.ps1
 - 新增设置项时，同步更新 `TEXT["zh-CN"]` 与 `TEXT["en"]`。
 - 修改后运行回归测试，校验发布 ZIP 的根目录、manifest 版本及文件内容，再执行发布。
 - 将供 PowerShell 5.1 执行的脚本保存为 UTF-8 带 BOM。
+
+- 设置页、弹窗与重置统一通过 `shared.js` 的 `writeSettings()` 写入；读取最新值、合并和发布共用原生锁。
+- `npm test` 运行行为检查，`npm run test:package` 单独验证发布包；常规测试不创建 ZIP 或复制下载文件。

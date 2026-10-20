@@ -72,7 +72,7 @@ function decodeStylesheet(bytes, contentType, environmentEncoding) {
 
 async function readStylesheet(key, remaining, environmentEncoding) {
   const response = await fetch(key, { credentials: "omit", signal: AbortSignal.timeout(remaining) });
-  if (!response.ok || !/^text\/css\b/i.test(response.headers.get("content-type") || "")) return null;
+  if (!response.ok || !/^text\/css[\t ]*(?:;|$)/i.test(response.headers.get("content-type") || "")) return null;
   const reader = response.body.getReader();
   const chunks = [];
   let length = 0;
