@@ -2,6 +2,10 @@
 
 根据 Git 提交、版本标签及 GitHub Release 记录整理。版本标题链接到对应 Release，日期采用首次发布时的北京时间；同版本安装包的后续更新另行标注日期。
 
+## [v2.3.4](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.3.4)（2026-10-24）
+
+- 统一源码、配置与文档的 LF 换行，通过 `.gitattributes` 和 `.editorconfig` 固定 Git 检出与编辑器保存格式。
+
 ## [v2.3.3](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/tag/v2.3.3)（2026-10-20）
 
 - 支持超过 32 个前置标点范围字体，继续按原正文首选字体判断替换与保护。

@@ -1,2 +1,2 @@
-# 保持性能样本与源码快照的摘要稳定。
-docs/performance/v2.3.1/** text eol=lf
+# 源码、文档及归档文本统一使用 LF，自动识别的二进制文件保持原样。
+* text=auto eol=lf
