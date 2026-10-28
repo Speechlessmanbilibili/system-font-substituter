@@ -18,6 +18,7 @@ ZIP 安装包也是 GitHub Release 的发布资产。Windows 的下载目录可�
 - 将每次生成的版本 ZIP 文件自动复制到系统定义的下载目录，包括日常测试构建和 Release 构建。
 - 在运行时获取下载目录，不要硬编码本机路径。
 - 将 Release 安装包命名为 `system-font-substituter-v<VERSION>.zip`，并同时发布 `apple-ui-mix.css`。
+- 存在独立私有密钥仓库 `font-extension-signing-keys`，本地目录与三个扩展项目同级，用于保存签名私钥的加密备份；解密口令由用户另行保管。本项目目录仅保存公钥。
 
 ### 更新日志与 Release 说明
 
@@ -53,7 +54,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-release.ps1
 
 | 文件 | 职责 |
 |---|---|
-| `manifest.json` | 声明 MV3 配置和固定的扩展 `key`；对应 ID 为 `ecgcpjehkelnjfcgldmifejcoefohdcp` |
+| `manifest.json` | 声明 MV3 配置和固定的扩展 `key`；对应 ID 为 `doefliheofmpeflkdhphilngfnkjbnad` |
 | `background.js` | 读取页面引用的跨域 CSS 并仅返回样式文本；不携带站点凭据，不执行或注入远程内容 |
 | `shared.js` | 统一默认值、站点与端口匹配、存储校验和 CSS 分块读写；先于内容脚本和设置页加载 |
 | `content.js` | 监控 DOM 节点、文本、相关属性和样式表加载；采样页面原始字体，维护替换/保护标记，并应用站点三态规则 |

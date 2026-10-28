@@ -80,7 +80,7 @@ test("从安装包的本地文件头路径解包后，真实 MV3 与设置页可
   try {
     const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker");
     const id = new URL(worker.url()).host;
-    assert.equal(id, "ecgcpjehkelnjfcgldmifejcoefohdcp");
+    assert.equal(id, "doefliheofmpeflkdhphilngfnkjbnad");
     const manifest = JSON.parse(packagedEntries.get("manifest.json"));
     assert.equal(await worker.evaluate(() => chrome.runtime.getManifest().version), manifest.version);
     const page = await context.newPage();

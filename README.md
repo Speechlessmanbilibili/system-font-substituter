@@ -40,7 +40,9 @@ System Font Substituter 为 Chrome、Edge 等 Chromium 浏览器提供可定制�
 
 浏览器依次选择可用字体，并在缺字时继续尝试后备项。扩展引用本机字体，字体文件需要单独安装。
 
-更新时拖入新版 ZIP，即可覆盖原扩展并沿用设置。固定扩展 ID：`ecgcpjehkelnjfcgldmifejcoefohdcp`。
+同一扩展 ID 下更新时拖入新版 ZIP，即可覆盖原扩展并沿用设置。固定扩展 ID：`doefliheofmpeflkdhphilngfnkjbnad`。
+
+从 `v2.3.5` 起启用上面的新 ID。请先记录旧版配置、停用旧扩展，再安装本版并重新配置，随后刷新已打开的网页。旧版与新版分别保存设置。
 
 <details>
 <summary>查看默认字体与替换名单</summary>
@@ -136,6 +138,8 @@ System Font Substituter 为 Chrome、Edge 等 Chromium 浏览器提供可定制�
 三个扩展可以分别安装、独立配置。与中西文字体替换同时启用时，本扩展会识别前置的专用标点范围字体，并按其后的原首选字体判断正文名单。
 
 ## 开发与构建
+
+签名私钥的加密备份集中保存在独立私有仓库 [`font-extension-signing-keys`](https://github.com/Speechlessmanbilibili/font-extension-signing-keys)。本地密钥仓库与三个扩展项目同级；本项目仅保存公钥，解密口令由维护者另行保管。
 
 常规测试使用独立测试浏览器；发布包检查通过 `npm run test:package` 单独运行。测试环境使用 Node.js 24.17 或更新版本。
 

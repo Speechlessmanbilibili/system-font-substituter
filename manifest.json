@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extName__",
-  "version": "2.3.4",
+  "version": "2.3.5",
   "description": "__MSG_extDescription__",
   "minimum_chrome_version": "120",
   "permissions": [
@@ -40,7 +40,7 @@
   "background": {
     "service_worker": "background.js"
   },
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxukZjjFQwqZTs0hs87Sil4avGyU2fSSpr8U4AugAwSxKgObGrQLUIjfYBdJJf4xoPzubk5Kr9GydovfmhUcNe2lTKqFZjINo5OlIZxVWCLSMgz90S5n8tQ9vI9/2+OF/SVPpPd5EPK51MICK3l+nBCLXcubJzE52FDgHbKdjBWZe688XYruU5R5T9Yx1eUbmeSVdtadFV2Syv1AooGNQROyJ79MLJecUBRCPxfZoJqUtW+2tretoVl4J18rZzWbVfnkF5DiFGRyo37hjBDufMSnSgl7tu3znuyS+aeTLRz7gUNrOcaESGay8wT/zlXiH2RxH1QhAINaMAC+IVHCTkQIDAQAB",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvszKuiJw/TTMl9lwo0axxUZA5XU5bcK64FCmA/Y0AzF1AG3hGR3AZJUCgL8jIm4S0whkufmfaES/BjA4pUvH1Qn3fE5RssoLnvhFYU4qekVs9g6fOQeEtWprY66GpbdTd2qLyf7ZsX1OUIX4EwHjsNME42gCnrEsMwqERkAcVlp5+vDI3BotiyHeGHjfBZWtLSFQSJsOLqM+NPkbTTCUHib+1A3wph93q0LBF7hUCAWMQyF6MMQ5rjII7UXALEiscbRxvtcaEIJ0pFnAXb+tzp8RKHJl5Fy3+W5PkIlGkTuHNffMEClKDzJiQugWiJziwq5Ar4EkaBW2ISsLlzNQvwIDAQAB",
   "default_locale": "en",
   "icons": {
     "16": "icons/icon-16.png",

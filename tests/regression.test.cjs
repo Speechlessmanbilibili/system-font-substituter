@@ -1082,9 +1082,9 @@ test("三个扩展真实 MV3 联合加载，分别关闭及恢复保持字体和
   try {
     const workerFor = async id => context.serviceWorkers().find(worker => new URL(worker.url()).host === id)
       || await context.waitForEvent("serviceworker", { predicate: worker => new URL(worker.url()).host === id });
-    const mainWorker = await workerFor("ecgcpjehkelnjfcgldmifejcoefohdcp");
-    const punctuationWorker = await workerFor("leodnciablfoggcacioldiippnfdonmg");
-    const spacingWorker = await workerFor("hciemeeoeagloegjphmccjmhlmdhjkfa");
+    const mainWorker = await workerFor("doefliheofmpeflkdhphilngfnkjbnad");
+    const punctuationWorker = await workerFor("bgihfdaiapfhjcpkaajdcplkkhfhmodg");
+    const spacingWorker = await workerFor("dlndlmhceeebhebhcdmdnceagejkkejb");
     await spacingWorker.evaluate(() => chrome.storage.local.set({ settings: { enabled: true, siteRules: [] } }));
     await mainWorker.evaluate(() => chrome.storage.sync.set({ enabled: true, replacement: '"Times New Roman"', targets: ["Arial"], protectCode: true, protectIcons: true, ligatureLevel: "native", customCSSOn: false, autoSpacing: false, siteRules: [] }));
     await punctuationWorker.evaluate(() => chrome.storage.local.set({ settings: { enabled: true, font: "Courier New", groups: ["quotes", "ellipsis"], cjkMode: "off", siteRules: [] } }));
@@ -1196,7 +1196,7 @@ test("交错读取设置时只应用最后一次结果", async () => {
 
 // 真实存储、弹窗与交互复用同一扩展会话。
 test("真实 MV3 存储、弹窗及状态联动", async t => {
-  const id = "ecgcpjehkelnjfcgldmifejcoefohdcp";
+  const id = "doefliheofmpeflkdhphilngfnkjbnad";
   let context, settings, stateServer, stateOrigin;
   stateServer = http.createServer((req, res) => {
     res.setHeader("content-type", "text/html; charset=utf-8");
@@ -1218,7 +1218,7 @@ await t.test("真实 MV3 加载、隔离内容脚本与同步存储联动", asyn
   await settings.evaluate(() => chrome.storage.sync.clear());
   const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker");
   const id = new URL(worker.url()).host;
-  assert.equal(id, "ecgcpjehkelnjfcgldmifejcoefohdcp");
+  assert.equal(id, "doefliheofmpeflkdhphilngfnkjbnad");
   const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.json"), "utf8"));
   assert.equal(await worker.evaluate(() => chrome.runtime.getManifest().version), manifest.version);
   const port = new URL(origin).port;
