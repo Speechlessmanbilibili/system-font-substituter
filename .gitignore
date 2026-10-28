@@ -5,3 +5,4 @@ test-results/
 performance-results/
 .DS_Store
 Thumbs.db
+*.pem
