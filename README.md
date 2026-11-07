@@ -29,8 +29,9 @@ System Font Substituter 为 Chrome、Edge 等 Chromium 浏览器提供可定制�
 
 1. 在系统中安装准备使用的字体。
 2. 从 [最新 Release](https://github.com/Speechlessmanbilibili/system-font-substituter/releases/latest) 下载 `system-font-substituter-v<VERSION>.zip`。
-3. 打开 `edge://extensions/` 或 `chrome://extensions/`，开启开发者模式，将 ZIP 拖入扩展管理页。
-4. 点击扩展图标，在“替换字体”中填写字体列表，查看预览后保存。
+3. 打开扩展管理页（Edge：`edge://extensions/`；Chrome：`chrome://extensions/`），开启 **开发者模式**。
+4. 将下载的 ZIP 拖入扩展管理页完成安装。
+5. 点击扩展图标，在“替换字体”中填写字体列表，查看预览后保存。
 
 字体列表使用 CSS `font-family` 语法，例如：
 
