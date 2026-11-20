@@ -18,7 +18,7 @@ ZIP 安装包也是 GitHub Release 的发布资产。Windows 的下载目录可�
 - 将每次生成的版本 ZIP 文件自动复制到系统定义的下载目录，包括日常测试构建和 Release 构建。
 - 在运行时获取下载目录，不要硬编码本机路径。
 - 将 Release 安装包命名为 `system-font-substituter-v<VERSION>.zip`，并同时发布 `apple-ui-mix.css`。
-- 存在独立私有密钥仓库 `font-extension-signing-keys`，本地目录与三个扩展项目同级，用于保存签名私钥的加密备份；解密口令由用户另行保管。本项目目录仅保存公钥。
+- 签名私钥的加密备份保存在独立私有仓库 [`font-extension-signing-keys`](https://github.com/Speechlessmanbilibili/font-extension-signing-keys)，解密口令保存在 1Password。本地密钥仓库与三个扩展项目同级，本项目目录仅保存公钥。
 
 ### 更新日志与 Release 说明
 
